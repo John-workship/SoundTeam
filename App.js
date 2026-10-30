@@ -209,70 +209,23 @@ export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [esRegistroNuevo, setEsRegistroNuevo] = useState(false);
 
-  // --- GESTIÓN DE INTEGRANTES Y ACCESOS UNIFICADA ---
+  // --- GESTIÓN DE INTEGRANTES AISLADOS POR SEDE ---
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v5");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v6");
         return guardados
           ? JSON.parse(guardados)
           : [
-              {
-                id: 1,
-                nombre: "Admin",
-                pin: "1234",
-                sedeId: "general",
-                rolAcceso: "admin",
-                rolesMusicales: ["👑 Director"],
-              },
-              {
-                id: 2,
-                nombre: "Líder",
-                pin: "1234",
-                sedeId: "general",
-                rolAcceso: "lider",
-                rolesMusicales: ["⭐ Líder de Grupo"],
-              },
-              {
-                id: 3,
-                nombre: "Lina",
-                pin: "1234",
-                sedeId: "general",
-                rolAcceso: "miembro",
-                rolesMusicales: ["🎤 Coros"],
-              },
-              {
-                id: 4,
-                nombre: "Arley",
-                pin: "1234",
-                sedeId: "general",
-                rolAcceso: "miembro",
-                rolesMusicales: ["🎹 Piano"],
-              },
-              {
-                id: 5,
-                nombre: "Alex",
-                pin: "1234",
-                sedeId: "general",
-                rolAcceso: "miembro",
-                rolesMusicales: ["🥁 Batería"],
-              },
-              {
-                id: 6,
-                nombre: "Heidy",
-                pin: "1234",
-                sedeId: "general",
-                rolAcceso: "miembro",
-                rolesMusicales: ["🎤 Coros"],
-              },
-              {
-                id: 7,
-                nombre: "Juan",
-                pin: "1234",
-                sedeId: "general",
-                rolAcceso: "miembro",
-                rolesMusicales: ["🎸 Guitarra"],
-              },
+              // Sede General
+              { id: 1, nombre: "Admin", pin: "1234", sedeId: "general", rolAcceso: "admin", rolesMusicales: ["👑 Director"] },
+              { id: 2, nombre: "Líder", pin: "1234", sedeId: "general", rolAcceso: "lider", rolesMusicales: ["⭐ Líder de Grupo"] },
+              { id: 3, nombre: "Lina", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎤 Coros"] },
+              { id: 4, nombre: "Arley", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎹 Piano"] },
+              { id: 5, nombre: "Alex", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🥁 Batería"] },
+              // Sede Norte (Ejemplo independiente)
+              { id: 6, nombre: "AdminNorte", pin: "1234", sedeId: "norte", rolAcceso: "admin", rolesMusicales: ["👑 Director Norte"] },
+              { id: 7, nombre: "Carlos", pin: "1234", sedeId: "norte", rolAcceso: "miembro", rolesMusicales: ["🎸 Guitarra"] },
             ];
       } catch (e) {
         return [];
@@ -285,7 +238,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v5",
+          "soundteam_integrantes_sedes_v6",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -353,6 +306,9 @@ export default function App() {
 
   const t = TEMAS[nombreTema];
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
+
+  // Integrantes filtrados estrictamente por la sede seleccionada actual
+  const integrantesSedeActual = integrantes.filter((m) => m.sedeId === sedeIdSeleccionada);
 
   const nombresMeses = [
     "Enero",
@@ -654,26 +610,24 @@ export default function App() {
       return;
     }
 
-    const miembroEncontrado = integrantes.find(
-      (m) =>
-        m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() &&
-        (m.sedeId === sedeIdSeleccionada || !m.sedeId)
+    // Buscar miembro estrictamente dentro de la sede seleccionada
+    const miembroEncontrado = integrantesSedeActual.find(
+      (m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase()
     );
 
-    let rolAsignado = "miembro";
-
-    if (miembroEncontrado) {
-      if (miembroEncontrado.pin !== pinInput.trim()) {
-        alert("⚠️ PIN incorrecto.");
-        return;
-      }
-      rolAsignado = miembroEncontrado.rolAcceso || "miembro";
-    } else {
-      // Si no está en el arreglo local, validamos un acceso genérico o permitimos entrar
-      rolAsignado = usuario.trim().toLowerCase() === "admin" ? "admin" : "miembro";
+    if (!miembroEncontrado) {
+      alert(`⚠️ El usuario "${usuario}" no está registrado en ${sedeActual.nombre}. Regístrate primero.`);
+      return;
     }
 
-    const nombreReal = miembroEncontrado ? miembroEncontrado.nombre : usuario;
+    if (miembroEncontrado.pin !== pinInput.trim()) {
+      alert("⚠️ PIN incorrecto para esta sede.");
+      return;
+    }
+
+    const rolAsignado = miembroEncontrado.rolAcceso || "miembro";
+    const nombreReal = miembroEncontrado.nombre;
+
     setUsuario(nombreReal);
     setRolUsuario(rolAsignado);
     setSesionIniciada(true);
@@ -693,14 +647,12 @@ export default function App() {
       return;
     }
 
-    const existe = integrantes.some(
-      (m) =>
-        m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() &&
-        (m.sedeId === sedeIdSeleccionada || !m.sedeId)
+    const existeEnSede = integrantesSedeActual.some(
+      (m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase()
     );
 
-    if (existe) {
-      alert("⚠️ Este usuario ya existe en esta sede. Inicia sesión.");
+    if (existeEnSede) {
+      alert(`⚠️ Este usuario ya existe en ${sedeActual.nombre}. Inicia sesión.`);
       return;
     }
 
@@ -745,7 +697,7 @@ export default function App() {
   const esAdmin = rolUsuario === "admin";
   const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
 
-  const miembroActualObj = integrantes.find(
+  const miembroActualObj = integrantesSedeActual.find(
     (m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase()
   );
 
@@ -1113,7 +1065,7 @@ export default function App() {
     alert("🔄 Rol liberado exitosamente.");
   };
 
-  // --- PANTALLA DE LOGUEO / REGISTRO CON LISTA DESPLEGABLE DE SEDES ---
+  // --- PANTALLA DE LOGUEO / REGISTRO CON SEDES ---
   if (!sesionIniciada) {
     return (
       <View style={[styles.loginContainer, { backgroundColor: t.bg }]}>
@@ -1185,7 +1137,7 @@ export default function App() {
                 color: t.textMain,
               },
             ]}
-            placeholder="Ej. Admin o Alex"
+            placeholder="Ej. Admin o Lina"
             placeholderTextColor={t.textSub}
             value={usuario}
             onChangeText={setUsuario}
@@ -2840,7 +2792,7 @@ export default function App() {
                     { color: t.textMain, marginBottom: 0 },
                   ]}
                 >
-                  👥 Miembros del Grupo y Accesos ({integrantes.length})
+                  👥 Miembros de {sedeActual.nombre} ({integrantesSedeActual.length})
                 </Text>
 
                 <TouchableOpacity
@@ -3055,11 +3007,12 @@ export default function App() {
                                 id: Date.now(),
                                 nombre: nombreNuevoMiembro.trim(),
                                 pin: pinNuevoMiembro.trim() || "1234",
+                                sedeId: sedeIdSeleccionada, // Queda estrictamente amarrado a esta sede
                                 rolAcceso: rolAccesoNuevo,
                                 rolesMusicales: rolesMusicalesNuevo,
                               },
                             ]);
-                            alert("✅ Miembro agregado con éxito.");
+                            alert(`✅ Miembro agregado con éxito a ${sedeActual.nombre}.`);
                           }
                           setModalMiembroVisible(false);
                         } else {
@@ -3087,7 +3040,7 @@ export default function App() {
                 </View>
               )}
 
-              {integrantes.map((int) => {
+              {integrantesSedeActual.map((int) => {
                 const esAdminOEsLiderObjetivo =
                   int.rolAcceso === "admin" || int.rolAcceso === "lider";
                 const puedeModificarEste = esAdmin || !esAdminOEsLiderObjetivo;

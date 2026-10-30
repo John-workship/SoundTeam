@@ -209,21 +209,21 @@ export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [esRegistroNuevo, setEsRegistroNuevo] = useState(false);
 
-  // --- GESTIÓN DE INTEGRANTES CON ADMINS INDEPENDIENTES POR SEDE Y MIEMBROS EN GENERAL ---
+  // --- GESTIÓN DE INTEGRANTES CON SUS ADMINS ESPECÍFICOS POR SEDE ---
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v7");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v8");
         return guardados
           ? JSON.parse(guardados)
           : [
-              // Administradores independientes por cada sede
+              // Administradores independientes para cada una de las 4 sedes
               { id: 101, nombre: "Admin", pin: "1234", sedeId: "general", rolAcceso: "admin", rolesMusicales: ["👑 Director General"] },
               { id: 102, nombre: "AdminNorte", pin: "1234", sedeId: "norte", rolAcceso: "admin", rolesMusicales: ["👑 Director Norte"] },
               { id: 103, nombre: "AdminSur", pin: "1234", sedeId: "sur", rolAcceso: "admin", rolesMusicales: ["👑 Director Sur"] },
               { id: 104, nombre: "AdminOccidente", pin: "1234", sedeId: "occidente", rolAcceso: "admin", rolesMusicales: ["👑 Director Occidente"] },
 
-              // Miembros comunes pertenecientes a la Sede General (visibles para todos)
+              // Miembros comunes pertenecientes a la Sede General
               { id: 1, nombre: "Líder", pin: "1234", sedeId: "general", rolAcceso: "lider", rolesMusicales: ["⭐ Líder de Grupo"] },
               { id: 2, nombre: "Lina", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎤 Coros"] },
               { id: 3, nombre: "Arley", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎹 Piano"] },
@@ -242,7 +242,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v7",
+          "soundteam_integrantes_sedes_v8",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -311,7 +311,7 @@ export default function App() {
   const t = TEMAS[nombreTema];
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
-  // En la pestaña Equipo, se muestran los administradores específicos de esta sede + todos los miembros de la sede general
+  // En la pestaña Equipo se muestran los miembros generales + los admins de la sede actual
   const integrantesSeccionEquipo = integrantes.filter(
     (m) => m.sedeId === "general" || m.sedeId === sedeIdSeleccionada
   );
@@ -616,7 +616,6 @@ export default function App() {
       return;
     }
 
-    // Buscar si el usuario existe (puede ser admin de esta sede específica, o un miembro general)
     const miembroEncontrado = integrantes.find(
       (m) =>
         m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() &&
@@ -624,7 +623,7 @@ export default function App() {
     );
 
     if (!miembroEncontrado) {
-      alert(`⚠️ El usuario "${usuario}" no fue encontrado. Regístrate si eres nuevo.`);
+      alert(`⚠️ El usuario "${usuario}" no fue encontrado en esta sede.`);
       return;
     }
 
@@ -668,7 +667,7 @@ export default function App() {
       id: Date.now(),
       nombre: usuario.trim(),
       pin: pinInput.trim(),
-      sedeId: "general", // Se registra en la sede general por defecto para que todos lo vean
+      sedeId: "general",
       rolAcceso: "miembro",
       rolesMusicales: ["🎤 Miembro"],
     };
@@ -676,7 +675,7 @@ export default function App() {
     setIntegrantes([...integrantes, nuevoMiembro]);
     setRolUsuario("miembro");
     setSesionIniciada(true);
-    alert(`🎉 ¡Registro exitoso en Sede General!`);
+    alert(`🎉 ¡Registro exitoso!`);
   };
 
   const handleLogout = () => {
@@ -1145,7 +1144,7 @@ export default function App() {
                 color: t.textMain,
               },
             ]}
-            placeholder="Ej. Admin o Lina"
+            placeholder="Ej. AdminSur, AdminNorte..."
             placeholderTextColor={t.textSub}
             value={usuario}
             onChangeText={setUsuario}
@@ -1457,18 +1456,6 @@ export default function App() {
                     );
                   })}
                 </View>
-
-                <Text
-                  style={[
-                    styles.welcomeText,
-                    { color: t.textSub, marginBottom: 8, fontSize: 11 },
-                  ]}
-                >
-                  Mensajes privados del equipo:{" "}
-                  <Text style={{ color: t.primary, fontWeight: "bold" }}>
-                    {canalChatActivo.toUpperCase()}
-                  </Text>
-                </Text>
 
                 <View
                   style={{
@@ -3015,7 +3002,7 @@ export default function App() {
                                 id: Date.now(),
                                 nombre: nombreNuevoMiembro.trim(),
                                 pin: pinNuevoMiembro.trim() || "1234",
-                                sedeId: sedeIdSeleccionada === "general" ? "general" : sedeIdSeleccionada,
+                                sedeId: "general",
                                 rolAcceso: rolAccesoNuevo,
                                 rolesMusicales: rolesMusicalesNuevo,
                               },

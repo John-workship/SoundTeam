@@ -1,5 +1,3 @@
-Ultimo
-
 import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
@@ -10,9 +8,8 @@ import {
   ScrollView,
   Platform,
   Linking,
-  Image,
-  Switch,
 } from "react-native";
+import { supabase } from "./supabase";
 
 const TEMAS = {
   azul: {
@@ -24,6 +21,7 @@ const TEMAS = {
     textSub: "#8D99AE",
     banner: "#6D28D9",
     selectedDay: "#F97316",
+    nombre: "🔵 Azul",
   },
   claro: {
     bg: "#F1F5F9",
@@ -34,6 +32,7 @@ const TEMAS = {
     textSub: "#64748B",
     banner: "#7C3AED",
     selectedDay: "#EA580C",
+    nombre: "☀️ Claro",
   },
   oscuro: {
     bg: "#000000",
@@ -44,6 +43,7 @@ const TEMAS = {
     textSub: "#A1A1AA",
     banner: "#4F46E5",
     selectedDay: "#8B5CF6",
+    nombre: "🌙 Oscuro",
   },
   rosado: {
     bg: "#1F121A",
@@ -54,6 +54,7 @@ const TEMAS = {
     textSub: "#F472B6",
     banner: "#DB2777",
     selectedDay: "#DB2777",
+    nombre: "🌸 Rosado",
   },
   morado: {
     bg: "#141124",
@@ -64,597 +65,1021 @@ const TEMAS = {
     textSub: "#C4B5FD",
     banner: "#7C3AED",
     selectedDay: "#7C3AED",
+    nombre: "🟣 Morado",
+  },
+  esmeralda: {
+    bg: "#061A14",
+    cardBg: "#0B2E25",
+    border: "#134E3F",
+    primary: "#10B981",
+    textMain: "#FFFFFF",
+    textSub: "#6EE7B7",
+    banner: "#047857",
+    selectedDay: "#059669",
+    nombre: "🟢 Esmeralda",
+  },
+  sunset: {
+    bg: "#1A0F0A",
+    cardBg: "#2D1911",
+    border: "#522C1E",
+    primary: "#F97316",
+    textMain: "#FFFFFF",
+    textSub: "#FDBA74",
+    banner: "#C2410C",
+    selectedDay: "#EA580C",
+    nombre: "🌅 Sunset",
+  },
+  minimal: {
+    bg: "#121212",
+    cardBg: "#1E1E1E",
+    border: "#333333",
+    primary: "#A3A3A3",
+    textMain: "#E5E5E5",
+    textSub: "#737373",
+    banner: "#525252",
+    selectedDay: "#737373",
+    nombre: "⬛ Minimal",
   },
 };
 
-const GALERIA_PALETAS = [
-  {
-    id: 1,
-    nombre: "Noche Púrpura",
-    url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=300&q=80",
-    colores: ["#0F4C81", "#1D1E4E", "#8C52FF", "#237B9F", "#7FD8BE"],
-  },
-  {
-    id: 2,
-    nombre: "Naturaleza Beige",
-    url: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=300&q=80",
-    colores: ["#E6E2DD", "#C08A5E", "#1A1A1A"],
-  },
-  {
-    id: 3,
-    nombre: "Flor de Loto (Grises)",
-    url: "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?auto=format&fit=crop&w=300&q=80",
-    colores: ["#747D81", "#A3A2A2", "#D3D2D7"],
-  },
-  {
-    id: 4,
-    nombre: "Primavera Cálida",
-    url: "https://images.unsplash.com/photo-1508615070457-7baebd0003ad?auto=format&fit=crop&w=300&q=80",
-    colores: ["#E5A93C", "#D0855A", "#C86E6D"],
-  },
-  {
-    id: 5,
-    nombre: "Océano Místico",
-    url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=300&q=80",
-    colores: ["#4A739C", "#6C7A9C", "#7B5E7B"],
-  },
-  {
-    id: 6,
-    nombre: "Pasión Roja",
-    url: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=300&q=80",
-    colores: ["#800010", "#4D5B44", "#A81329"],
-  },
-  {
-    id: 7,
-    nombre: "Café Calidez",
-    url: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=300&q=80",
-    colores: ["#2B1B17", "#3D2314", "#7A4B2A", "#A3724B"],
-  },
-  {
-    id: 8,
-    nombre: "Girasoles Amarillos",
-    url: "https://images.unsplash.com/photo-1597848212624-a19eb35e2651?auto=format&fit=crop&w=300&q=80",
-    colores: ["#00A896", "#028090", "#F0A500"],
-  },
-  {
-    id: 9,
-    nombre: "Menta Fresca",
-    url: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?auto=format&fit=crop&w=300&q=80",
-    colores: ["#8AA399", "#4E6E58", "#45B69C", "#92DCE5", "#B8E1DD"],
-  },
-  {
-    id: 10,
-    nombre: "Atardecer Otoñal",
-    url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=300&q=80",
-    colores: ["#EE4266", "#FFD166", "#E2D3A1", "#A2AA7B", "#A88220"],
-  },
-  {
-    id: 11,
-    nombre: "Hojas Otoño",
-    url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=300&q=80",
-    colores: ["#2D3A12", "#E28400", "#5B1707", "#E06D3B", "#D93829"],
-  },
+// --- MOTOR DE TRANSPOSICIÓN MUSICAL INTELIGENTE ---
+const NOTAS_SEMI = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
 ];
+const NOTAS_BEMOL = {
+  Db: "C#",
+  Eb: "D#",
+  Gb: "F#",
+  Ab: "G#",
+  Bb: "A#",
+};
+
+const transponerNotaUnica = (acorde, semitonos) => {
+  if (!acorde) return "";
+  let base = acorde.trim();
+  let resto = "";
+
+  let raiz = "";
+  if (base.length >= 2 && (base[1] === "#" || base[1] === "b")) {
+    raiz = base.substring(0, 2);
+    resto = base.substring(2);
+  } else {
+    raiz = base.substring(0, 1);
+    resto = base.substring(1);
+  }
+
+  if (NOTAS_BEMOL[raiz]) raiz = NOTAS_BEMOL[raiz];
+
+  let idx = NOTAS_SEMI.indexOf(raiz);
+  if (idx === -1) return acorde;
+
+  let nuevoIdx = (idx + semitonos) % 12;
+  if (nuevoIdx < 0) nuevoIdx += 12;
+
+  return NOTAS_SEMI[nuevoIdx] + resto;
+};
+
+const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
+  if (semitonos === 0) return acordeCompuesto;
+  if (acordeCompuesto.includes("/")) {
+    const partes = acordeCompuesto.split("/");
+    return (
+      transponerNotaUnica(partes[0], semitonos) +
+      "/" +
+      transponerNotaUnica(partes[1], semitonos)
+    );
+  }
+  return transponerNotaUnica(acordeCompuesto, semitonos);
+};
+
+const transponerTextoLetra = (texto, semitonos) => {
+  if (semitonos === 0 || !texto) return texto;
+
+  let textoTranspuesto = texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
+    return "[" + transponerAcordeCompuesto(p1, semitonos) + "]";
+  });
+
+  const lineas = textoTranspuesto.split("\n");
+  const lineasProcesadas = lineas.map((linea) => {
+    if (linea.trim().startsWith("[") && linea.trim().endsWith("]")) {
+      return linea;
+    }
+
+    const palabras = linea.trim().split(/\s+/);
+    const esLineaDeAcordes =
+      palabras.length > 0 &&
+      palabras.every((p) => {
+        const limpia = p.replace(/[^A-G#bm0-9/]/g, "");
+        return /^[A-G](#|b)?(m|maj|min|dim|aug|sus|[0-9])*(\/[A-G](#|b)?)?$/.test(
+          limpia
+        );
+      });
+
+    if (esLineaDeAcordes) {
+      return palabras
+        .map((p) => transponerAcordeCompuesto(p, semitonos))
+        .join("   ");
+    }
+
+    return linea;
+  });
+
+  return lineasProcesadas.join("\n");
+};
 
 export default function App() {
-  const [usuario, setUsuario] = useState("");
-  const [rolUsuario, setRolUsuario] = useState("Voz Líder");
-  const [sesionIniciada, setSesionIniciada] = useState(false);
+  // --- GESTIÓN DE INTEGRANTES Y ACCESOS UNIFICADA ---
+  const [integrantes, setIntegrantes] = useState(() => {
+    if (Platform.OS === "web") {
+      try {
+        const guardados = localStorage.getItem("soundteam_integrantes_v2");
+        return guardados
+          ? JSON.parse(guardados)
+          : [
+              {
+                id: 1,
+                nombre: "Admin",
+                pin: "1234",
+                rolAcceso: "admin",
+                rolesMusicales: ["👑 Director"],
+              },
+              {
+                id: 2,
+                nombre: "Líder",
+                pin: "1234",
+                rolAcceso: "lider",
+                rolesMusicales: ["⭐ Líder de Grupo"],
+              },
+              {
+                id: 3,
+                nombre: "Lina",
+                pin: "1234",
+                rolAcceso: "miembro",
+                rolesMusicales: ["🎤 Coros"],
+              },
+              {
+                id: 4,
+                nombre: "Arley",
+                pin: "1234",
+                rolAcceso: "miembro",
+                rolesMusicales: ["🎹 Piano"],
+              },
+              {
+                id: 5,
+                nombre: "Alex",
+                pin: "1234",
+                rolAcceso: "miembro",
+                rolesMusicales: ["🥁 Batería"],
+              },
+              {
+                id: 6,
+                nombre: "Heidy",
+                pin: "1234",
+                rolAcceso: "miembro",
+                rolesMusicales: ["🎤 Coros"],
+              },
+              {
+                id: 7,
+                nombre: "Juan",
+                pin: "1234",
+                rolAcceso: "miembro",
+                rolesMusicales: ["🎸 Guitarra"],
+              },
+            ];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      try {
+        localStorage.setItem(
+          "soundteam_integrantes_v2",
+          JSON.stringify(integrantes)
+        );
+      } catch (e) {}
+    }
+  }, [integrantes]);
+
+  // --- PERSISTENCIA DE SESIÓN ---
+  const [usuario, setUsuario] = useState(() => {
+    if (Platform.OS === "web") {
+      try {
+        return localStorage.getItem("soundteam_sesion_usuario") || "";
+      } catch (e) {
+        return "";
+      }
+    }
+    return "";
+  });
+
+  const [pinInput, setPinInput] = useState("");
+
+  const [sesionIniciada, setSesionIniciada] = useState(() => {
+    if (Platform.OS === "web") {
+      try {
+        return localStorage.getItem("soundteam_sesion_activa") === "true";
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  });
+
+  const [rolUsuario, setRolUsuario] = useState(() => {
+    if (Platform.OS === "web") {
+      try {
+        return localStorage.getItem("soundteam_sesion_rol") || "miembro";
+      } catch (e) {
+        return "miembro";
+      }
+    }
+    return "miembro";
+  });
+
   const [pestana, setPestana] = useState("inicio");
 
-  // SEDES Y CÓDIGOS
-  const [sedeActual, setSedeActual] = useState("Iglesia General");
-  const [codigoSedeActual, setCodigoSedeActual] = useState("GEN2026");
-  const [codigoInputSede, setCodigoInputSede] = useState("");
-  const [sedesDisponibles] = useState([
-    { nombre: "Iglesia General", codigo: "GEN2026" },
-    { nombre: "Sede Norte", codigo: "NORTE2026" },
-    { nombre: "Sede Sur", codigo: "SUR2026" },
-  ]);
+  const [nombreTema, setNombreTema] = useState(() => {
+    if (Platform.OS === "web") {
+      try {
+        return localStorage.getItem("soundteam_tema_app") || "azul";
+      } catch (e) {
+        return "azul";
+      }
+    }
+    return "azul";
+  });
 
-  const [modalSedeVisible, setModalSedeVisible] = useState(false);
-  const [nombreTema, setNombreTema] = useState<
-    "azul" | "claro" | "oscuro" | "rosado" | "morado"
-  >("azul");
+  const [mostrarMenuTemas, setMostrarMenuTemas] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      try {
+        localStorage.setItem("soundteam_tema_app", nombreTema);
+      } catch (e) {}
+    }
+  }, [nombreTema]);
 
   const t = TEMAS[nombreTema];
 
-  const [mesSeleccionado, setMesSeleccionado] = useState("Octubre");
-  const [diaSeleccionado, setDiaSeleccionado] = useState(27);
+  const nombresMeses = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
 
-  const [servicios, setServicios] = useState([
-    {
-      fecha: "2026-10-27",
-      titulo: "Culto Dominical",
-      observaciones: "Todo listo",
-      paletaSeleccionadaId: 3,
-      setlist: [
-        { id: 1, titulo: "digno", tono: "E" },
-        { id: 2, titulo: "A el alto y sublime", tono: "G" },
-        { id: 3, titulo: "creo en ti", tono: "C" },
-      ],
-      voces: { principal: "Sin asignar", coros: "Admin" },
-      instrumentos: {
-        piano: "Sin asignar",
-        guitarra: "Sin asignar",
-        bajo: "Sin asignar",
-        bateria: "Sin asignar",
-      },
-    },
-  ]);
+  const fechaActualObj = new Date();
+  const listaMesesDinamicos = [];
+
+  for (let i = 0; i < 4; i++) {
+    const dTarget = new Date(
+      fechaActualObj.getFullYear(),
+      fechaActualObj.getMonth() + i,
+      1
+    );
+    listaMesesDinamicos.push({
+      nombre: nombresMeses[dTarget.getMonth()],
+      mesIndex: dTarget.getMonth(),
+      year: dTarget.getFullYear(),
+      key: `${dTarget.getFullYear()}-${dTarget.getMonth()}`,
+    });
+  }
+
+  const [mesSeleccionadoObj, setMesSeleccionadoObj] = useState(
+    listaMesesDinamicos[0]
+  );
+  const [diaSeleccionado, setDiaSeleccionado] = useState(
+    fechaActualObj.getDate()
+  );
+
+  const esDomingoSeleccionado =
+    new Date(
+      mesSeleccionadoObj.year,
+      mesSeleccionadoObj.mesIndex,
+      diaSeleccionado
+    ).getDay() === 0;
+
+  const [paletasCulto, setPaletasCulto] = useState(() => {
+    if (Platform.OS === "web") {
+      try {
+        const guardados = localStorage.getItem("soundteam_paletas_culto");
+        return guardados
+          ? JSON.parse(guardados)
+          : [
+              {
+                id: 1,
+                nombre: "Atardecer Violeta",
+                colores: [
+                  "#064680",
+                  "#31245A",
+                  "#AC6DBF",
+                  "#2A7CA3",
+                  "#588BC2",
+                ],
+              },
+              {
+                id: 2,
+                nombre: "Tonos Arena",
+                colores: ["#C29B78", "#A17651", "#5C4033", "#222222"],
+              },
+              {
+                id: 3,
+                nombre: "Blanco Sacro",
+                colores: ["#748185", "#93afb3", "#456467"],
+              },
+              {
+                id: 4,
+                nombre: "Rosa Alba",
+                colores: ["#E29578", "#FFDDD2", "#83C5BE", "#006D77"],
+              },
+            ];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      try {
+        localStorage.setItem(
+          "soundteam_paletas_culto",
+          JSON.stringify(paletasCulto)
+        );
+      } catch (e) {}
+    }
+  }, [paletasCulto]);
+
+  // --- SERVICIOS CON SUPABASE Y RESPALDO LOCAL ---
+  const [servicios, setServicios] = useState(() => {
+    if (Platform.OS === "web") {
+      try {
+        const guardados = localStorage.getItem("soundteam_servicios_v3");
+        return guardados ? JSON.parse(guardados) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const cargarServiciosSupabase = async () => {
+    const { data, error } = await supabase.from("servicios").select("*");
+    if (data && !error) {
+      const formateados = data.map((s) => ({
+        id: s.id,
+        fecha: s.fecha,
+        titulo: s.titulo,
+        observaciones: s.observaciones || "Sin observaciones",
+        setlist: s.setlist || [],
+        paletaSeleccionada: s.paleta_seleccionada || null,
+        voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
+        instrumentos: s.instrumentos || {
+          piano: "Sin asignar",
+          guitarra: "Sin asignar",
+          bajo: "Sin asignar",
+          bateria: "Sin asignar",
+        },
+      }));
+      setServicios(formateados);
+    }
+  };
+
+  useEffect(() => {
+    cargarServiciosSupabase();
+
+    const canalSub = supabase
+      .channel("servicios-cambios")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "servicios" },
+        () => {
+          cargarServiciosSupabase();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canalSub);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      try {
+        localStorage.setItem(
+          "soundteam_servicios_v3",
+          JSON.stringify(servicios)
+        );
+      } catch (e) {}
+    }
+  }, [servicios]);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
+  const [idServicioEditando, setIdServicioEditando] = useState(null);
+  const [idServicioPostulando, setIdServicioPostulando] = useState(null);
 
   const [nombreEvento, setNombreEvento] = useState("");
   const [observaciones, setObservaciones] = useState("");
-  const [setlistActivo, setSetlistActivo] = useState<any[]>([]);
-  const [paletaActivaId, setPaletaActivaId] = useState<number | null>(3);
-  const [subirImagenToggle, setSubirImagenToggle] = useState(false);
-  const [indiceSeleccionadoParaMover, setIndiceSeleccionadoParaMover] =
-    useState<number | null>(null);
+  const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] =
+    useState(null);
 
-  const [servicioEditandoFecha, setServicioEditandoFecha] = useState<any>(null);
-  const [nuevaFechaInput, setNuevaFechaInput] = useState("");
+  const [setlistActivo, setSetlistActivo] = useState([]);
+  const [indiceParaMover, setIndiceParaMover] = useState(null);
 
-  const bibliotecaCanciones = [
-    { id: 1, titulo: "creo en ti", tono: "C" },
-    { id: 2, titulo: "A el alto y sublime", tono: "G" },
-    { id: 3, titulo: "digno", tono: "E" },
-    { id: 4, titulo: "cuan grande", tono: "G" },
-  ];
+  const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
+  const [idMiembroEditando, setIdMiembroEditando] = useState(null);
+  const [nombreNuevoMiembro, setNombreNuevoMiembro] = useState("");
+  const [pinNuevoMiembro, setPinNuevoMiembro] = useState("1234");
+  const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
+  const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
-  const [integrantes, setIntegrantes] = useState([
-    { id: 1, nombre: "Lina", roles: ["🎤 Voz Principal", "👥 Coros"] },
-    {
-      id: 2,
-      nombre: "Arley",
-      roles: ["🎤 Voz Principal", "👥 Coros", "🎹 Piano"],
-    },
-    { id: 3, nombre: "Heidy", roles: ["🎤 Voz Principal", "👥 Coros"] },
-    { id: 4, nombre: "Juan", roles: ["🎹 Piano"] },
-    {
-      id: 5,
-      nombre: "Alex (Tú)",
-      roles: ["🎤 Voz Principal", "👥 Coros", "🥁 Batería"],
-    },
-    {
-      id: 6,
-      nombre: "Alexa",
-      roles: ["🎤 Voz Principal", "👥 Coros", "🥁 Batería"],
-    },
-  ]);
+  // --- REPERTORIO AVANZADO ---
+  const [repertorio, setRepertorio] = useState(() => {
+    if (Platform.OS === "web") {
+      try {
+        const guardados = localStorage.getItem("soundteam_repertorio_pro");
+        return guardados
+          ? JSON.parse(guardados)
+          : [
+              {
+                id: 1,
+                titulo: "A dónde iré",
+                artista: "Verbo y Vida",
+                tono: "F",
+                etiquetas: ["Adoración", "Entrega"],
+                letra:
+                  "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada\n[C/E] Y que sin tu [Bb/D] amor no vi[F/C]viré [A/C#]\n[Dm7] Y que sin tu [Dm9/C] amor no vi[G/B]viré\n[Bb/F] Estoy confu[F/E]ndida a tal ma[Gm/D]nera [C]\n[Bb] Quisiera ahora mismo te pudiera ver",
+              },
+              {
+                id: 2,
+                titulo: "Creo en ti",
+                artista: "Espíritu y Verdad",
+                tono: "C",
+                etiquetas: ["Alabanza"],
+                letra:
+                  "[VERSO]\n[C] Creo en ti, [G] Señor\n[Am] Con todo el cora[F]zón\n\n[CORO]\n[C] Eres digno de adora[G]ción\n[Am] Mi salvador y rey [F] eterno",
+              },
+              {
+                id: 3,
+                titulo: "Digno",
+                artista: "Elevation Worship",
+                tono: "E",
+                etiquetas: ["Adoración"],
+                letra:
+                  "[VERSO]\n[E] Digno eres Señor\n[B] De recibir la gloria\n[A] La honra y el poder",
+              },
+            ];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
 
-  const [integranteEditando, setIntegranteEditando] = useState<any>(null);
-  const [rolesSeleccionadosEdit, setRolesSeleccionadosEdit] = useState<
-    string[]
-  >([]);
-
-  const rolesDisponiblesGeneral = [
-    "🎤 Voz Principal",
-    "👥 Coros",
-    "🎹 Piano",
-    "🎸 Guitarra",
-    "🎸 Bajo",
-    "🥁 Batería",
-  ];
-
-  // SCRIPT AUTOMÁTICO PARA ELIMINAR EL BOTÓN DE OPEN SANDBOX EN WEB
   useEffect(() => {
     if (Platform.OS === "web") {
-      const limpiarBotonMolesto = () => {
-        const elementos = document.querySelectorAll("button, div");
-        elementos.forEach((el) => {
-          if (
-            el.textContent?.includes("Open Sandbox") ||
-            el.getAttribute("title")?.includes("CodeSandbox") ||
-            (el.className &&
-              typeof el.className === "string" &&
-              el.className.includes("Sandbox"))
-          ) {
-            el.remove();
-          }
-        });
-      };
-      limpiarBotonMolesto();
-      const intervalo = setInterval(limpiarBotonMolesto, 500);
-      return () => clearInterval(intervalo);
+      try {
+        localStorage.setItem(
+          "soundteam_repertorio_pro",
+          JSON.stringify(repertorio)
+        );
+      } catch (e) {}
     }
-  }, []);
+  }, [repertorio]);
 
-  const abrirModalRoles = (int: any) => {
-    setIntegranteEditando(int);
-    setRolesSeleccionadosEdit([...int.roles]);
-  };
+  const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] =
+    useState(null);
+  const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
 
-  const guardarRolesIntegrante = () => {
-    if (integranteEditando) {
-      setIntegrantes(
-        integrantes.map((item) =>
-          item.id === integranteEditando.id
-            ? { ...item, roles: rolesSeleccionadosEdit }
-            : item
-        )
-      );
-      setIntegranteEditando(null);
-    }
-  };
-
-  const [repertorio, setRepertorio] = useState([
-    {
-      id: 1,
-      titulo: "creo en ti",
-      artista: "Sin artista",
-      tono: "C",
-      letra: "[C] Creo en ti, [G] Señor...",
-    },
-    {
-      id: 2,
-      titulo: "A el alto y sublime",
-      artista: "Sin artista",
-      tono: "G",
-      letra: "[G] A el alto y sublime...",
-    },
-    {
-      id: 3,
-      titulo: "digno",
-      artista: "espiritu y verdad",
-      tono: "E",
-      letra: "[E] Digno eres tú...",
-    },
-    {
-      id: 4,
-      titulo: "cuan grande",
-      artista: "grande",
-      tono: "G",
-      letra: "[G] Señor mi Dios...",
-    },
-  ]);
-
+  const [modoEdicionCancion, setModoEdicionCancion] = useState(false);
   const [nuevoTituloCancion, setNuevoTituloCancion] = useState("");
   const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
   const [nuevoTonoCancion, setNuevoTonoCancion] = useState("");
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
+  const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  const [cancionEditando, setCancionEditando] = useState<any>(null);
-  const [editTitulo, setEditTitulo] = useState("");
-  const [editArtista, setEditArtista] = useState("");
-  const [editTono, setEditTono] = useState("");
-  const [editLetra, setEditLetra] = useState("");
+  // --- LÓGICA CHATS POR CANAL ---
+  const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
+  const [mensajesChat, setMensajesChat] = useState([]);
+  const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
+  const [idMensajeEditando, setIdMensajeEditando] = useState(null);
+  const [textoOriginalEditando, setTextoOriginalEditando] = useState("");
+  const [mostrarSelectorEmojis, setMostrarSelectorEmojis] = useState(false);
 
-  const [tipoAcordeAtril, setTipoAcordeAtril] = useState<
-    "Acordes" | "Nashville"
-  >("Acordes");
-  const [transposicion, setTransposicion] = useState(0);
+  const cargarMensajesSupabase = async () => {
+    const { data, error } = await supabase
+      .from("mensajes")
+      .select("*")
+      .eq("canal", canalChatActivo)
+      .order("created_at", { ascending: true });
 
-  const validarYCambiarSedePorCodigo = () => {
-    const sedeEncontrada = sedesDisponibles.find(
-      (s) =>
-        s.codigo.trim().toUpperCase() === codigoInputSede.trim().toUpperCase()
-    );
-
-    if (sedeEncontrada) {
-      setSedeActual(sedeEncontrada.nombre);
-      setCodigoSedeActual(sedeEncontrada.codigo);
-      setCodigoInputSede("");
-      setModalSedeVisible(false);
-      alert(`✅ Te has conectado exitosamente a: ${sedeEncontrada.nombre}`);
+    if (data && !error) {
+      setMensajesChat(data);
     } else {
-      alert(
-        "❌ Código de sede inválido. Verifica el código con tu administrador."
-      );
+      setMensajesChat([]);
     }
   };
 
-  const eliminarServicioPorFecha = (fecha: string) => {
-    setServicios(servicios.filter((s) => s.fecha !== fecha));
-  };
+  useEffect(() => {
+    cargarMensajesSupabase();
 
-  const guardarNuevaFechaServicio = () => {
-    if (servicioEditandoFecha && nuevaFechaInput.trim() !== "") {
-      setServicios(
-        servicios.map((s) =>
-          s.fecha === servicioEditandoFecha.fecha
-            ? { ...s, fecha: nuevaFechaInput.trim() }
-            : s
-        )
-      );
-      setServicioEditandoFecha(null);
-      setNuevaFechaInput("");
-    }
-  };
-
-  const guardarNuevaCancion = () => {
-    if (nuevoTituloCancion.trim() !== "") {
-      setRepertorio([
-        ...repertorio,
+    const canalSub = supabase
+      .channel(`chat-realtime-${canalChatActivo}`)
+      .on(
+        "postgres_changes",
         {
-          id: Date.now(),
-          titulo: nuevoTituloCancion,
-          artista: nuevoArtistaCancion || "Sin artista",
-          tono: nuevoTonoCancion || "C",
-          letra: nuevaLetraCancion,
+          event: "*",
+          schema: "public",
+          table: "mensajes",
+          filter: `canal=eq.${canalChatActivo}`,
         },
-      ]);
-      setNuevoTituloCancion("");
-      setNuevoArtistaCancion("");
-      setNuevoTonoCancion("");
-      setNuevaLetraCancion("");
-    }
-  };
+        () => {
+          cargarMensajesSupabase();
+        }
+      )
+      .subscribe();
 
-  const seleccionarCancionParaEditar = (cancion: any) => {
-    setCancionEditando(cancion);
-    setEditTitulo(cancion.titulo);
-    setEditArtista(cancion.artista);
-    setEditTono(cancion.tono);
-    setEditLetra(cancion.letra || "");
-  };
+    return () => {
+      supabase.removeChannel(canalSub);
+    };
+  }, [canalChatActivo]);
 
-  const guardarCambiosCancion = () => {
-    if (cancionEditando) {
-      setRepertorio(
-        repertorio.map((c) =>
-          c.id === cancionEditando.id
-            ? {
-                ...c,
-                titulo: editTitulo,
-                artista: editArtista,
-                tono: editTono,
-                letra: editLetra,
-              }
-            : c
-        )
-      );
-      setCancionEditando(null);
-    }
-  };
-
-  const eliminarCancion = (id: number) => {
-    setRepertorio(repertorio.filter((c) => c.id !== id));
-    if (cancionEditando && cancionEditando.id === id) {
-      setCancionEditando(null);
-    }
-  };
-
-  const manejarPresionCancionSetlist = (index: number) => {
-    if (indiceSeleccionadoParaMover === null) {
-      setIndiceSeleccionadoParaMover(index);
-    } else {
-      const nuevo = [...setlistActivo];
-      const temp = nuevo[indiceSeleccionadoParaMover];
-      nuevo[indiceSeleccionadoParaMover] = nuevo[index];
-      nuevo[index] = temp;
-      setSetlistActivo(nuevo);
-      setIndiceSeleccionadoParaMover(null);
-    }
-  };
-
-  const quitarCancionSetlist = (index: number) => {
-    const nuevo = [...setlistActivo];
-    nuevo.splice(index, 1);
-    setSetlistActivo(nuevo);
-    setIndiceSeleccionadoParaMover(null);
-  };
-
-  const moverCancionSetlist = (
-    index: number,
-    direccion: "arriba" | "abajo"
-  ) => {
-    const nuevo = [...setlistActivo];
-    const destino = direccion === "arriba" ? index - 1 : index + 1;
-    if (destino >= 0 && destino < nuevo.length) {
-      const temp = nuevo[index];
-      nuevo[index] = nuevo[destino];
-      nuevo[destino] = temp;
-      setSetlistActivo(nuevo);
-    }
-  };
-
-  const cambiarTonoSetlist = (index: number, nuevoTono: string) => {
-    const nuevo = [...setlistActivo];
-    nuevo[index].tono = nuevoTono;
-    setSetlistActivo(nuevo);
-  };
-
-  const abrirEditorServicio = (serv: any) => {
-    setNombreEvento(serv ? serv.titulo : "Culto Especial");
-    setObservaciones(serv ? serv.observaciones : "");
-    setSetlistActivo(serv ? [...serv.setlist] : []);
-    setPaletaActivaId(serv ? serv.paletaSeleccionadaId : 3);
-    setIndiceSeleccionadoParaMover(null);
-    setModalProgramarVisible(true);
-  };
-
-  const guardarServicioAvanzado = () => {
-    if (nombreEvento.trim() !== "") {
-      const mesNum =
-        mesSeleccionado === "Octubre"
-          ? "10"
-          : mesSeleccionado === "Noviembre"
-          ? "11"
-          : "12";
-      const diaStr =
-        diaSeleccionado < 10 ? "0" + diaSeleccionado : String(diaSeleccionado);
-      const fechaClave = `2026-${mesNum}-${diaStr}`;
-
-      const servicioExistente = servicios.find((s) => s.fecha === fechaClave);
-      const serviciosFiltrados = servicios.filter(
-        (s) => s.fecha !== fechaClave
-      );
-
-      setServicios([
-        ...serviciosFiltrados,
-        {
-          fecha: fechaClave,
-          titulo: nombreEvento,
-          observaciones: observaciones || "Sin observaciones",
-          paletaSeleccionadaId: paletaActivaId,
-          setlist: setlistActivo.length > 0 ? setlistActivo : [],
-          voces: servicioExistente
-            ? servicioExistente.voces
-            : { principal: "Sin asignar", coros: "Sin asignar" },
-          instrumentos: servicioExistente
-            ? servicioExistente.instrumentos
-            : {
-                piano: "Sin asignar",
-                guitarra: "Sin asignar",
-                bajo: "Sin asignar",
-                bateria: "Sin asignar",
-              },
-        },
-      ]);
-
-      setModalProgramarVisible(false);
-    }
-  };
-
-  const postularseARol = (
-    categoria: "voces" | "instrumentos",
-    subcampo: string
-  ) => {
-    const mesNum =
-      mesSeleccionado === "Octubre"
-        ? "10"
-        : mesSeleccionado === "Noviembre"
-        ? "11"
-        : "12";
-    const diaStr =
-      diaSeleccionado < 10 ? "0" + diaSeleccionado : String(diaSeleccionado);
-    const fechaClave = `2026-${mesNum}-${diaStr}`;
-
-    const servicioActual = servicios.find((s) => s.fecha === fechaClave);
-    if (!servicioActual) return;
-
-    const yaEstaEnVoces = Object.values(servicioActual.voces).includes(usuario);
-    const yaEstaEnInstrumentos = Object.values(
-      servicioActual.instrumentos
-    ).includes(usuario);
-
-    if (yaEstaEnVoces || yaEstaEnInstrumentos) {
-      alert(
-        `⚠️ Ya te encuentras postulado o asignado en este servicio. Solo puedes ocupar un rol por evento.`
-      );
-      setModalPostularVisible(false);
+  const handleLogin = async () => {
+    if (usuario.trim() === "") {
+      alert("⚠️ Ingresa un nombre de usuario.");
       return;
     }
 
-    setServicios(
-      servicios.map((s) => {
-        if (s.fecha === fechaClave) {
-          if (categoria === "voces") {
-            return { ...s, voces: { ...s.voces, [subcampo]: usuario } };
-          } else {
-            return {
-              ...s,
-              instrumentos: { ...s.instrumentos, [subcampo]: usuario },
-            };
-          }
-        }
-        return s;
-      })
+    let rolAsignado = "miembro";
+    const miembroEncontrado = integrantes.find(
+      (m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase()
     );
-    setModalPostularVisible(false);
-    alert(`¡Te has postulado como ${subcampo} exitosamente!`);
-  };
 
-  const quitarRolAsignado = (
-    categoria: "voces" | "instrumentos",
-    subcampo: string
-  ) => {
-    const mesNum =
-      mesSeleccionado === "Octubre"
-        ? "10"
-        : mesSeleccionado === "Noviembre"
-        ? "11"
-        : "12";
-    const diaStr =
-      diaSeleccionado < 10 ? "0" + diaSeleccionado : String(diaSeleccionado);
-    const fechaClave = `2026-${mesNum}-${diaStr}`;
-
-    setServicios(
-      servicios.map((s) => {
-        if (s.fecha === fechaClave) {
-          if (categoria === "voces") {
-            return { ...s, voces: { ...s.voces, [subcampo]: "Sin asignar" } };
-          } else {
-            return {
-              ...s,
-              instrumentos: { ...s.instrumentos, [subcampo]: "Sin asignar" },
-            };
-          }
-        }
-        return s;
-      })
-    );
-  };
-
-  const enviarSetlistPorWhatsApp = () => {
-    if (!servicioDelDia) return;
-
-    let mensaje = `🎵 *SERVICIO: ${servicioDelDia.titulo}* 🎵\n`;
-    mensaje += `📅 Fecha: ${diaSeleccionado} de ${mesSeleccionado} 2026\n`;
-    mensaje += `🏛️ Sede: ${sedeActual} (${codigoSedeActual})\n\n`;
-
-    mensaje += `📜 *SETLIST:*\n`;
-    if (servicioDelDia.setlist && servicioDelDia.setlist.length > 0) {
-      servicioDelDia.setlist.forEach((c: any, index: number) => {
-        mensaje += `${index + 1}. ${c.titulo} (${c.tono})\n`;
-      });
-    } else {
-      mensaje += `Sin canciones asignadas\n`;
-    }
-
-    mensaje += `\n🎤 *VOCES:*\n`;
-    mensaje += `• Principal: ${servicioDelDia.voces.principal}\n`;
-    mensaje += `• Coros: ${servicioDelDia.voces.coros}\n`;
-
-    mensaje += `\n🎸 *INSTRUMENTOS:*\n`;
-    mensaje += `• Piano: ${servicioDelDia.instrumentos.piano}\n`;
-    mensaje += `• Guitarra: ${servicioDelDia.instrumentos.guitarra}\n`;
-    mensaje += `• Bajo: ${servicioDelDia.instrumentos.bajo}\n`;
-    mensaje += `• Batería: ${servicioDelDia.instrumentos.bateria}\n`;
-
-    if (servicioDelDia.observaciones) {
-      mensaje += `\n📝 *OBSERVACIONES:*\n${servicioDelDia.observaciones}`;
-    }
-
-    const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
-
-    Linking.openURL(url).catch(() => {
-      alert("No se pudo abrir WhatsApp. Asegúrate de tenerlo instalado.");
-    });
-  };
-
-  const handleLogin = () => {
-    if (usuario.trim() !== "") {
-      if (usuario.toLowerCase() === "admin") {
-        setRolUsuario("Administrador");
-      } else {
-        setRolUsuario("Voz Líder");
+    if (miembroEncontrado) {
+      if (miembroEncontrado.pin !== pinInput.trim()) {
+        alert("⚠️ PIN incorrecto.");
+        return;
       }
-      setSesionIniciada(true);
+      rolAsignado = miembroEncontrado.rolAcceso || "miembro";
+    } else {
+      const { data, error } = await supabase.from("usuarios").select("*");
+      if (data && !error) {
+        const usuarioSupabase = data.find(
+          (u) => u.nombre.trim().toLowerCase() === usuario.trim().toLowerCase()
+        );
+        if (usuarioSupabase) {
+          if (usuarioSupabase.pin !== pinInput.trim()) {
+            alert("⚠️ PIN incorrecto.");
+            return;
+          }
+          rolAsignado = usuarioSupabase.rol;
+        } else {
+          alert("⚠️ Usuario no registrado en el sistema.");
+          return;
+        }
+      } else {
+        alert("⚠️ Usuario no registrado en el sistema.");
+        return;
+      }
+    }
+
+    const nombreReal = miembroEncontrado ? miembroEncontrado.nombre : usuario;
+    setUsuario(nombreReal);
+    setRolUsuario(rolAsignado);
+    setSesionIniciada(true);
+
+    if (Platform.OS === "web") {
+      try {
+        localStorage.setItem("soundteam_sesion_activa", "true");
+        localStorage.setItem("soundteam_sesion_usuario", nombreReal);
+        localStorage.setItem("soundteam_sesion_rol", rolAsignado);
+      } catch (e) {}
+    }
+
+    if (rolAsignado === "miembro" && pestana === "equipo") {
+      setPestana("inicio");
     }
   };
 
   const handleLogout = () => {
     setSesionIniciada(false);
     setUsuario("");
+    setPinInput("");
+    setRolUsuario("miembro");
+    setPestana("inicio");
+    setCancionSeleccionadaDetalle(null);
+
+    if (Platform.OS === "web") {
+      try {
+        localStorage.removeItem("soundteam_sesion_activa");
+        localStorage.removeItem("soundteam_sesion_usuario");
+        localStorage.removeItem("soundteam_sesion_rol");
+      } catch (e) {}
+    }
   };
 
-  const mesNumActual =
-    mesSeleccionado === "Octubre"
-      ? "10"
-      : mesSeleccionado === "Noviembre"
-      ? "11"
-      : "12";
-  const fechaActualClave = `2026-${mesNumActual}-${
+  const recargarDatosApp = async () => {
+    await cargarServiciosSupabase();
+    await cargarMensajesSupabase();
+    alert("🔄 ¡Datos actualizados desde la nube correctamente!");
+  };
+
+  const esAdmin = rolUsuario === "admin";
+  const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
+
+  const miembroActualObj = integrantes.find(
+    (m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase()
+  );
+
+  const tocaInstrumento =
+    miembroActualObj &&
+    miembroActualObj.rolesMusicales &&
+    miembroActualObj.rolesMusicales.some((rol) => {
+      const rLower = rol.toLowerCase();
+      return (
+        rLower.includes("piano") ||
+        rLower.includes("guitarra") ||
+        rLower.includes("bajo") ||
+        rLower.includes("batería") ||
+        rLower.includes("bateria")
+      );
+    });
+
+  const puedeControlarRepertorio = esAdminOLider || tocaInstrumento;
+
+  const enviarOActualizarMensajeChat = async () => {
+    if (nuevoMensajeTexto.trim() !== "") {
+      const horaActual = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      if (idMensajeEditando !== null) {
+        const textoModificado = nuevoMensajeTexto.trim();
+        const idNumerico = Number(idMensajeEditando);
+
+        const { error } = await supabase
+          .from("mensajes")
+          .update({ texto: textoModificado, editado: true })
+          .eq("id", idNumerico);
+
+        if (error) {
+          alert(
+            `⚠️ No se pudo actualizar el mensaje en la nube: ${error.message}`
+          );
+          return;
+        }
+
+        const mensajeAuditoria = {
+          autor: "🛡️ [SISTEMA ADMIN]",
+          texto: `${usuario} editó un mensaje.\n• Antes: "${textoOriginalEditando}"\n• Ahora: "${textoModificado}"`,
+          hora: horaActual,
+          canal: canalChatActivo,
+          editado: false,
+        };
+
+        await supabase.from("mensajes").insert([mensajeAuditoria]);
+
+        setIdMensajeEditando(null);
+        setTextoOriginalEditando("");
+        setNuevoMensajeTexto("");
+        await cargarMensajesSupabase();
+      } else {
+        const mensaje = {
+          autor: usuario,
+          texto: nuevoMensajeTexto.trim(),
+          hora: horaActual,
+          canal: canalChatActivo,
+          editado: false,
+        };
+
+        setNuevoMensajeTexto("");
+        const { error } = await supabase.from("mensajes").insert([mensaje]);
+        if (error) {
+          alert(`⚠️ No se pudo enviar el mensaje: ${error.message}`);
+        }
+        await cargarMensajesSupabase();
+      }
+    }
+  };
+
+  const limpiarHistorialChat = async () => {
+    if (!esAdminOLider) {
+      alert(
+        "⚠️ Solo Administradores y Líderes pueden limpiar el historial del chat."
+      );
+      return;
+    }
+
+    if (
+      confirm(
+        `¿Estás seguro de que deseas eliminar el historial del chat de ${canalChatActivo.toUpperCase()}?`
+      )
+    ) {
+      const { error } = await supabase
+        .from("mensajes")
+        .delete()
+        .eq("canal", canalChatActivo);
+
+      if (!error) {
+        setMensajesChat([]);
+        alert("🧹 Historial de este canal eliminado con éxito.");
+      } else {
+        alert("⚠️ No se pudo limpiar el historial.");
+      }
+    }
+  };
+
+  const guardarOActualizarCancion = () => {
+    if (!puedeControlarRepertorio) {
+      alert(
+        "⚠️ No tienes permisos de instrumentista o líder para modificar el repertorio."
+      );
+      return;
+    }
+
+    if (nuevoTituloCancion.trim() !== "") {
+      if (cancionSeleccionadaDetalle !== null && modoEdicionCancion) {
+        const cancionActualizada = {
+          ...cancionSeleccionadaDetalle,
+          titulo: nuevoTituloCancion,
+          artista: nuevoArtistaCancion || "Sin artista",
+          tono: nuevoTonoCancion || "C",
+          etiquetas: etiquetasActuales,
+          letra: nuevaLetraCancion || "",
+        };
+        setRepertorio(
+          repertorio.map((c) =>
+            c.id === cancionActualizada.id ? cancionActualizada : c
+          )
+        );
+        setCancionSeleccionadaDetalle(cancionActualizada);
+        setModoEdicionCancion(false);
+        setSemitonosTransposicion(0);
+        alert("🎵 Canción actualizada exitosamente.");
+      } else {
+        const nuevaCancion = {
+          id: Date.now(),
+          titulo: nuevoTituloCancion,
+          artista: nuevoArtistaCancion || "Sin artista",
+          tono: nuevoTonoCancion || "C",
+          etiquetas:
+            etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
+          letra: nuevaLetraCancion || "",
+        };
+        setRepertorio([...repertorio, nuevaCancion]);
+        setModoEdicionCancion(false);
+        alert("🎵 Canción guardada exitosamente.");
+      }
+      setNuevoTituloCancion("");
+      setNuevoArtistaCancion("");
+      setNuevoTonoCancion("");
+      setNuevaLetraCancion("");
+      setEtiquetasActuales([]);
+    } else {
+      alert("⚠️ Ingresa al menos el título de la canción.");
+    }
+  };
+
+  const eliminarCancionRepertorio = (id) => {
+    if (!puedeControlarRepertorio) {
+      alert("⚠️ No tienes permisos para eliminar canciones.");
+      return;
+    }
+    if (confirm("¿Estás seguro de eliminar esta canción del repertorio?")) {
+      setRepertorio(repertorio.filter((c) => c.id !== id));
+      setCancionSeleccionadaDetalle(null);
+    }
+  };
+
+  const mesNumStr = String(mesSeleccionadoObj.mesIndex + 1).padStart(2, "0");
+  const fechaActualClave = `${mesSeleccionadoObj.year}-${mesNumStr}-${
     diaSeleccionado < 10 ? "0" + diaSeleccionado : diaSeleccionado
   }`;
-  const servicioDelDia = servicios.find((s) => s.fecha === fechaActualClave);
-  const paletaServicio = GALERIA_PALETAS.find(
-    (p) => p.id === servicioDelDia?.paletaSeleccionadaId
-  );
+
+  const serviciosDelDia = servicios.filter((s) => s.fecha === fechaActualClave);
+
+  const usuarioEstaPostuladoEnFecha = (fechaStr) => {
+    const servs = servicios.filter((s) => s.fecha === fechaStr);
+    for (const serv of servs) {
+      const vp = serv.voces?.principal;
+      const coros = serv.voces?.coros || "";
+      const piano = serv.instrumentos?.piano;
+      const guitarra = serv.instrumentos?.guitarra;
+      const bajo = serv.instrumentos?.bajo;
+      const bateria = serv.instrumentos?.bateria;
+
+      if (
+        vp === usuario ||
+        coros.includes(usuario) ||
+        piano === usuario ||
+        guitarra === usuario ||
+        bajo === usuario ||
+        bateria === usuario
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const obtenerDiasDelMesDinamico = (mIndex, year) => {
+    let totalDias = new Date(year, mIndex + 1, 0).getDate();
+    let lista = [];
+    let primerDiaIndex = new Date(year, mIndex, 1).getDay();
+
+    for (let i = 0; i < primerDiaIndex; i++) {
+      lista.push({ vacio: true, id: `vacio-${i}` });
+    }
+
+    for (let d = 1; d <= totalDias; d++) {
+      const dStr = d < 10 ? "0" + d : String(d);
+      const mStr = String(mIndex + 1).padStart(2, "0");
+      const claveFecha = `${year}-${mStr}-${dStr}`;
+      const postulado = usuarioEstaPostuladoEnFecha(claveFecha);
+
+      lista.push({
+        vacio: false,
+        diaNum: d,
+        postulado: postulado,
+      });
+    }
+    return lista;
+  };
+
+  const enviarPorWhatsApp = (servicio) => {
+    let texto = `🎵 *Setlist - ${servicio.titulo}* (${diaSeleccionado} de ${mesSeleccionadoObj.nombre} ${mesSeleccionadoObj.year})\n\n`;
+    if (servicio.setlist && servicio.setlist.length > 0) {
+      servicio.setlist.forEach((s, i) => {
+        texto += `${i + 1}. ${s.titulo} (Tono: ${s.tono})\n`;
+      });
+    } else {
+      texto += `Sin canciones asignadas.\n`;
+    }
+
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+      texto
+    )}`;
+    Linking.openURL(url).catch(() => {
+      alert("No se pudo abrir WhatsApp.");
+    });
+  };
+
+  const confirmarPostulacionRol = async (rol) => {
+    if (idServicioPostulando === null) return;
+    const servicioObjetivo = servicios.find(
+      (s) => s.id === idServicioPostulando
+    );
+    if (!servicioObjetivo) return;
+
+    let nuevaVozP = servicioObjetivo.voces?.principal || "Sin asignar";
+    let nuevosCoros = servicioObjetivo.voces?.coros
+      ? servicioObjetivo.voces.coros
+          .split(", ")
+          .filter((c) => c !== "Sin asignar" && c !== "")
+      : [];
+    let nuevoPiano = servicioObjetivo.instrumentos?.piano || "Sin asignar";
+    let nuevaGuitarra =
+      servicioObjetivo.instrumentos?.guitarra || "Sin asignar";
+    let nuevoBajo = servicioObjetivo.instrumentos?.bajo || "Sin asignar";
+    let nuevaBateria = servicioObjetivo.instrumentos?.bateria || "Sin asignar";
+
+    const yaEstaPostulado =
+      nuevaVozP === usuario ||
+      nuevosCoros.includes(usuario) ||
+      nuevoPiano === usuario ||
+      nuevaGuitarra === usuario ||
+      nuevoBajo === usuario ||
+      nuevaBateria === usuario;
+
+    if (yaEstaPostulado) {
+      alert(`⚠️ Ya estás postulado en este servicio.`);
+      setModalPostularVisible(false);
+      return;
+    }
+
+    if (rol === "vozPrincipal") {
+      if (nuevaVozP !== "Sin asignar") {
+        alert("⚠️ La Voz Principal ya está ocupada.");
+        return;
+      }
+      nuevaVozP = usuario;
+    } else if (rol === "coros") {
+      if (nuevosCoros.length >= 3) {
+        alert("⚠️ Los coros ya tienen el límite de 3 personas.");
+        return;
+      }
+      nuevosCoros.push(usuario);
+    } else if (rol === "piano") {
+      if (nuevoPiano !== "Sin asignar") {
+        alert("⚠️ El Piano ya está ocupado.");
+        return;
+      }
+      nuevoPiano = usuario;
+    } else if (rol === "guitarra") {
+      if (nuevaGuitarra !== "Sin asignar") {
+        alert("⚠️ La Guitarra ya está ocupada.");
+        return;
+      }
+      nuevaGuitarra = usuario;
+    } else if (rol === "bajo") {
+      if (nuevoBajo !== "Sin asignar") {
+        alert("⚠️ El Bajo ya está ocupado.");
+        return;
+      }
+      nuevoBajo = usuario;
+    } else if (rol === "bateria") {
+      if (nuevaBateria !== "Sin asignar") {
+        alert("⚠️ La Batería ya está ocupada.");
+        return;
+      }
+      nuevaBateria = usuario;
+    }
+
+    const nVoces = {
+      principal: nuevaVozP,
+      coros: nuevosCoros.length > 0 ? nuevosCoros.join(", ") : "Sin asignar",
+    };
+    const nInst = {
+      piano: nuevoPiano,
+      guitarra: nuevaGuitarra,
+      bajo: nuevoBajo,
+      bateria: nuevaBateria,
+    };
+
+    const actualizados = servicios.map((s) =>
+      s.id === idServicioPostulando
+        ? { ...s, voces: nVoces, instrumentos: nInst }
+        : s
+    );
+    setServicios(actualizados);
+
+    await supabase
+      .from("servicios")
+      .update({ voces: nVoces, instrumentos: nInst })
+      .eq("id", idServicioPostulando);
+
+    setModalPostularVisible(false);
+    alert(`🚀 Te has postulado exitosamente.`);
+  };
+
+  const liberarRol = async (idServicio, categoria) => {
+    if (!esAdminOLider) {
+      alert("⚠️ No tienes permisos para liberar o eliminar esta postulación.");
+      return;
+    }
+
+    const servicioObjetivo = servicios.find((s) => s.id === idServicio);
+    if (!servicioObjetivo) return;
+
+    let nVoces = { ...servicioObjetivo.voces };
+    let nInst = { ...servicioObjetivo.instrumentos };
+
+    if (categoria === "vozPrincipal") nVoces.principal = "Sin asignar";
+    else if (categoria === "coros") nVoces.coros = "Sin asignar";
+    else if (categoria === "piano") nInst.piano = "Sin asignar";
+    else if (categoria === "guitarra") nInst.guitarra = "Sin asignar";
+    else if (categoria === "bajo") nInst.bajo = "Sin asignar";
+    else if (categoria === "bateria") nInst.bateria = "Sin asignar";
+
+    const actualizados = servicios.map((s) =>
+      s.id === idServicio ? { ...s, voces: nVoces, instrumentos: nInst } : s
+    );
+    setServicios(actualizados);
+
+    await supabase
+      .from("servicios")
+      .update({ voces: nVoces, instrumentos: nInst })
+      .eq("id", idServicio);
+
+    alert("🔄 Rol liberado exitosamente.");
+  };
 
   if (!sesionIniciada) {
     return (
@@ -669,11 +1094,7 @@ export default function App() {
             SoundTeam
           </Text>
           <Text style={[styles.loginSubtitle, { color: t.textSub }]}>
-            Ingresa tu nombre o apodo para acceso total
-          </Text>
-
-          <Text style={[styles.loginLabel, { color: t.textMain }]}>
-            Tu Nombre o Apodo
+            Ingresa tu usuario y PIN de acceso
           </Text>
           <TextInput
             style={[
@@ -684,12 +1105,26 @@ export default function App() {
                 color: t.textMain,
               },
             ]}
-            placeholder="Ej. Alex o Admin"
+            placeholder="Usuario"
             placeholderTextColor={t.textSub}
             value={usuario}
             onChangeText={setUsuario}
           />
-
+          <TextInput
+            style={[
+              styles.loginInput,
+              {
+                backgroundColor: t.bg,
+                borderColor: t.border,
+                color: t.textMain,
+              },
+            ]}
+            placeholder="PIN de acceso"
+            placeholderTextColor={t.textSub}
+            secureTextEntry
+            value={pinInput}
+            onChangeText={setPinInput}
+          />
           <TouchableOpacity
             style={[styles.loginButton, { backgroundColor: t.primary }]}
             onPress={handleLogin}
@@ -710,245 +1145,1594 @@ export default function App() {
         ]}
       >
         <View style={styles.headerTopRow}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.headerTitle, { color: t.textMain }]}>
               SoundTeam
             </Text>
-            <Text style={[styles.headerSubtitle, { color: t.textSub }]}>
-              {usuario} 👑 ({rolUsuario}) • Sede: {sedeActual} (
-              {codigoSedeActual})
+            <Text
+              style={[styles.headerSubtitle, { color: t.textSub }]}
+              numberOfLines={1}
+            >
+              👤 {usuario} •{" "}
+              <Text style={{ color: t.primary, fontWeight: "bold" }}>
+                ROL: {rolUsuario.toUpperCase()}
+              </Text>
             </Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
-              style={[styles.sedeBtn, { backgroundColor: t.primary }]}
-              onPress={() => setModalSedeVisible(!modalSedeVisible)}
+              style={{
+                backgroundColor: t.primary,
+                paddingVertical: 5,
+                paddingHorizontal: 8,
+                borderRadius: 6,
+                marginRight: 4,
+              }}
+              onPress={recargarDatosApp}
             >
-              <Text style={styles.sedeBtnText}>🏛️ Sede</Text>
+              <Text
+                style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 11 }}
+              >
+                🔄 Refrescar
+              </Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
               <Text style={styles.logoutBtnText}>Salir</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </View>
 
-      <View
-        style={[
-          styles.themeRow,
-          { backgroundColor: t.cardBg, borderBottomColor: t.border },
-        ]}
-      >
-        <Text style={[styles.themeLabel, { color: t.textMain }]}>Tema:</Text>
-        {[
-          { key: "azul", label: "🔵 Azul" },
-          { key: "claro", label: "☀️ Claro" },
-          { key: "oscuro", label: "🌙 Oscuro" },
-          { key: "rosado", label: "🌸 Rosado" },
-          { key: "morado", label: "💜 Morado" },
-        ].map((item) => (
+        <View style={{ marginTop: 8 }}>
           <TouchableOpacity
-            key={item.key}
-            style={[
-              styles.themeBtn,
-              { backgroundColor: t.bg, borderColor: t.border },
-              nombreTema === item.key && {
-                borderColor: t.primary,
-                backgroundColor: t.primary + "33",
-              },
-            ]}
-            onPress={() => setNombreTema(item.key as any)}
+            style={{
+              backgroundColor: t.bg,
+              borderWidth: 1,
+              borderColor: t.border,
+              paddingVertical: 5,
+              paddingHorizontal: 10,
+              borderRadius: 6,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+            onPress={() => setMostrarMenuTemas(!mostrarMenuTemas)}
           >
             <Text
-              style={[
-                styles.themeText,
-                { color: t.textSub },
-                nombreTema === item.key && {
-                  color: t.textMain,
-                  fontWeight: "bold",
-                },
-              ]}
+              style={{ fontSize: 11, color: t.textMain, fontWeight: "bold" }}
             >
-              {item.label}
+              🎨 Tema actual: {t.nombre}
+            </Text>
+            <Text
+              style={{ fontSize: 11, color: t.primary, fontWeight: "bold" }}
+            >
+              {mostrarMenuTemas ? "▲ Ocultar" : "▼ Cambiar tema"}
             </Text>
           </TouchableOpacity>
-        ))}
+
+          {mostrarMenuTemas && (
+            <View
+              style={{
+                marginTop: 4,
+                backgroundColor: t.cardBg,
+                borderRadius: 6,
+                borderWidth: 1,
+                borderColor: t.border,
+                padding: 6,
+                gap: 4,
+              }}
+            >
+              {[
+                { key: "azul", label: "🔵 Azul" },
+                { key: "claro", label: "☀️ Claro" },
+                { key: "oscuro", label: "🌙 Oscuro" },
+                { key: "rosado", label: "🌸 Rosado" },
+                { key: "morado", label: "🟣 Morado" },
+                { key: "esmeralda", label: "🟢 Esmeralda" },
+                { key: "sunset", label: "🌅 Sunset" },
+                { key: "minimal", label: "⬛ Minimal" },
+              ].map((itemTema) => {
+                const activo = nombreTema === itemTema.key;
+                return (
+                  <TouchableOpacity
+                    key={itemTema.key}
+                    style={{
+                      paddingVertical: 6,
+                      paddingHorizontal: 8,
+                      borderRadius: 4,
+                      backgroundColor: activo
+                        ? t.primary + "33"
+                        : "transparent",
+                    }}
+                    onPress={() => {
+                      setNombreTema(itemTema.key);
+                      setMostrarMenuTemas(false);
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: activo ? t.primary : t.textMain,
+                        fontWeight: activo ? "bold" : "normal",
+                      }}
+                    >
+                      {itemTema.label} {activo ? "✓" : ""}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
       </View>
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}
       >
-        {modalSedeVisible && (
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: t.cardBg,
-                borderColor: t.primary,
-                borderWidth: 2,
-              },
-            ]}
-          >
-            <Text
-              style={[styles.cardTitle, { color: t.textMain, fontSize: 16 }]}
-            >
-              🏛️ Gestión de Sedes y Accesos
-            </Text>
-            <Text
-              style={[
-                styles.welcomeText,
-                { color: t.textSub, marginBottom: 8 },
-              ]}
-            >
-              Sede activa actual:{" "}
-              <Text style={{ color: t.primary, fontWeight: "bold" }}>
-                {sedeActual}
-              </Text>{" "}
-              (Código: {codigoSedeActual})
-            </Text>
-
-            <Text style={[styles.inputLabel, { color: t.textSub }]}>
-              Ingresar código de sede o grupo:
-            </Text>
-            <TextInput
-              style={[
-                styles.loginInput,
-                {
-                  backgroundColor: t.bg,
-                  borderColor: t.border,
-                  color: t.textMain,
-                },
-              ]}
-              placeholder="Ej. GEN2026, NORTE2026, SUR2026"
-              placeholderTextColor={t.textSub}
-              value={codigoInputSede}
-              onChangeText={setCodigoInputSede}
-              autoCapitalize="characters"
-            />
-
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
-              <TouchableOpacity
-                style={[
-                  styles.loginButton,
-                  { flex: 1, backgroundColor: t.primary, paddingVertical: 10 },
-                ]}
-                onPress={validarYCambiarSedePorCodigo}
+        <View style={styles.mainWrapper}>
+          {pestana === "inicio" && (
+            <View style={{ width: "100%" }}>
+              <View
+                style={[styles.welcomeBanner, { backgroundColor: t.banner }]}
               >
-                <Text style={[styles.loginButtonText, { fontSize: 13 }]}>
-                  Conectarse a Sede
+                <Text style={styles.welcomeTitle}>✨ Colosenses 3:23</Text>
+                <Text style={styles.welcomeBannerText}>
+                  "Y todo lo que hagan, háganlo de corazón, como para el Señor y
+                  no para los hombres."
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </View>
+
+              <View
                 style={[
-                  styles.loginButton,
-                  { flex: 1, backgroundColor: "#EF4444", paddingVertical: 10 },
+                  styles.card,
+                  { backgroundColor: t.cardBg, borderColor: t.border },
                 ]}
-                onPress={() => setModalSedeVisible(false)}
               >
-                <Text style={[styles.loginButtonText, { fontSize: 13 }]}>
-                  Cerrar
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text
-              style={[
-                styles.subHeaderLabel,
-                { color: t.textSub, marginTop: 12 },
-              ]}
-            >
-              Códigos disponibles de ejemplo:
-            </Text>
-            {sedesDisponibles.map((s, idx) => (
-              <Text key={idx} style={{ fontSize: 11, color: t.textSub }}>
-                • {s.nombre}:{" "}
-                <Text style={{ color: t.textMain, fontWeight: "bold" }}>
-                  {s.codigo}
-                </Text>
-              </Text>
-            ))}
-          </View>
-        )}
-
-        {/* --- PESTAÑA INICIO --- */}
-        {pestana === "inicio" && (
-          <>
-            <View style={[styles.welcomeBanner, { backgroundColor: t.banner }]}>
-              <Text style={styles.welcomeTitle}>Sede: {sedeActual}</Text>
-              <Text style={styles.welcomeBannerText}>
-                Organiza cada servicio con excelencia en tu comunidad.
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: t.cardBg, borderColor: t.border },
-              ]}
-            >
-              <Text style={[styles.cardTitle, { color: t.textMain }]}>
-                Resumen del Grupo
-              </Text>
-              <View style={styles.statsRow}>
                 <View
-                  style={[
-                    styles.statBox,
-                    { backgroundColor: t.bg, borderColor: t.border },
-                  ]}
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
                 >
-                  <Text style={[styles.statNumber, { color: t.primary }]}>
-                    {servicios.length}
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { color: t.textMain, marginBottom: 0 },
+                    ]}
+                  >
+                    💬 Chat de Equipos
                   </Text>
-                  <Text style={[styles.statLabel, { color: t.textSub }]}>
-                    Eventos
-                  </Text>
+
+                  {esAdminOLider && (
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: "#EF4444",
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 6,
+                      }}
+                      onPress={limpiarHistorialChat}
+                    >
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: 11,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        🗑️ Limpiar
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
+
                 <View
-                  style={[
-                    styles.statBox,
-                    { backgroundColor: t.bg, borderColor: t.border },
-                  ]}
+                  style={{ flexDirection: "row", gap: 6, marginBottom: 12 }}
                 >
-                  <Text style={[styles.statNumber, { color: t.primary }]}>
-                    {integrantes.length}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: t.textSub }]}>
-                    Integrantes
-                  </Text>
+                  {[
+                    { key: "martes", label: "🗓️ Martes" },
+                    { key: "jueves", label: "🗓️ Jueves" },
+                    { key: "finsemana", label: "⛪ Sáb & Dom" },
+                  ].map((ch) => {
+                    const estaActivo = canalChatActivo === ch.key;
+                    return (
+                      <TouchableOpacity
+                        key={ch.key}
+                        style={[
+                          {
+                            flex: 1,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: t.border,
+                            backgroundColor: t.bg,
+                            alignItems: "center",
+                          },
+                          estaActivo && {
+                            backgroundColor: t.primary,
+                            borderColor: t.primary,
+                          },
+                        ]}
+                        onPress={() => setCanalChatActivo(ch.key)}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: estaActivo ? "bold" : "normal",
+                            color: estaActivo ? "#FFF" : t.textSub,
+                          }}
+                        >
+                          {ch.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-                <View
+
+                <Text
                   style={[
-                    styles.statBox,
-                    { backgroundColor: t.bg, borderColor: t.border },
+                    styles.welcomeText,
+                    { color: t.textSub, marginBottom: 8, fontSize: 11 },
                   ]}
                 >
-                  <Text style={[styles.statNumber, { color: t.primary }]}>
-                    {repertorio.length}
+                  Mensajes privados del equipo:{" "}
+                  <Text style={{ color: t.primary, fontWeight: "bold" }}>
+                    {canalChatActivo.toUpperCase()}
                   </Text>
-                  <Text style={[styles.statLabel, { color: t.textSub }]}>
-                    Canciones
-                  </Text>
+                </Text>
+
+                <View
+                  style={{
+                    backgroundColor: t.bg,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: t.border,
+                    padding: 10,
+                    height: 240,
+                    marginBottom: 10,
+                  }}
+                >
+                  <ScrollView>
+                    {mensajesChat.length === 0 ? (
+                      <Text
+                        style={{
+                          color: t.textSub,
+                          textAlign: "center",
+                          marginTop: 20,
+                          fontStyle: "italic",
+                          fontSize: 12,
+                        }}
+                      >
+                        No hay mensajes en este chat. ¡Sé el primero en
+                        escribir!
+                      </Text>
+                    ) : (
+                      mensajesChat.map((m, i) => {
+                        const esMio = m.autor === usuario;
+                        const esAuditoriaSistema =
+                          m.autor.includes("SISTEMA ADMIN");
+
+                        return (
+                          <View
+                            key={m.id || i}
+                            style={{
+                              marginBottom: 8,
+                              backgroundColor: esAuditoriaSistema
+                                ? "#F59E0B22"
+                                : esMio
+                                ? t.primary + "22"
+                                : t.cardBg,
+                              padding: 8,
+                              borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: esAuditoriaSistema
+                                ? "#F59E0B"
+                                : t.border,
+                            }}
+                          >
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                marginBottom: 2,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: esAuditoriaSistema
+                                    ? "#F59E0B"
+                                    : t.primary,
+                                  fontWeight: "bold",
+                                  fontSize: 11,
+                                }}
+                              >
+                                {m.autor} {m.editado ? "(editado)" : ""}
+                              </Text>
+                              <View
+                                style={{
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  gap: 6,
+                                }}
+                              >
+                                <Text style={{ color: t.textSub, fontSize: 9 }}>
+                                  {m.hora}
+                                </Text>
+                                {esMio && !esAuditoriaSistema && (
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      setIdMensajeEditando(m.id);
+                                      setTextoOriginalEditando(m.texto);
+                                      setNuevoMensajeTexto(m.texto);
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        color: t.primary,
+                                        fontSize: 10,
+                                        fontWeight: "bold",
+                                      }}
+                                    >
+                                      ✏️ Editar
+                                    </Text>
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                            </View>
+                            <Text style={{ color: t.textMain, fontSize: 12 }}>
+                              {m.texto}
+                            </Text>
+                          </View>
+                        );
+                      })
+                    )}
+                  </ScrollView>
+                </View>
+
+                <View style={{ marginBottom: 8 }}>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: t.bg,
+                      borderWidth: 1,
+                      borderColor: t.border,
+                      paddingVertical: 6,
+                      paddingHorizontal: 10,
+                      borderRadius: 6,
+                      alignSelf: "flex-start",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                    onPress={() =>
+                      setMostrarSelectorEmojis(!mostrarSelectorEmojis)
+                    }
+                  >
+                    <Text
+                      style={{
+                        color: t.textMain,
+                        fontSize: 12,
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {mostrarSelectorEmojis
+                        ? "🔽 Ocultar Emojis"
+                        : "😀 Emojis (Desplegar)"}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {mostrarSelectorEmojis && (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        gap: 6,
+                        marginTop: 6,
+                        backgroundColor: t.bg,
+                        padding: 8,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: t.border,
+                      }}
+                    >
+                      {[
+                        "😀",
+                        "😢",
+                        "❤️",
+                        "🏃‍♂️",
+                        "🔥",
+                        "🙏",
+                        "🎸",
+                        "🎹",
+                        "🥁",
+                        "🙌",
+                        "✨",
+                        "⭐",
+                        "💡",
+                        "✅",
+                        "❌",
+                        "💬",
+                        "🎵",
+                      ].map((emoji) => (
+                        <TouchableOpacity
+                          key={emoji}
+                          style={{
+                            backgroundColor: t.cardBg,
+                            borderWidth: 1,
+                            borderColor: t.border,
+                            paddingHorizontal: 8,
+                            paddingVertical: 4,
+                            borderRadius: 4,
+                          }}
+                          onPress={() => {
+                            setNuevoMensajeTexto((prev) => prev + emoji);
+                            setMostrarSelectorEmojis(false);
+                          }}
+                        >
+                          <Text style={{ fontSize: 16 }}>{emoji}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                {idMensajeEditando !== null && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 6,
+                      backgroundColor: t.primary + "33",
+                      padding: 6,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Text style={{ color: t.textMain, fontSize: 11 }}>
+                      ✏️ Estás editando un mensaje:
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setIdMensajeEditando(null);
+                        setTextoOriginalEditando("");
+                        setNuevoMensajeTexto("");
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#EF4444",
+                          fontSize: 11,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        Cancelar edición
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  <TextInput
+                    style={[
+                      styles.loginInput,
+                      {
+                        flex: 1,
+                        backgroundColor: t.bg,
+                        borderColor: t.border,
+                        color: t.textMain,
+                        marginBottom: 0,
+                        padding: 8,
+                        fontSize: 13,
+                      },
+                    ]}
+                    placeholder={
+                      idMensajeEditando !== null
+                        ? "Edita tu mensaje aquí..."
+                        : `Escribir en el chat de ${canalChatActivo}...`
+                    }
+                    placeholderTextColor={t.textSub}
+                    value={nuevoMensajeTexto}
+                    onChangeText={setNuevoMensajeTexto}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.loginButton,
+                      {
+                        backgroundColor:
+                          idMensajeEditando !== null ? "#22C55E" : t.primary,
+                        justifyContent: "center",
+                        paddingVertical: 8,
+                        paddingHorizontal: 14,
+                      },
+                    ]}
+                    onPress={enviarOActualizarMensajeChat}
+                  >
+                    <Text style={[styles.loginButtonText, { fontSize: 12 }]}>
+                      {idMensajeEditando !== null ? "Guardar" : "Enviar"}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
+          )}
 
+          {pestana === "eventos" && (
+            <>
+              <View style={styles.monthsRow}>
+                {listaMesesDinamicos.map((itemMes) => {
+                  const esSeleccionado = mesSeleccionadoObj.key === itemMes.key;
+                  return (
+                    <TouchableOpacity
+                      key={itemMes.key}
+                      style={[
+                        styles.monthTab,
+                        { backgroundColor: t.cardBg, borderColor: t.border },
+                        esSeleccionado && {
+                          backgroundColor: t.primary,
+                          borderColor: t.primary,
+                        },
+                      ]}
+                      onPress={() => {
+                        setMesSeleccionadoObj(itemMes);
+                        setDiaSeleccionado(1);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.monthText,
+                          { color: t.textSub },
+                          esSeleccionado && styles.monthTextActive,
+                        ]}
+                      >
+                        {itemMes.nombre} {itemMes.year}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View
+                style={[
+                  styles.calendarCard,
+                  { backgroundColor: t.cardBg, borderColor: t.border },
+                ]}
+              >
+                <Text
+                  style={[styles.calendarHeaderTitle, { color: t.textMain }]}
+                >
+                  {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}
+                </Text>
+
+                <View style={styles.weekHeaderRow}>
+                  {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map(
+                    (dSem, idx) => (
+                      <Text
+                        key={idx}
+                        style={[styles.weekHeaderText, { color: t.textSub }]}
+                      >
+                        {dSem}
+                      </Text>
+                    )
+                  )}
+                </View>
+
+                <View style={styles.daysGrid}>
+                  {obtenerDiasDelMesDinamico(
+                    mesSeleccionadoObj.mesIndex,
+                    mesSeleccionadoObj.year
+                  ).map((item, index) => {
+                    if (item.vacio) {
+                      return <View key={item.id} style={styles.dayCellEmpty} />;
+                    }
+
+                    const esSeleccionado = diaSeleccionado === item.diaNum;
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.dayCell,
+                          { backgroundColor: t.bg, borderColor: t.border },
+                          esSeleccionado && {
+                            backgroundColor: t.selectedDay,
+                            borderColor: t.selectedDay,
+                          },
+                        ]}
+                        onPress={() => setDiaSeleccionado(item.diaNum)}
+                      >
+                        <Text
+                          style={[
+                            styles.dayText,
+                            { color: t.textMain },
+                            esSeleccionado && styles.dayTextSelected,
+                          ]}
+                        >
+                          {item.diaNum}
+                        </Text>
+
+                        {item.postulado && (
+                          <View
+                            style={{
+                              position: "absolute",
+                              top: 2,
+                              right: 2,
+                              backgroundColor: "#22C55E",
+                              width: 6,
+                              height: 6,
+                              borderRadius: 3,
+                            }}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={styles.serviceSectionHeader}>
+                <Text
+                  style={[styles.serviceSectionTitle, { color: t.textMain }]}
+                >
+                  Servicios del Día {diaSeleccionado} de{" "}
+                  {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year} (
+                  {serviciosDelDia.length})
+                </Text>
+
+                {esAdminOLider && (
+                  <TouchableOpacity
+                    style={[styles.programBtn, { backgroundColor: t.primary }]}
+                    onPress={() => {
+                      setIdServicioEditando(null);
+                      setNombreEvento(
+                        esDomingoSeleccionado ? "Culto Dominical" : "Culto"
+                      );
+                      setObservaciones("");
+                      setPaletaSeleccionadaModal(null);
+                      setSetlistActivo([]);
+                      setIndiceParaMover(null);
+                      setModalProgramarVisible(true);
+                    }}
+                  >
+                    <Text style={styles.programBtnText}>
+                      + Programar Servicio
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {modalProgramarVisible && (
+                <View
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: t.cardBg,
+                      borderColor: t.primary,
+                      borderWidth: 2,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { color: t.textMain, fontSize: 17, marginBottom: 12 },
+                    ]}
+                  >
+                    {idServicioEditando !== null
+                      ? "✏️ Modificar Servicio"
+                      : "➕ Nuevo Servicio"}{" "}
+                    ({mesSeleccionadoObj.nombre} {diaSeleccionado})
+                  </Text>
+
+                  <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                    Nombre del evento / servicio
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.loginInput,
+                      {
+                        backgroundColor: t.bg,
+                        borderColor: t.border,
+                        color: t.textMain,
+                      },
+                    ]}
+                    placeholder="Ej. Culto Dominical"
+                    placeholderTextColor={t.textSub}
+                    value={nombreEvento}
+                    onChangeText={setNombreEvento}
+                  />
+
+                  <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                    Observaciones Técnicas
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.loginInput,
+                      {
+                        backgroundColor: t.bg,
+                        borderColor: t.border,
+                        color: t.textMain,
+                      },
+                    ]}
+                    placeholder="Ej. Prueba de sonido a las 8:00 AM"
+                    placeholderTextColor={t.textSub}
+                    value={observaciones}
+                    onChangeText={setObservaciones}
+                  />
+
+                  {esDomingoSeleccionado && (
+                    <View style={{ marginBottom: 12 }}>
+                      <Text
+                        style={[
+                          styles.inputLabel,
+                          { color: t.textMain, fontWeight: "bold" },
+                        ]}
+                      >
+                        🎨 Seleccionar Paleta para este Servicio:
+                      </Text>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          flexWrap: "wrap",
+                          gap: 6,
+                          marginTop: 4,
+                        }}
+                      >
+                        {paletasCulto.map((p) => {
+                          const esSeleccionadaModal =
+                            paletaSeleccionadaModal?.id === p.id;
+                          return (
+                            <TouchableOpacity
+                              key={p.id}
+                              style={[
+                                {
+                                  width: "48%",
+                                  padding: 8,
+                                  borderRadius: 6,
+                                  borderWidth: 1,
+                                  borderColor: t.border,
+                                  backgroundColor: t.bg,
+                                },
+                                esSeleccionadaModal && {
+                                  borderColor: t.primary,
+                                  borderWidth: 2,
+                                },
+                              ]}
+                              onPress={() => setPaletaSeleccionadaModal(p)}
+                            >
+                              <View
+                                style={{
+                                  flexDirection: "row",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  marginBottom: 4,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: t.textMain,
+                                    fontSize: 11,
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  {p.nombre}
+                                </Text>
+                                {esSeleccionadaModal && (
+                                  <Text
+                                    style={{
+                                      color: t.primary,
+                                      fontSize: 10,
+                                      fontWeight: "bold",
+                                    }}
+                                  >
+                                    ✓
+                                  </Text>
+                                )}
+                              </View>
+                              <View
+                                style={{
+                                  flexDirection: "row",
+                                  height: 12,
+                                  borderRadius: 2,
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {p.colores.map((hex, idx) => (
+                                  <View
+                                    key={idx}
+                                    style={{ flex: 1, backgroundColor: hex }}
+                                  />
+                                ))}
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+
+                  <Text
+                    style={[
+                      styles.inputLabel,
+                      { color: t.textMain, fontWeight: "bold", marginTop: 8 },
+                    ]}
+                  >
+                    Organización del Setlist
+                  </Text>
+
+                  {setlistActivo.length > 0 && (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text
+                        style={{
+                          color: t.primary,
+                          fontSize: 12,
+                          fontWeight: "bold",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Setlist Activo ({setlistActivo.length}):
+                      </Text>
+                      {setlistActivo.map((item, idx) => {
+                        const estaSeleccionadoParaMover =
+                          indiceParaMover === idx;
+                        return (
+                          <View
+                            key={idx}
+                            style={[
+                              styles.setlistItemRow,
+                              { backgroundColor: t.bg, borderColor: t.border },
+                              estaSeleccionadoParaMover && {
+                                borderColor: t.primary,
+                                borderWidth: 2,
+                              },
+                            ]}
+                          >
+                            <TouchableOpacity
+                              style={{
+                                flex: 1,
+                                flexDirection: "row",
+                                alignItems: "center",
+                              }}
+                              onPress={() => {
+                                if (indiceParaMover === null) {
+                                  setIndiceParaMover(idx);
+                                } else {
+                                  const nuevoSetlist = [...setlistActivo];
+                                  const temp = nuevoSetlist[indiceParaMover];
+                                  nuevoSetlist[indiceParaMover] =
+                                    nuevoSetlist[idx];
+                                  nuevoSetlist[idx] = temp;
+                                  setSetlistActivo(nuevoSetlist);
+                                  setIndiceParaMover(null);
+                                }
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: t.textMain,
+                                  fontSize: 13,
+                                  fontWeight: "bold",
+                                  marginRight: 8,
+                                }}
+                              >
+                                {idx + 1}. {item.titulo}
+                              </Text>
+                            </TouchableOpacity>
+
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                            >
+                              <Text style={{ color: t.textSub, fontSize: 11 }}>
+                                Tono:
+                              </Text>
+                              <TextInput
+                                style={{
+                                  backgroundColor: t.cardBg,
+                                  color: t.textMain,
+                                  borderWidth: 1,
+                                  borderColor: t.border,
+                                  borderRadius: 4,
+                                  width: 32,
+                                  textAlign: "center",
+                                  fontSize: 12,
+                                  padding: 2,
+                                }}
+                                value={item.tono}
+                                onChangeText={(nuevoTono) => {
+                                  const actualizado = [...setlistActivo];
+                                  actualizado[idx].tono = nuevoTono;
+                                  setSetlistActivo(actualizado);
+                                }}
+                              />
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: t.primary,
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 4,
+                                  borderRadius: 4,
+                                }}
+                                onPress={() => {
+                                  if (indiceParaMover === null) {
+                                    setIndiceParaMover(idx);
+                                  } else {
+                                    const nuevoSetlist = [...setlistActivo];
+                                    const temp = nuevoSetlist[indiceParaMover];
+                                    nuevoSetlist[indiceParaMover] =
+                                      nuevoSetlist[idx];
+                                    nuevoSetlist[idx] = temp;
+                                    setSetlistActivo(nuevoSetlist);
+                                    setIndiceParaMover(null);
+                                  }
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: "#FFF",
+                                    fontSize: 10,
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  {estaSeleccionadoParaMover ? "✓" : "Mover"}
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: "#EF4444",
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 4,
+                                  borderRadius: 4,
+                                }}
+                                onPress={() => {
+                                  setSetlistActivo(
+                                    setlistActivo.filter((_, i) => i !== idx)
+                                  );
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: "#FFF",
+                                    fontSize: 10,
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  X
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  <Text
+                    style={[
+                      styles.inputLabel,
+                      { color: t.textSub, fontSize: 12 },
+                    ]}
+                  >
+                    Biblioteca de canciones (Toca para agregar):
+                  </Text>
+                  {repertorio.map((cancion) => (
+                    <View
+                      key={cancion.id}
+                      style={[
+                        styles.libSongRow,
+                        { borderBottomColor: t.border },
+                      ]}
+                    >
+                      <Text
+                        style={{ color: t.textMain, fontSize: 13, flex: 1 }}
+                      >
+                        {cancion.titulo}{" "}
+                        <Text style={{ color: t.textSub }}>
+                          ({cancion.tono})
+                        </Text>
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.addSongBtn,
+                          { backgroundColor: t.primary },
+                        ]}
+                        onPress={() => {
+                          setSetlistActivo([
+                            ...setlistActivo,
+                            { titulo: cancion.titulo, tono: cancion.tono },
+                          ]);
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#FFFFFF",
+                            fontSize: 11,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          + Agregar
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+
+                  <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.loginButton,
+                        { flex: 1, backgroundColor: t.primary, padding: 12 },
+                      ]}
+                      onPress={async () => {
+                        if (nombreEvento.trim() !== "") {
+                          const [yS, mS, dS] = fechaActualClave
+                            .split("-")
+                            .map(Number);
+                          const esDomingoReal =
+                            new Date(yS, mS - 1, dS).getDay() === 0;
+                          const paletaFinal = esDomingoReal
+                            ? paletaSeleccionadaModal
+                            : null;
+
+                          if (idServicioEditando !== null) {
+                            const actualizados = servicios.map((s) =>
+                              s.id === idServicioEditando
+                                ? {
+                                    ...s,
+                                    titulo: nombreEvento,
+                                    observaciones:
+                                      observaciones || "Sin observaciones",
+                                    setlist: setlistActivo,
+                                    paletaSeleccionada: paletaFinal,
+                                  }
+                                : s
+                            );
+                            setServicios(actualizados);
+
+                            await supabase
+                              .from("servicios")
+                              .update({
+                                titulo: nombreEvento,
+                                observaciones:
+                                  observaciones || "Sin observaciones",
+                                setlist: setlistActivo,
+                                paleta_seleccionada: paletaFinal,
+                              })
+                              .eq("id", idServicioEditando);
+
+                            alert("✅ Servicio actualizado con éxito.");
+                          } else {
+                            const nuevoId = Date.now();
+                            const nuevoServicioObj = {
+                              id: nuevoId,
+                              fecha: fechaActualClave,
+                              titulo: nombreEvento,
+                              observaciones:
+                                observaciones || "Sin observaciones",
+                              setlist: setlistActivo,
+                              paletaSeleccionada: paletaFinal,
+                              voces: {
+                                principal: "Sin asignar",
+                                coros: "Sin asignar",
+                              },
+                              instrumentos: {
+                                piano: "Sin asignar",
+                                guitarra: "Sin asignar",
+                                bajo: "Sin asignar",
+                                bateria: "Sin asignar",
+                              },
+                            };
+
+                            setServicios([...servicios, nuevoServicioObj]);
+
+                            await supabase.from("servicios").insert([
+                              {
+                                id: nuevoId,
+                                fecha: fechaActualClave,
+                                titulo: nombreEvento,
+                                observaciones:
+                                  observaciones || "Sin observaciones",
+                                setlist: setlistActivo,
+                                paleta_seleccionada: paletaFinal,
+                                voces: {
+                                  principal: "Sin asignar",
+                                  coros: "Sin asignar",
+                                },
+                                instrumentos: {
+                                  piano: "Sin asignar",
+                                  guitarra: "Sin asignar",
+                                  bajo: "Sin asignar",
+                                  bateria: "Sin asignar",
+                                },
+                              },
+                            ]);
+
+                            alert("✅ Nuevo servicio programado con éxito.");
+                          }
+                          setModalProgramarVisible(false);
+                          setIdServicioEditando(null);
+                        } else {
+                          alert("⚠️ Por favor ingresa el nombre del evento.");
+                        }
+                      }}
+                    >
+                      <Text style={[styles.loginButtonText, { fontSize: 14 }]}>
+                        Guardar Servicio
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.loginButton,
+                        { flex: 1, backgroundColor: "#EF4444", padding: 12 },
+                      ]}
+                      onPress={() => {
+                        setModalProgramarVisible(false);
+                        setIdServicioEditando(null);
+                      }}
+                    >
+                      <Text style={[styles.loginButtonText, { fontSize: 14 }]}>
+                        Cancelar
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {modalPostularVisible && (
+                <View
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: t.cardBg,
+                      borderColor: t.selectedDay,
+                      borderWidth: 2,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { color: t.textMain, fontSize: 17, marginBottom: 6 },
+                    ]}
+                  >
+                    ✨ Selecciona tu Rol para Postularte
+                  </Text>
+                  <Text
+                    style={{ color: t.textSub, fontSize: 12, marginBottom: 14 }}
+                  >
+                    Elige en qué posición deseas servir en este servicio:
+                  </Text>
+
+                  {[
+                    { key: "vozPrincipal", label: "🎤 Voz Principal (Máx. 1)" },
+                    { key: "coros", label: "👥 Coros (Máx. 3)" },
+                    { key: "piano", label: "🎹 Piano (Máx. 1)" },
+                    { key: "guitarra", label: "🎸 Guitarra (Máx. 1)" },
+                    { key: "bajo", label: "🎸 Bajo (Máx. 1)" },
+                    { key: "bateria", label: "🥁 Batería (Máx. 1)" },
+                  ].map((rolObj) => (
+                    <TouchableOpacity
+                      key={rolObj.key}
+                      style={[
+                        styles.postulateRoleOption,
+                        { backgroundColor: t.bg, borderColor: t.border },
+                      ]}
+                      onPress={() => confirmarPostulacionRol(rolObj.key)}
+                    >
+                      <Text style={{ color: t.textMain, fontWeight: "bold" }}>
+                        {rolObj.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+
+                  <TouchableOpacity
+                    style={[
+                      styles.loginButton,
+                      {
+                        backgroundColor: "#EF4444",
+                        padding: 10,
+                        marginTop: 10,
+                      },
+                    ]}
+                    onPress={() => setModalPostularVisible(false)}
+                  >
+                    <Text style={[styles.loginButtonText, { fontSize: 13 }]}>
+                      Cancelar
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {serviciosDelDia.length > 0 ? (
+                serviciosDelDia.map((serv) => {
+                  const [yS, mS, dS] = serv.fecha.split("-").map(Number);
+                  const esDomingoServicio =
+                    new Date(yS, mS - 1, dS).getDay() === 0;
+
+                  return (
+                    <View
+                      key={serv.id}
+                      style={[
+                        styles.card,
+                        {
+                          backgroundColor: t.cardBg,
+                          borderColor: t.border,
+                          marginBottom: 16,
+                        },
+                      ]}
+                    >
+                      <View style={styles.eventCardHeaderRow}>
+                        <Text
+                          style={[styles.eventMainTitle, { color: t.textMain }]}
+                        >
+                          📅 {serv.titulo}
+                        </Text>
+
+                        {esAdminOLider && (
+                          <View style={{ flexDirection: "row", gap: 6 }}>
+                            <TouchableOpacity
+                              style={styles.editServiceBtn}
+                              onPress={() => {
+                                setIdServicioEditando(serv.id);
+                                setNombreEvento(serv.titulo);
+                                setObservaciones(serv.observaciones);
+                                setPaletaSeleccionadaModal(
+                                  serv.paletaSeleccionada ||
+                                    paletasCulto[0] ||
+                                    null
+                                );
+                                setSetlistActivo(serv.setlist || []);
+                                setIndiceParaMover(null);
+                                setModalProgramarVisible(true);
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  color: "#FFFFFF",
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                ✏️ Modificar
+                              </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={styles.deleteServiceBtn}
+                              onPress={async () => {
+                                setServicios(
+                                  servicios.filter((s) => s.id !== serv.id)
+                                );
+                                await supabase
+                                  .from("servicios")
+                                  .delete()
+                                  .eq("id", serv.id);
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  color: "#FFFFFF",
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                🗑️ Eliminar
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                      <Text
+                        style={{
+                          color: t.textSub,
+                          fontSize: 12,
+                          marginTop: 4,
+                          marginBottom: 4,
+                        }}
+                      >
+                        Observaciones: {serv.observaciones}
+                      </Text>
+
+                      {esDomingoServicio && serv.paletaSeleccionada && (
+                        <View
+                          style={{
+                            marginVertical: 8,
+                            padding: 8,
+                            backgroundColor: t.bg,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: t.border,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: t.textMain,
+                              fontSize: 11,
+                              fontWeight: "bold",
+                              marginBottom: 4,
+                            }}
+                          >
+                            🎨 Paleta del Culto:{" "}
+                            {serv.paletaSeleccionada.nombre}
+                          </Text>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              height: 14,
+                              borderRadius: 3,
+                              overflow: "hidden",
+                            }}
+                          >
+                            {serv.paletaSeleccionada.colores.map(
+                              (hex, idx) => (
+                                <View
+                                  key={idx}
+                                  style={{ flex: 1, backgroundColor: hex }}
+                                />
+                              )
+                            )}
+                          </View>
+                        </View>
+                      )}
+
+                      <Text
+                        style={{
+                          color: t.primary,
+                          fontSize: 13,
+                          fontWeight: "bold",
+                          marginTop: 6,
+                        }}
+                      >
+                        🎵 Setlist del Servicio:
+                      </Text>
+                      {serv.setlist && serv.setlist.length > 0 ? (
+                        serv.setlist.map((s, i) => (
+                          <Text
+                            key={i}
+                            style={{
+                              color: t.textMain,
+                              fontSize: 12,
+                              marginLeft: 8,
+                            }}
+                          >
+                            • {s.titulo} (Tono: {s.tono})
+                          </Text>
+                        ))
+                      ) : (
+                        <Text
+                          style={{
+                            color: t.textSub,
+                            fontSize: 12,
+                            marginLeft: 8,
+                            fontStyle: "italic",
+                          }}
+                        >
+                          Sin canciones agregadas.
+                        </Text>
+                      )}
+
+                      <View style={styles.columnsContainer}>
+                        <View
+                          style={[
+                            styles.columnBox,
+                            { backgroundColor: t.bg, borderColor: t.border },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.columnHeaderTitle,
+                              { color: t.primary },
+                            ]}
+                          >
+                            🎤 VOCES
+                          </Text>
+
+                          <View style={styles.roleRowClean}>
+                            <Text
+                              style={{ color: t.textMain, fontSize: 11 }}
+                              numberOfLines={1}
+                            >
+                              • Principal:{" "}
+                              <Text style={{ fontWeight: "bold" }}>
+                                {serv.voces?.principal || "Sin asignar"}
+                              </Text>
+                            </Text>
+                            {serv.voces?.principal &&
+                              serv.voces?.principal !== "Sin asignar" &&
+                              esAdminOLider && (
+                                <TouchableOpacity
+                                  onPress={() =>
+                                    liberarRol(serv.id, "vozPrincipal")
+                                  }
+                                >
+                                  <Text
+                                    style={{
+                                      color: "#EF4444",
+                                      fontSize: 10,
+                                      fontWeight: "bold",
+                                    }}
+                                  >
+                                    ❌
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                          </View>
+
+                          <View style={styles.roleRowClean}>
+                            <Text
+                              style={{ color: t.textMain, fontSize: 11 }}
+                              numberOfLines={1}
+                            >
+                              • Coros:{" "}
+                              <Text style={{ fontWeight: "bold" }}>
+                                {serv.voces?.coros || "Sin asignar"}
+                              </Text>
+                            </Text>
+                            {serv.voces?.coros &&
+                              serv.voces?.coros !== "Sin asignar" &&
+                              esAdminOLider && (
+                                <TouchableOpacity
+                                  onPress={() => liberarRol(serv.id, "coros")}
+                                >
+                                  <Text
+                                    style={{
+                                      color: "#EF4444",
+                                      fontSize: 10,
+                                      fontWeight: "bold",
+                                    }}
+                                  >
+                                    ❌
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                          </View>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.columnBox,
+                            { backgroundColor: t.bg, borderColor: t.border },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.columnHeaderTitle,
+                              { color: t.primary },
+                            ]}
+                          >
+                            🎸 INSTRUMENTOS
+                          </Text>
+
+                          {["piano", "guitarra", "bajo", "bateria"].map(
+                            (instKey) => {
+                              const valInst =
+                                serv.instrumentos?.[instKey] || "Sin asignar";
+                              return (
+                                <View key={instKey} style={styles.roleRowClean}>
+                                  <Text
+                                    style={{ color: t.textMain, fontSize: 11 }}
+                                    numberOfLines={1}
+                                  >
+                                    •{" "}
+                                    {instKey.charAt(0).toUpperCase() +
+                                      instKey.slice(1)}
+                                    :{" "}
+                                    <Text style={{ fontWeight: "bold" }}>
+                                      {valInst}
+                                    </Text>
+                                  </Text>
+                                  {valInst !== "Sin asignar" &&
+                                    esAdminOLider && (
+                                      <TouchableOpacity
+                                        onPress={() =>
+                                          liberarRol(serv.id, instKey)
+                                        }
+                                      >
+                                        <Text
+                                          style={{
+                                            color: "#EF4444",
+                                            fontSize: 10,
+                                            fontWeight: "bold",
+                                          }}
+                                        >
+                                          ❌
+                                        </Text>
+                                      </TouchableOpacity>
+                                    )}
+                                </View>
+                              );
+                            }
+                          )}
+                        </View>
+                      </View>
+
+                      <View style={{ marginTop: 14, gap: 8 }}>
+                        <TouchableOpacity
+                          style={styles.whatsappBtn}
+                          onPress={() => enviarPorWhatsApp(serv)}
+                        >
+                          <Text style={styles.actionBtnText}>
+                            🚀 Enviar setlist por WhatsApp
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.postulateBtn}
+                          onPress={() => {
+                            setIdServicioPostulando(serv.id);
+                            setModalPostularVisible(true);
+                          }}
+                        >
+                          <Text style={styles.actionBtnText}>
+                            Postularme (Confirmar asistencia)
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })
+              ) : (
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: t.cardBg, borderColor: t.border },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: t.textSub,
+                      textAlign: "center",
+                      padding: 10,
+                    }}
+                  >
+                    No hay servicios programados para este día.
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {pestana === "equipo" && esAdminOLider && (
             <View
               style={[
                 styles.card,
                 { backgroundColor: t.cardBg, borderColor: t.border },
               ]}
             >
-              <Text
-                style={[
-                  styles.cardTitle,
-                  { color: t.textMain, marginBottom: 8 },
-                ]}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
               >
-                Servicios Programados
-              </Text>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    { color: t.textMain, marginBottom: 0 },
+                  ]}
+                >
+                  👥 Miembros del Grupo y Accesos ({integrantes.length})
+                </Text>
 
-              {servicioEditandoFecha && (
+                <TouchableOpacity
+                  style={[styles.programBtn, { backgroundColor: t.primary }]}
+                  onPress={() => {
+                    setIdMiembroEditando(null);
+                    setNombreNuevoMiembro("");
+                    setPinNuevoMiembro("1234");
+                    setRolAccesoNuevo("miembro");
+                    setRolesMusicalesNuevo([]);
+                    setModalMiembroVisible(true);
+                  }}
+                >
+                  <Text style={styles.programBtnText}>+ Agregar Miembro</Text>
+                </TouchableOpacity>
+              </View>
+
+              {modalMiembroVisible && (
                 <View
                   style={[
                     styles.card,
@@ -956,20 +2740,23 @@ export default function App() {
                       backgroundColor: t.bg,
                       borderColor: t.primary,
                       borderWidth: 2,
-                      marginBottom: 12,
+                      marginBottom: 14,
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.cardTitle,
-                      { color: t.textMain, fontSize: 13 },
+                      { color: t.textMain, fontSize: 16 },
                     ]}
                   >
-                    📅 Reprogramar fecha para: {servicioEditandoFecha.titulo}
+                    {idMiembroEditando !== null
+                      ? "✏️ Modificar Miembro"
+                      : "➕ Nuevo Miembro"}
                   </Text>
-                  <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                    Nueva Fecha (Formato: YYYY-MM-DD):
+
+                  <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                    Nombre del integrante
                   </Text>
                   <TextInput
                     style={[
@@ -978,41 +2765,195 @@ export default function App() {
                         backgroundColor: t.cardBg,
                         borderColor: t.border,
                         color: t.textMain,
+                        marginBottom: 10,
                       },
                     ]}
-                    placeholder="Ej. 2026-11-05"
+                    placeholder="Ej. Lina"
                     placeholderTextColor={t.textSub}
-                    value={nuevaFechaInput}
-                    onChangeText={setNuevaFechaInput}
+                    value={nombreNuevoMiembro}
+                    onChangeText={setNombreNuevoMiembro}
                   />
-                  <View style={{ flexDirection: "row", gap: 6, marginTop: 4 }}>
+
+                  <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                    PIN de acceso a la app
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.loginInput,
+                      {
+                        backgroundColor: t.cardBg,
+                        borderColor: t.border,
+                        color: t.textMain,
+                        marginBottom: 10,
+                      },
+                    ]}
+                    placeholder="Ej. 1234"
+                    placeholderTextColor={t.textSub}
+                    value={pinNuevoMiembro}
+                    onChangeText={setPinNuevoMiembro}
+                  />
+
+                  <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                    Rol en el sistema (Permisos):
+                  </Text>
+                  <View
+                    style={{ flexDirection: "row", gap: 6, marginBottom: 10 }}
+                  >
+                    {[
+                      ...(esAdmin ? [{ key: "admin", label: "👑 Admin" }] : []),
+                      ...(esAdmin ? [{ key: "lider", label: "⭐ Líder" }] : []),
+                      { key: "miembro", label: "👤 General" },
+                    ].map((rObj) => {
+                      const seleccionado = rolAccesoNuevo === rObj.key;
+                      return (
+                        <TouchableOpacity
+                          key={rObj.key}
+                          style={[
+                            {
+                              flex: 1,
+                              paddingVertical: 8,
+                              alignItems: "center",
+                              borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: t.border,
+                              backgroundColor: t.cardBg,
+                            },
+                            seleccionado && {
+                              backgroundColor: t.primary,
+                              borderColor: t.primary,
+                            },
+                          ]}
+                          onPress={() => setRolAccesoNuevo(rObj.key)}
+                        >
+                          <Text
+                            style={{
+                              color: seleccionado ? "#FFF" : t.textMain,
+                              fontSize: 11,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {rObj.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                    Roles Musicales (Instrumentos / Voces):
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      marginBottom: 12,
+                    }}
+                  >
+                    {[
+                      "🎤 Voz Principal",
+                      "🎤 Coros",
+                      "🎹 Piano",
+                      "🎸 Guitarra",
+                      "🎸 Bajo",
+                      "🥁 Batería",
+                    ].map((rolM) => {
+                      const seleccionado = rolesMusicalesNuevo.includes(rolM);
+                      return (
+                        <TouchableOpacity
+                          key={rolM}
+                          style={[
+                            styles.chipRole,
+                            {
+                              backgroundColor: t.cardBg,
+                              borderColor: t.border,
+                            },
+                            seleccionado && {
+                              backgroundColor: t.primary,
+                              borderColor: t.primary,
+                            },
+                          ]}
+                          onPress={() => {
+                            if (seleccionado) {
+                              setRolesMusicalesNuevo(
+                                rolesMusicalesNuevo.filter((r) => r !== rolM)
+                              );
+                            } else {
+                              setRolesMusicalesNuevo([
+                                ...rolesMusicalesNuevo,
+                                rolM,
+                              ]);
+                            }
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: seleccionado ? "#FFF" : t.textMain,
+                              fontSize: 11,
+                            }}
+                          >
+                            {rolM}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <View style={{ flexDirection: "row", gap: 8 }}>
                     <TouchableOpacity
                       style={[
                         styles.loginButton,
-                        {
-                          flex: 1,
-                          backgroundColor: t.primary,
-                          paddingVertical: 8,
-                        },
+                        { flex: 1, backgroundColor: t.primary, padding: 10 },
                       ]}
-                      onPress={guardarNuevaFechaServicio}
+                      onPress={() => {
+                        if (nombreNuevoMiembro.trim() !== "") {
+                          if (idMiembroEditando !== null) {
+                            setIntegrantes(
+                              integrantes.map((m) =>
+                                m.id === idMiembroEditando
+                                  ? {
+                                      ...m,
+                                      nombre: nombreNuevoMiembro.trim(),
+                                      pin: pinNuevoMiembro.trim() || "1234",
+                                      rolAcceso: rolAccesoNuevo,
+                                      rolesMusicales: rolesMusicalesNuevo,
+                                    }
+                                  : m
+                              )
+                            );
+                            alert("✅ Miembro actualizado con éxito.");
+                          } else {
+                            setIntegrantes([
+                              ...integrantes,
+                              {
+                                id: Date.now(),
+                                nombre: nombreNuevoMiembro.trim(),
+                                pin: pinNuevoMiembro.trim() || "1234",
+                                rolAcceso: rolAccesoNuevo,
+                                rolesMusicales: rolesMusicalesNuevo,
+                              },
+                            ]);
+                            alert("✅ Miembro agregado con éxito.");
+                          }
+                          setModalMiembroVisible(false);
+                        } else {
+                          alert("⚠️ Ingresa el nombre del integrante.");
+                        }
+                      }}
                     >
-                      <Text style={[styles.loginButtonText, { fontSize: 12 }]}>
-                        Guardar Fecha
+                      <Text style={[styles.loginButtonText, { fontSize: 13 }]}>
+                        Guardar
                       </Text>
                     </TouchableOpacity>
+
                     <TouchableOpacity
                       style={[
                         styles.loginButton,
-                        {
-                          flex: 1,
-                          backgroundColor: "#EF4444",
-                          paddingVertical: 8,
-                        },
+                        { flex: 1, backgroundColor: "#EF4444", padding: 10 },
                       ]}
-                      onPress={() => setServicioEditandoFecha(null)}
+                      onPress={() => setModalMiembroVisible(false)}
                     >
-                      <Text style={[styles.loginButtonText, { fontSize: 12 }]}>
+                      <Text style={[styles.loginButtonText, { fontSize: 13 }]}>
                         Cancelar
                       </Text>
                     </TouchableOpacity>
@@ -1020,1533 +2961,758 @@ export default function App() {
                 </View>
               )}
 
-              {servicios.length > 0 ? (
-                servicios.map((serv, index) => (
+              {integrantes.map((int) => {
+                const esAdminOEsLiderObjetivo =
+                  int.rolAcceso === "admin" || int.rolAcceso === "lider";
+                const puedeModificarEste = esAdmin || !esAdminOEsLiderObjetivo;
+
+                return (
                   <View
-                    key={index}
+                    key={int.id}
                     style={[
-                      styles.eventCard,
-                      {
-                        backgroundColor: t.bg,
-                        borderColor: t.border,
-                        marginBottom: 8,
-                      },
+                      styles.memberCard,
+                      { backgroundColor: t.bg, borderColor: t.border },
                     ]}
                   >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Text style={[styles.eventTitle, { color: t.textMain }]}>
-                        📅 {serv.titulo} ({serv.fecha})
+                    <View style={styles.memberHeaderRow}>
+                      <Text style={[styles.memberTitle, { color: t.textMain }]}>
+                        👤 {int.nombre}
                       </Text>
 
-                      <View style={{ flexDirection: "row", gap: 6 }}>
-                        <TouchableOpacity
-                          style={styles.editServiceBtn}
-                          onPress={() => {
-                            setServicioEditandoFecha(serv);
-                            setNuevaFechaInput(serv.fecha);
-                          }}
-                        >
-                          <Text style={{ fontSize: 10, fontWeight: "bold" }}>
-                            📅 Modificar Fecha
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.deleteServiceBtn}
-                          onPress={() => eliminarServicioPorFecha(serv.fecha)}
-                        >
-                          <Text style={{ fontSize: 10 }}>🗑️ Eliminar</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <Text
-                      style={[
-                        styles.welcomeText,
-                        { color: t.textSub, marginTop: 4 },
-                      ]}
-                    >
-                      {serv.observaciones || "Sin observaciones"}
-                    </Text>
-
-                    <View
-                      style={{
-                        marginTop: 6,
-                        borderTopWidth: 1,
-                        borderTopColor: t.border,
-                        paddingTop: 4,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 10,
-                          fontWeight: "bold",
-                          color: t.primary,
-                        }}
-                      >
-                        SETLIST:
-                      </Text>
-                      {serv.setlist && serv.setlist.length > 0 ? (
-                        serv.setlist.map((c: any, idx: number) => (
-                          <Text
-                            key={idx}
-                            style={{ fontSize: 11, color: t.textSub }}
+                      {puedeModificarEste && (
+                        <View style={{ flexDirection: "row", gap: 6 }}>
+                          <TouchableOpacity
+                            style={{
+                              backgroundColor: "#3B82F6",
+                              paddingHorizontal: 6,
+                              paddingVertical: 3,
+                              borderRadius: 4,
+                            }}
+                            onPress={() => {
+                              setIdMiembroEditando(int.id);
+                              setNombreNuevoMiembro(int.nombre);
+                              setPinNuevoMiembro(int.pin || "1234");
+                              setRolAccesoNuevo(int.rolAcceso || "miembro");
+                              setRolesMusicalesNuevo(int.rolesMusicales || []);
+                              setModalMiembroVisible(true);
+                            }}
                           >
-                            {idx + 1}. {c.titulo} ({c.tono})
-                          </Text>
-                        ))
-                      ) : (
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            color: t.textSub,
-                            fontStyle: "italic",
-                          }}
-                        >
-                          Sin canciones agregadas
-                        </Text>
+                            <Text
+                              style={{
+                                color: "#FFFFFF",
+                                fontSize: 10,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              ✏️ Modificar
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={{
+                              backgroundColor: "#EF4444",
+                              paddingHorizontal: 6,
+                              paddingVertical: 3,
+                              borderRadius: 4,
+                            }}
+                            onPress={() =>
+                              setIntegrantes(
+                                integrantes.filter((item) => item.id !== int.id)
+                              )
+                            }
+                          >
+                            <Text
+                              style={{
+                                color: "#FFFFFF",
+                                fontSize: 10,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              🗑️ Eliminar
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                       )}
                     </View>
-                  </View>
-                ))
-              ) : (
-                <Text
-                  style={[
-                    styles.welcomeText,
-                    { color: t.textSub, textAlign: "center", padding: 10 },
-                  ]}
-                >
-                  No hay servicios programados.
-                </Text>
-              )}
-            </View>
-          </>
-        )}
-
-        {pestana === "eventos" && (
-          <>
-            <View style={styles.monthsRow}>
-              {["Octubre", "Noviembre", "Diciembre"].map((mes) => (
-                <TouchableOpacity
-                  key={mes}
-                  style={[
-                    styles.monthTab,
-                    { backgroundColor: t.cardBg, borderColor: t.border },
-                    mesSeleccionado === mes && {
-                      backgroundColor: t.primary,
-                      borderColor: t.primary,
-                    },
-                  ]}
-                  onPress={() => setMesSeleccionado(mes)}
-                >
-                  <Text
-                    style={[
-                      styles.monthText,
-                      { color: t.textSub },
-                      mesSeleccionado === mes && styles.monthTextActive,
-                    ]}
-                  >
-                    {mes}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View
-              style={[
-                styles.calendarCard,
-                { backgroundColor: t.cardBg, borderColor: t.border },
-              ]}
-            >
-              <Text style={[styles.calendarHeaderTitle, { color: t.textMain }]}>
-                {mesSeleccionado} 2026
-              </Text>
-              <View style={styles.weekHeaderRow}>
-                {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
-                  <Text
-                    key={d}
-                    style={[styles.weekHeaderCell, { color: t.textSub }]}
-                  >
-                    {d}
-                  </Text>
-                ))}
-              </View>
-
-              <View style={styles.daysGrid}>
-                {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => {
-                  const esSeleccionado = diaSeleccionado === dia;
-                  return (
-                    <TouchableOpacity
-                      key={dia}
-                      style={[
-                        styles.dayCell,
-                        { backgroundColor: t.bg },
-                        esSeleccionado && {
-                          backgroundColor: t.selectedDay,
-                          borderColor: t.selectedDay,
-                        },
-                      ]}
-                      onPress={() => setDiaSeleccionado(dia)}
+                    <Text
+                      style={{
+                        color: t.primary,
+                        fontSize: 12,
+                        marginBottom: 2,
+                      }}
                     >
-                      <Text
-                        style={[
-                          styles.dayText,
-                          { color: t.textMain },
-                          esSeleccionado && styles.dayTextSelected,
-                        ]}
-                      >
-                        {dia}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                      🎵 Roles:{" "}
+                      {int.rolesMusicales
+                        ? int.rolesMusicales.join(", ")
+                        : "Sin rol musical"}
+                    </Text>
+                    <Text style={{ color: t.textSub, fontSize: 11 }}>
+                      🔑 Acceso:{" "}
+                      <Text style={{ fontWeight: "bold", color: t.textMain }}>
+                        {(int.rolAcceso || "miembro").toUpperCase()}
+                      </Text>{" "}
+                      (PIN: {int.pin || "1234"})
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
+          )}
 
-            <View style={styles.serviceSectionHeader}>
-              <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>
-                Servicio del Día {diaSeleccionado} de {mesSeleccionado} 2026
-              </Text>
-              <TouchableOpacity
-                style={[styles.programBtn, { backgroundColor: t.primary }]}
-                onPress={() => abrirEditorServicio(null)}
-              >
-                <Text style={styles.programBtnText}>
-                  + Programar en este día
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {servicioDelDia ? (
-              <View
-                style={[
-                  styles.card,
-                  { backgroundColor: t.cardBg, borderColor: t.border },
-                ]}
-              >
-                <View style={styles.eventCardHeaderRow}>
+          {pestana === "repertorio" && (
+            <>
+              {cancionSeleccionadaDetalle !== null ? (
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: t.cardBg, borderColor: t.border },
+                  ]}
+                >
                   <View
                     style={{
                       flexDirection: "row",
+                      justifyContent: "space-between",
                       alignItems: "center",
-                      gap: 6,
+                      marginBottom: 12,
                     }}
                   >
-                    <Text style={{ fontSize: 14 }}>📅</Text>
-                    <Text
-                      style={[styles.eventMainTitle, { color: t.textMain }]}
-                    >
-                      {servicioDelDia.titulo}
-                    </Text>
-                  </View>
-                  <View style={{ flexDirection: "row", gap: 6 }}>
                     <TouchableOpacity
-                      style={styles.editServiceBtn}
-                      onPress={() => abrirEditorServicio(servicioDelDia)}
-                    >
-                      <Text style={{ fontSize: 11, fontWeight: "bold" }}>
-                        ✏️ Editar
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteServiceBtn}
-                      onPress={() => eliminarServicioPorFecha(fechaActualClave)}
-                    >
-                      <Text style={{ fontSize: 11 }}>🗑️</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <Text style={[styles.eventSubDate, { color: t.textSub }]}>
-                  Día {diaSeleccionado} de {mesSeleccionado} 2026
-                </Text>
-
-                {paletaServicio && (
-                  <View
-                    style={[
-                      styles.paletaPreviewBox,
-                      { backgroundColor: t.bg, borderColor: t.border },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.setlistHeaderBoxText,
-                        { color: t.textSub },
-                      ]}
-                    >
-                      🎨 PALETA DE COLORES: {paletaServicio.nombre}
-                    </Text>
-                    <View style={styles.paletaPreviewRow}>
-                      <Image
-                        source={{ uri: paletaServicio.url }}
-                        style={styles.paletaThumbImage}
-                      />
-                      <View style={styles.paletaSwatchesRow}>
-                        {paletaServicio.colores.map((colorHex, idx) => (
-                          <View
-                            key={idx}
-                            style={[
-                              styles.swatchBox,
-                              { backgroundColor: colorHex },
-                            ]}
-                          />
-                        ))}
-                      </View>
-                    </View>
-                  </View>
-                )}
-
-                <View
-                  style={[
-                    styles.setlistContainerBox,
-                    { backgroundColor: t.bg, borderColor: t.border },
-                  ]}
-                >
-                  <Text
-                    style={[styles.setlistHeaderBoxText, { color: t.textSub }]}
-                  >
-                    SETLIST (
-                    {servicioDelDia.setlist ? servicioDelDia.setlist.length : 0}
-                    )
-                  </Text>
-                  {servicioDelDia.setlist &&
-                  servicioDelDia.setlist.length > 0 ? (
-                    servicioDelDia.setlist.map((cancion: any, idx: number) => (
-                      <Text
-                        key={idx}
-                        style={[
-                          styles.setlistItemBoxText,
-                          { color: t.primary },
-                        ]}
-                      >
-                        {idx + 1}. {cancion.titulo} ({cancion.tono})
-                      </Text>
-                    ))
-                  ) : (
-                    <Text
                       style={{
-                        fontSize: 11,
-                        color: t.textSub,
-                        fontStyle: "italic",
+                        backgroundColor: t.bg,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: t.border,
+                      }}
+                      onPress={() => {
+                        setCancionSeleccionadaDetalle(null);
+                        setModoEdicionCancion(false);
+                        setSemitonosTransposicion(0);
                       }}
                     >
-                      Sin canciones en este servicio
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.rolesGridRow}>
-                  <View
-                    style={[
-                      styles.roleBoxHalf,
-                      { backgroundColor: t.bg, borderColor: t.border },
-                    ]}
-                  >
-                    <Text style={[styles.roleBoxTitle, { color: t.textMain }]}>
-                      🎤 VOCES
-                    </Text>
-
-                    <View style={styles.roleItemRow}>
-                      <Text style={[styles.roleBoxText, { color: t.textSub }]}>
-                        • Principal: {servicioDelDia.voces.principal}
+                      <Text
+                        style={{
+                          color: t.textMain,
+                          fontSize: 12,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ← Volver al repertorio
                       </Text>
-                      {servicioDelDia.voces.principal !== "Sin asignar" && (
+                    </TouchableOpacity>
+
+                    {puedeControlarRepertorio && (
+                      <View style={{ flexDirection: "row", gap: 6 }}>
                         <TouchableOpacity
+                          style={{
+                            backgroundColor: "#3B82F6",
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                          }}
+                          onPress={() => {
+                            setModoEdicionCancion(true);
+                            setNuevoTituloCancion(
+                              cancionSeleccionadaDetalle.titulo
+                            );
+                            setNuevoArtistaCancion(
+                              cancionSeleccionadaDetalle.artista
+                            );
+                            setNuevoTonoCancion(
+                              cancionSeleccionadaDetalle.tono
+                            );
+                            setNuevaLetraCancion(
+                              cancionSeleccionadaDetalle.letra || ""
+                            );
+                            setEtiquetasActuales(
+                              cancionSeleccionadaDetalle.etiquetas || []
+                            );
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "#FFF",
+                              fontSize: 12,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            ✏️ Editar
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{
+                            backgroundColor: "#EF4444",
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                          }}
                           onPress={() =>
-                            quitarRolAsignado("voces", "principal")
+                            eliminarCancionRepertorio(
+                              cancionSeleccionadaDetalle.id
+                            )
                           }
-                          style={styles.quitarRolBtn}
                         >
                           <Text
                             style={{
-                              fontSize: 10,
-                              color: "#EF4444",
+                              color: "#FFF",
+                              fontSize: 12,
                               fontWeight: "bold",
                             }}
                           >
-                            ✕ Quitar
+                            🗑️ Eliminar
                           </Text>
                         </TouchableOpacity>
-                      )}
-                    </View>
-
-                    <View style={styles.roleItemRow}>
-                      <Text style={[styles.roleBoxText, { color: t.textSub }]}>
-                        • Coros: {servicioDelDia.voces.coros}
-                      </Text>
-                      {servicioDelDia.voces.coros !== "Sin asignar" && (
-                        <TouchableOpacity
-                          onPress={() => quitarRolAsignado("voces", "coros")}
-                          style={styles.quitarRolBtn}
-                        >
-                          <Text
-                            style={{
-                              fontSize: 10,
-                              color: "#EF4444",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            ✕ Quitar
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
+                      </View>
+                    )}
                   </View>
 
-                  <View
-                    style={[
-                      styles.roleBoxHalf,
-                      { backgroundColor: t.bg, borderColor: t.border },
-                    ]}
-                  >
-                    <Text style={[styles.roleBoxTitle, { color: t.textMain }]}>
-                      🎸 INSTRUMENTOS
-                    </Text>
+                  {modoEdicionCancion ? (
+                    <View>
+                      <Text
+                        style={[
+                          styles.cardTitle,
+                          { color: t.textMain, fontSize: 18, marginBottom: 14 },
+                        ]}
+                      >
+                        ✏️ Editar Canción
+                      </Text>
 
-                    {["piano", "guitarra", "bajo", "bateria"].map((inst) => {
-                      const asignado = servicioDelDia.instrumentos[inst];
-                      return (
-                        <View key={inst} style={styles.roleItemRow}>
-                          <Text
-                            style={[
-                              styles.roleBoxText,
-                              { color: t.textSub, textTransform: "capitalize" },
-                            ]}
-                          >
-                            • {inst}: {asignado}
+                      <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                        Título
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.loginInput,
+                          {
+                            backgroundColor: t.bg,
+                            borderColor: t.border,
+                            color: t.textMain,
+                          },
+                        ]}
+                        value={nuevoTituloCancion}
+                        onChangeText={setNuevoTituloCancion}
+                      />
+
+                      <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                        Artista o autor
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.loginInput,
+                          {
+                            backgroundColor: t.bg,
+                            borderColor: t.border,
+                            color: t.textMain,
+                          },
+                        ]}
+                        value={nuevoArtistaCancion}
+                        onChangeText={setNuevoArtistaCancion}
+                      />
+
+                      <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                        Tonalidad original
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.loginInput,
+                          {
+                            backgroundColor: t.bg,
+                            borderColor: t.border,
+                            color: t.textMain,
+                          },
+                        ]}
+                        value={nuevoTonoCancion}
+                        onChangeText={setNuevoTonoCancion}
+                      />
+
+                      <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                        Letra con acordes [G]
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.loginInput,
+                          {
+                            backgroundColor: t.bg,
+                            borderColor: t.border,
+                            color: t.textMain,
+                            height: 160,
+                            textAlignVertical: "top",
+                          },
+                        ]}
+                        value={nuevaLetraCancion}
+                        onChangeText={setNuevaLetraCancion}
+                        multiline
+                      />
+
+                      <View
+                        style={{ flexDirection: "row", gap: 8, marginTop: 10 }}
+                      >
+                        <TouchableOpacity
+                          style={[
+                            styles.loginButton,
+                            {
+                              flex: 1,
+                              backgroundColor: t.primary,
+                              padding: 12,
+                            },
+                          ]}
+                          onPress={guardarOActualizarCancion}
+                        >
+                          <Text style={styles.loginButtonText}>
+                            Guardar Cambios
                           </Text>
-                          {asignado !== "Sin asignar" && (
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.loginButton,
+                            {
+                              flex: 1,
+                              backgroundColor: "#EF4444",
+                              padding: 12,
+                            },
+                          ]}
+                          onPress={() => setModoEdicionCancion(false)}
+                        >
+                          <Text style={styles.loginButtonText}>Cancelar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <View>
+                      <View style={{ marginBottom: 14 }}>
+                        <Text
+                          style={{
+                            fontSize: 22,
+                            fontWeight: "bold",
+                            color: t.textMain,
+                            marginBottom: 2,
+                          }}
+                        >
+                          {cancionSeleccionadaDetalle.titulo}
+                        </Text>
+                        <Text
+                          style={{
+                            color: t.textSub,
+                            fontSize: 13,
+                            marginBottom: 8,
+                          }}
+                        >
+                          {cancionSeleccionadaDetalle.artista}
+                        </Text>
+
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: 6,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <View
+                            style={{
+                              backgroundColor: t.primary + "33",
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: 4,
+                              borderWidth: 1,
+                              borderColor: t.primary,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: t.primary,
+                                fontWeight: "bold",
+                                fontSize: 11,
+                              }}
+                            >
+                              Tonalidad:{" "}
+                              {transponerNotaUnica(
+                                cancionSeleccionadaDetalle.tono || "C",
+                                semitonosTransposicion
+                              )}{" "}
+                              {semitonosTransposicion !== 0
+                                ? `(orig: ${cancionSeleccionadaDetalle.tono})`
+                                : ""}
+                            </Text>
+                          </View>
+                          {cancionSeleccionadaDetalle.etiquetas?.map(
+                            (eti, idx) => (
+                              <View
+                                key={idx}
+                                style={{
+                                  backgroundColor: t.bg,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 4,
+                                  borderWidth: 1,
+                                  borderColor: t.border,
+                                }}
+                              >
+                                <Text
+                                  style={{ color: t.textSub, fontSize: 11 }}
+                                >
+                                  {eti}
+                                </Text>
+                              </View>
+                            )
+                          )}
+                        </View>
+                      </View>
+
+                      <View
+                        style={{
+                          backgroundColor: t.bg,
+                          padding: 14,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: t.border,
+                        }}
+                      >
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: 12,
+                            borderBottomWidth: 1,
+                            borderBottomColor: t.border,
+                            paddingBottom: 8,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: t.primary,
+                              fontSize: 12,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            📜 LETRA Y ACORDES
+                          </Text>
+
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              backgroundColor: t.cardBg,
+                              borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: t.border,
+                              overflow: "hidden",
+                            }}
+                          >
                             <TouchableOpacity
+                              style={{
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                backgroundColor: t.bg,
+                                borderRightWidth: 1,
+                                borderRightColor: t.border,
+                              }}
                               onPress={() =>
-                                quitarRolAsignado("instrumentos", inst)
+                                setSemitonosTransposicion(
+                                  semitonosTransposicion - 1
+                                )
                               }
-                              style={styles.quitarRolBtn}
                             >
                               <Text
                                 style={{
-                                  fontSize: 10,
-                                  color: "#EF4444",
+                                  color: t.textMain,
                                   fontWeight: "bold",
+                                  fontSize: 14,
                                 }}
                               >
-                                ✕ Quitar
+                                -
                               </Text>
                             </TouchableOpacity>
-                          )}
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
 
-                <View
-                  style={[
-                    styles.obsContainerBox,
-                    { backgroundColor: t.bg, borderColor: t.border },
-                  ]}
-                >
-                  <Text
-                    style={[styles.obsHeaderBoxText, { color: t.textMain }]}
-                  >
-                    📝 OBSERVACIONES TÉCNICAS
-                  </Text>
-                  <Text
-                    style={[styles.obsContentBoxText, { color: t.textSub }]}
-                  >
-                    {servicioDelDia.observaciones}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.whatsappActionBtn,
-                    { backgroundColor: "#22C55E", marginTop: 8 },
-                  ]}
-                  onPress={enviarSetlistPorWhatsApp}
-                >
-                  <Text style={styles.loginButtonText}>
-                    🚀 Enviar setlist por WhatsApp
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.postulateActionBtn,
-                    { backgroundColor: "#F97316", marginTop: 8 },
-                  ]}
-                  onPress={() => setModalPostularVisible(true)}
-                >
-                  <Text style={styles.loginButtonText}>
-                    🙋‍♂️ Postularme (Elegir rol)
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.card,
-                  { backgroundColor: t.cardBg, borderColor: t.border },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.welcomeText,
-                    { color: t.textSub, textAlign: "center", padding: 20 },
-                  ]}
-                >
-                  No hay ningún servicio programado para esta fecha. Toca en "+
-                  Programar en este día".
-                </Text>
-              </View>
-            )}
-
-            {modalPostularVisible && (
-              <View
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: t.cardBg,
-                    borderColor: t.primary,
-                    borderWidth: 2,
-                    marginTop: 12,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    { color: t.textMain, fontSize: 16, marginBottom: 8 },
-                  ]}
-                >
-                  Selecciona el rol para ocupar ({usuario}):
-                </Text>
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  🎤 Voces:
-                </Text>
-                <View style={{ flexDirection: "row", gap: 6, marginBottom: 8 }}>
-                  <TouchableOpacity
-                    style={[styles.chip, { backgroundColor: t.primary }]}
-                    onPress={() => postularseARol("voces", "principal")}
-                  >
-                    <Text
-                      style={{
-                        color: "#FFFFFF",
-                        fontSize: 11,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Voz Principal
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.chip, { backgroundColor: t.primary }]}
-                    onPress={() => postularseARol("voces", "coros")}
-                  >
-                    <Text
-                      style={{
-                        color: "#FFFFFF",
-                        fontSize: 11,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Coros
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  🎸 Instrumentos:
-                </Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    flexWrap: "wrap",
-                    gap: 6,
-                    marginBottom: 12,
-                  }}
-                >
-                  {["piano", "guitarra", "bajo", "bateria"].map((inst) => (
-                    <TouchableOpacity
-                      key={inst}
-                      style={[styles.chip, { backgroundColor: t.primary }]}
-                      onPress={() => postularseARol("instrumentos", inst)}
-                    >
-                      <Text
-                        style={{
-                          color: "#FFFFFF",
-                          fontSize: 11,
-                          fontWeight: "bold",
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        {inst}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.loginButton, { backgroundColor: "#EF4444" }]}
-                  onPress={() => setModalPostularVisible(false)}
-                >
-                  <Text style={styles.loginButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {modalProgramarVisible && (
-              <View
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: t.cardBg,
-                    borderColor: t.primary,
-                    borderWidth: 2,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    { color: t.textMain, fontSize: 16 },
-                  ]}
-                >
-                  ✏️ Editando Servicio ({mesSeleccionado} {diaSeleccionado},
-                  2026)
-                </Text>
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Nombre del evento (Modificable)
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInput,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  value={nombreEvento}
-                  onChangeText={setNombreEvento}
-                  placeholder="Ej. Culto Dominical, Vigilia, etc."
-                  placeholderTextColor={t.textSub}
-                />
-
-                <View
-                  style={[
-                    styles.paletaSectionContainer,
-                    { backgroundColor: "#131B2E", borderColor: t.border },
-                  ]}
-                >
-                  <View style={styles.paletaHeaderRow}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14 }}>🌐</Text>
-                      <Text style={styles.paletaSectionTitle}>
-                        PALETA DEL CULTO
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Text style={{ color: "#8D99AE", fontSize: 11 }}>
-                        📷 Subir imagen
-                      </Text>
-                      <Switch
-                        value={subirImagenToggle}
-                        onValueChange={setSubirImagenToggle}
-                        trackColor={{ false: "#3A506B", true: "#3B82F6" }}
-                        thumbColor="#FFFFFF"
-                      />
-                    </View>
-                  </View>
-
-                  <View style={styles.paletaGrid}>
-                    {GALERIA_PALETAS.map((item) => {
-                      const esSeleccionada = paletaActivaId === item.id;
-                      return (
-                        <TouchableOpacity
-                          key={item.id}
-                          activeOpacity={0.8}
-                          style={[
-                            styles.paletaCard,
-                            esSeleccionada && styles.paletaCardSelected,
-                          ]}
-                          onPress={() => {
-                            if (esSeleccionada) {
-                              setPaletaActivaId(null);
-                            } else {
-                              setPaletaActivaId(item.id);
-                            }
-                          }}
-                        >
-                          <Image
-                            source={{ uri: item.url }}
-                            style={styles.paletaImage}
-                          />
-
-                          <View style={styles.swatchContainerOverlay}>
-                            {item.colores.map((c, i) => (
-                              <View
-                                key={i}
-                                style={[
-                                  styles.swatchMini,
-                                  { backgroundColor: c },
-                                ]}
-                              />
-                            ))}
-                          </View>
-
-                          {esSeleccionada && (
-                            <View style={styles.checkIconBadge}>
+                            <TouchableOpacity
+                              style={{
+                                paddingHorizontal: 12,
+                                paddingVertical: 5,
+                              }}
+                              onPress={() => setSemitonosTransposicion(0)}
+                            >
                               <Text
                                 style={{
-                                  color: "#FFFFFF",
-                                  fontSize: 10,
+                                  color: t.primary,
                                   fontWeight: "bold",
+                                  fontSize: 12,
                                 }}
                               >
-                                ✓
+                                {transponerNotaUnica(
+                                  cancionSeleccionadaDetalle.tono || "C",
+                                  semitonosTransposicion
+                                )}{" "}
+                                <Text style={{ color: t.textSub, fontSize: 9 }}>
+                                  {semitonosTransposicion === 0
+                                    ? "original"
+                                    : `${
+                                        semitonosTransposicion > 0
+                                          ? "+" + semitonosTransposicion
+                                          : semitonosTransposicion
+                                      }`}
+                                </Text>
                               </Text>
-                            </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={{
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                backgroundColor: t.bg,
+                                borderLeftWidth: 1,
+                                borderLeftColor: t.border,
+                              }}
+                              onPress={() =>
+                                setSemitonosTransposicion(
+                                  semitonosTransposicion + 1
+                                )
+                              }
+                            >
+                              <Text
+                                style={{
+                                  color: t.textMain,
+                                  fontWeight: "bold",
+                                  fontSize: 14,
+                                }}
+                              >
+                                +
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+
+                        <Text
+                          style={{
+                            color: t.textMain,
+                            fontSize: 14,
+                            lineHeight: 22,
+                            fontFamily:
+                              Platform.OS === "ios" ? "Courier" : "monospace",
+                          }}
+                        >
+                          {transponerTextoLetra(
+                            cancionSeleccionadaDetalle.letra ||
+                              "Sin letra registrada.",
+                            semitonosTransposicion
                           )}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-                  <Text style={styles.paletaFooterHint}>
-                    Toca otra imagen para cambiar o la misma para deseleccionar.
-                    ({paletaActivaId || 0}/12)
-                  </Text>
-                </View>
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Observaciones Técnicas
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInput,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  value={observaciones}
-                  onChangeText={setObservaciones}
-                />
-
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    { color: t.textMain, marginTop: 12, fontSize: 14 },
-                  ]}
-                >
-                  Organización del Setlist (Modificar Nota / Tono y Orden)
-                </Text>
-                <Text style={[styles.subHeaderLabel, { color: t.textSub }]}>
-                  {setlistActivo.length === 0
-                    ? "💡 El setlist está vacío. Toca abajo en la biblioteca para agregar canciones:"
-                    : indiceSeleccionadoParaMover !== null
-                    ? "👉 Toca otra canción del Setlist para mover la selección de puesto:"
-                    : "💡 Toca una canción para seleccionarla (o usa los botones ▲▼):"}
-                </Text>
-
-                {setlistActivo.map((cancion, idx) => {
-                  const estaSeleccionada = indiceSeleccionadoParaMover === idx;
-                  return (
-                    <TouchableOpacity
-                      key={idx}
-                      activeOpacity={0.9}
-                      onPress={() => manejarPresionCancionSetlist(idx)}
-                      style={[
-                        styles.editSetlistRow,
-                        { backgroundColor: t.bg, borderColor: t.border },
-                        estaSeleccionada && {
-                          backgroundColor: "#F9731633",
-                          borderColor: "#F97316",
-                          borderWidth: 2,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          flex: 1,
-                          gap: 6,
-                        }}
-                      >
-                        <Text style={{ color: t.textMain, fontWeight: "bold" }}>
-                          {estaSeleccionada ? "📌 [Seleccionada] " : "≡ "}{" "}
-                          {idx + 1}. {cancion.titulo}
                         </Text>
                       </View>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 4,
-                        }}
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <>
+                  {puedeControlarRepertorio && (
+                    <View
+                      style={[
+                        styles.card,
+                        { backgroundColor: t.cardBg, borderColor: t.border },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.cardTitle,
+                          { color: t.textMain, fontSize: 16, marginBottom: 10 },
+                        ]}
                       >
-                        <Text style={{ color: t.textSub, fontSize: 11 }}>
-                          Nota:
-                        </Text>
+                        ➕ Agregar Nueva Canción
+                      </Text>
+
+                      <View style={{ gap: 8 }}>
                         <TextInput
                           style={[
-                            styles.notaInput,
+                            styles.loginInput,
                             {
-                              backgroundColor: t.cardBg,
+                              backgroundColor: t.bg,
                               borderColor: t.border,
                               color: t.textMain,
+                              marginBottom: 0,
                             },
                           ]}
-                          value={cancion.tono}
-                          onChangeText={(val) => cambiarTonoSetlist(idx, val)}
+                          placeholder="Título de la canción"
+                          placeholderTextColor={t.textSub}
+                          value={nuevoTituloCancion}
+                          onChangeText={setNuevoTituloCancion}
+                        />
+                        <TextInput
+                          style={[
+                            styles.loginInput,
+                            {
+                              backgroundColor: t.bg,
+                              borderColor: t.border,
+                              color: t.textMain,
+                              marginBottom: 0,
+                            },
+                          ]}
+                          placeholder="Artista o autor"
+                          placeholderTextColor={t.textSub}
+                          value={nuevoArtistaCancion}
+                          onChangeText={setNuevoArtistaCancion}
+                        />
+                        <TextInput
+                          style={[
+                            styles.loginInput,
+                            {
+                              backgroundColor: t.bg,
+                              borderColor: t.border,
+                              color: t.textMain,
+                              marginBottom: 0,
+                            },
+                          ]}
+                          placeholder="Tonalidad (Ej. C, G, Dm)"
+                          placeholderTextColor={t.textSub}
+                          value={nuevoTonoCancion}
+                          onChangeText={setNuevoTonoCancion}
+                        />
+                        <TextInput
+                          style={[
+                            styles.loginInput,
+                            {
+                              backgroundColor: t.bg,
+                              borderColor: t.border,
+                              color: t.textMain,
+                              height: 70,
+                              textAlignVertical: "top",
+                              marginBottom: 0,
+                            },
+                          ]}
+                          placeholder="Letra con acordes entre corchetes [C]..."
+                          placeholderTextColor={t.textSub}
+                          value={nuevaLetraCancion}
+                          onChangeText={setNuevaLetraCancion}
+                          multiline
                         />
                         <TouchableOpacity
                           style={[
-                            styles.miniBtn,
-                            { backgroundColor: "#3B82F6" },
+                            styles.loginButton,
+                            { backgroundColor: t.primary, padding: 10 },
                           ]}
-                          onPress={() => moverCancionSetlist(idx, "arriba")}
+                          onPress={guardarOActualizarCancion}
                         >
-                          <Text style={{ color: "#FFFFFF", fontSize: 10 }}>
-                            ▲
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.miniBtn,
-                            { backgroundColor: "#3B82F6" },
-                          ]}
-                          onPress={() => moverCancionSetlist(idx, "abajo")}
-                        >
-                          <Text style={{ color: "#FFFFFF", fontSize: 10 }}>
-                            ▼
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.miniBtnDanger,
-                            { backgroundColor: "#EF4444" },
-                          ]}
-                          onPress={() => quitarCancionSetlist(idx)}
-                        >
-                          <Text style={{ color: "#FFFFFF", fontSize: 10 }}>
-                            Quitar
+                          <Text style={styles.loginButtonText}>
+                            Guardar en Repertorio
                           </Text>
                         </TouchableOpacity>
                       </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                    </View>
+                  )}
 
-                <Text
-                  style={[
-                    styles.subHeaderLabel,
-                    { color: t.textSub, marginTop: 12 },
-                  ]}
-                >
-                  Biblioteca de canciones (Toca para agregar):
-                </Text>
-                {bibliotecaCanciones.map((cancion) => {
-                  const yaAgregada = setlistActivo.some(
-                    (c) =>
-                      c.titulo.toLowerCase() === cancion.titulo.toLowerCase()
-                  );
-                  return (
-                    <TouchableOpacity
-                      key={cancion.id}
+                  <View
+                    style={[
+                      styles.card,
+                      { backgroundColor: t.cardBg, borderColor: t.border },
+                    ]}
+                  >
+                    <Text
                       style={[
-                        styles.songLibraryRow,
-                        { backgroundColor: t.bg, borderColor: t.border },
+                        styles.cardTitle,
+                        { color: t.textMain, fontSize: 16, marginBottom: 14 },
                       ]}
-                      onPress={() => {
-                        if (!yaAgregada) {
-                          setSetlistActivo([
-                            ...setlistActivo,
-                            {
-                              id: Date.now(),
-                              titulo: cancion.titulo,
-                              tono: cancion.tono,
-                            },
-                          ]);
-                        }
-                      }}
                     >
-                      <Text
-                        style={[styles.songLibraryText, { color: t.textMain }]}
-                      >
-                        {cancion.titulo}{" "}
-                        <Text style={{ color: t.textSub }}>
-                          ({cancion.tono})
-                        </Text>
-                      </Text>
-                      <Text
-                        style={{
-                          color: yaAgregada ? "#22C55E" : t.primary,
-                          fontSize: 11,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {yaAgregada ? "✓ Agregada" : "+ Agregar"}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                      Repertorio ({repertorio.length})
+                    </Text>
 
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
-                  <TouchableOpacity
-                    style={[
-                      styles.loginButton,
-                      { flex: 1, backgroundColor: "#F97316" },
-                    ]}
-                    onPress={guardarServicioAvanzado}
-                  >
-                    <Text style={styles.loginButtonText}>Guardar Cambios</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.loginButton,
-                      { flex: 1, backgroundColor: "#EF4444" },
-                    ]}
-                    onPress={() => setModalProgramarVisible(false)}
-                  >
-                    <Text style={styles.loginButtonText}>Cancelar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </>
-        )}
-
-        {pestana === "equipo" && (
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: t.cardBg, borderColor: t.border },
-            ]}
-          >
-            <Text
-              style={[styles.cardTitle, { color: t.textMain, fontSize: 16 }]}
-            >
-              Miembros del Grupo ({integrantes.length})
-            </Text>
-            <Text style={[styles.teamSubtitle, { color: t.textSub }]}>
-              👑 Vista de Voz Líder: Modificación de roles.
-            </Text>
-
-            {integrantes.map((int) => (
-              <View
-                key={int.id}
-                style={[
-                  styles.memberCard,
-                  { backgroundColor: t.bg, borderColor: t.border },
-                ]}
-              >
-                <View style={styles.memberHeaderRow}>
-                  <Text style={[styles.memberTitle, { color: t.textMain }]}>
-                    👤 {int.nombre}
-                  </Text>
-                  <View style={styles.memberRolesRow}>
-                    {int.roles.map((r, i) => (
-                      <Text
-                        key={i}
-                        style={[styles.memberRoleTag, { color: t.primary }]}
-                      >
-                        {r}
-                      </Text>
-                    ))}
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.modifyRoleBtn,
-                    { borderColor: t.border, backgroundColor: t.cardBg },
-                  ]}
-                  onPress={() => abrirModalRoles(int)}
-                >
-                  <Text
-                    style={[styles.modifyRoleBtnText, { color: t.textSub }]}
-                  >
-                    ⚙️ Modificar roles de este integrante
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-
-            {integranteEditando && (
-              <View
-                style={[
-                  styles.editModalContainer,
-                  { backgroundColor: t.cardBg, borderColor: t.primary },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    { color: t.textMain, fontSize: 16, marginBottom: 12 },
-                  ]}
-                >
-                  Modificar roles de {integranteEditando.nombre}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: t.textSub, marginBottom: 8 },
-                  ]}
-                >
-                  Selecciona los roles activos:
-                </Text>
-
-                <View style={styles.chipsRow}>
-                  {rolesDisponiblesGeneral.map((rol) => {
-                    const activo = rolesSeleccionadosEdit.includes(rol);
-                    return (
+                    {repertorio.map((c) => (
                       <TouchableOpacity
-                        key={rol}
+                        key={c.id}
                         style={[
-                          styles.chip,
-                          { backgroundColor: t.bg, borderColor: t.border },
-                          activo && {
-                            backgroundColor: t.primary,
-                            borderColor: t.primary,
+                          styles.repertorioItemRowPro,
+                          {
+                            borderBottomColor: t.border,
+                            backgroundColor: t.bg,
                           },
                         ]}
                         onPress={() => {
-                          if (activo) {
-                            setRolesSeleccionadosEdit(
-                              rolesSeleccionadosEdit.filter((r) => r !== rol)
-                            );
-                          } else {
-                            setRolesSeleccionadosEdit([
-                              ...rolesSeleccionadosEdit,
-                              rol,
-                            ]);
-                          }
+                          setCancionSeleccionadaDetalle(c);
+                          setSemitonosTransposicion(0);
                         }}
                       >
-                        <Text
-                          style={[
-                            styles.chipText,
-                            { color: t.textMain },
-                            activo && { color: "#FFFFFF", fontWeight: "bold" },
-                          ]}
+                        <View style={{ flex: 1, paddingVertical: 4 }}>
+                          <Text
+                            style={{
+                              color: t.textMain,
+                              fontSize: 15,
+                              fontWeight: "bold",
+                              marginBottom: 2,
+                            }}
+                          >
+                            {c.titulo}
+                          </Text>
+                          <Text style={{ color: t.textSub, fontSize: 12 }}>
+                            {c.artista || "Sin artista"}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={{
+                            backgroundColor: t.primary,
+                            width: 34,
+                            height: 34,
+                            borderRadius: 6,
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
                         >
-                          {rol}
-                        </Text>
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              fontWeight: "bold",
+                              fontSize: 13,
+                            }}
+                          >
+                            {c.tono || "C"}
+                          </Text>
+                        </View>
                       </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
-                  <TouchableOpacity
-                    style={[
-                      styles.loginButton,
-                      { flex: 1, backgroundColor: t.primary },
-                    ]}
-                    onPress={guardarRolesIntegrante}
-                  >
-                    <Text style={styles.loginButtonText}>Guardar Cambios</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.loginButton,
-                      { flex: 1, backgroundColor: "#EF4444" },
-                    ]}
-                    onPress={() => setIntegranteEditando(null)}
-                  >
-                    <Text style={styles.loginButtonText}>Cerrar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        )}
-
-        {pestana === "repertorio" && (
-          <>
-            {cancionEditando ? (
-              <View
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: t.cardBg,
-                    borderColor: t.primary,
-                    borderWidth: 2,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    { color: t.textMain, fontSize: 16, marginBottom: 12 },
-                  ]}
-                >
-                  ✏️ Editando: {cancionEditando.titulo}
-                </Text>
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Título
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInput,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  value={editTitulo}
-                  onChangeText={setEditTitulo}
-                />
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Artista o autor
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInput,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  value={editArtista}
-                  onChangeText={setEditArtista}
-                />
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Tonalidad original
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInput,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  value={editTono}
-                  onChangeText={setEditTono}
-                />
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Letra con acordes [G]
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInputArea,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  multiline={true}
-                  numberOfLines={5}
-                  value={editLetra}
-                  onChangeText={setEditLetra}
-                />
-
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
-                  <TouchableOpacity
-                    style={[
-                      styles.loginButton,
-                      { flex: 1, backgroundColor: t.primary },
-                    ]}
-                    onPress={guardarCambiosCancion}
-                  >
-                    <Text style={styles.loginButtonText}>Guardar Cambios</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.loginButton,
-                      { flex: 1, backgroundColor: "#EF4444" },
-                    ]}
-                    onPress={() => setCancionEditando(null)}
-                  >
-                    <Text style={styles.loginButtonText}>Cancelar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.card,
-                  { backgroundColor: t.cardBg, borderColor: t.border },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    { color: t.textMain, fontSize: 16, marginBottom: 12 },
-                  ]}
-                >
-                  Nueva canción para {sedeActual}
-                </Text>
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Título
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInput,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  placeholder="Ej. Cuán Grande es Él"
-                  placeholderTextColor={t.textSub}
-                  value={nuevoTituloCancion}
-                  onChangeText={setNuevoTituloCancion}
-                />
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Artista o autor
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInput,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  placeholder="Ej. Espíritu y Verdad"
-                  placeholderTextColor={t.textSub}
-                  value={nuevoArtistaCancion}
-                  onChangeText={setNuevoArtistaCancion}
-                />
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Tonalidad original
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInput,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  placeholder="Ej. G"
-                  placeholderTextColor={t.textSub}
-                  value={nuevoTonoCancion}
-                  onChangeText={setNuevoTonoCancion}
-                />
-
-                <Text style={[styles.inputLabel, { color: t.textSub }]}>
-                  Letra con acordes [G]
-                </Text>
-                <TextInput
-                  style={[
-                    styles.loginInputArea,
-                    {
-                      backgroundColor: t.bg,
-                      borderColor: t.border,
-                      color: t.textMain,
-                    },
-                  ]}
-                  placeholder="Escribe la letra e incluye acordes entre corchetes..."
-                  placeholderTextColor={t.textSub}
-                  multiline={true}
-                  numberOfLines={4}
-                  value={nuevaLetraCancion}
-                  onChangeText={setNuevaLetraCancion}
-                />
-
-                <TouchableOpacity
-                  style={[
-                    styles.loginButton,
-                    { backgroundColor: t.primary, marginTop: 8 },
-                  ]}
-                  onPress={guardarNuevaCancion}
-                >
-                  <Text style={styles.loginButtonText}>Guardar canción</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: t.cardBg, borderColor: t.border },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.cardTitle,
-                  { color: t.textMain, fontSize: 16, marginBottom: 12 },
-                ]}
-              >
-                Repertorio de {sedeActual} ({repertorio.length})
-              </Text>
-
-              {repertorio.map((cancion) => (
-                <TouchableOpacity
-                  key={cancion.id}
-                  style={[
-                    styles.songItemRow,
-                    { backgroundColor: t.bg, borderColor: t.border },
-                  ]}
-                  onPress={() => seleccionarCancionParaEditar(cancion)}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.itemTitle, { color: t.textMain }]}>
-                      {cancion.titulo}
-                    </Text>
-                    <Text style={[styles.itemSub, { color: t.textSub }]}>
-                      {cancion.artista} • Tono: {cancion.tono} (Toca para
-                      editar)
-                    </Text>
+                    ))}
                   </View>
-                  <TouchableOpacity
-                    onPress={() => eliminarCancion(cancion.id)}
-                    style={styles.trashBtn}
-                  >
-                    <Text style={{ fontSize: 18 }}>🗑️</Text>
-                  </TouchableOpacity>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-
-        {pestana === "atril" && (
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: t.cardBg, borderColor: t.border },
-            ]}
-          >
-            <Text
-              style={[
-                styles.cardTitle,
-                { color: t.textMain, fontSize: 18, marginBottom: 12 },
-              ]}
-            >
-              {repertorio[0]?.titulo || "creo en ti"}
-            </Text>
-
-            <Text style={[styles.inputLabel, { color: t.textSub }]}>
-              Acordes escritos en {repertorio[0]?.tono || "C"}
-            </Text>
-
-            <View
-              style={[
-                styles.atrilSwitchRow,
-                { backgroundColor: t.bg, borderColor: t.border },
-              ]}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.atrilSwitchBtn,
-                  tipoAcordeAtril === "Acordes" && {
-                    backgroundColor: t.primary,
-                  },
-                ]}
-                onPress={() => setTipoAcordeAtril("Acordes")}
-              >
-                <Text
-                  style={[
-                    styles.atrilSwitchText,
-                    tipoAcordeAtril === "Acordes" && {
-                      color: "#FFFFFF",
-                      fontWeight: "bold",
-                    },
-                  ]}
-                >
-                  Acordes
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.atrilSwitchBtn,
-                  tipoAcordeAtril === "Nashville" && {
-                    backgroundColor: t.primary,
-                  },
-                ]}
-                onPress={() => setTipoAcordeAtril("Nashville")}
-              >
-                <Text
-                  style={[
-                    styles.atrilSwitchText,
-                    tipoAcordeAtril === "Nashville" && {
-                      color: "#FFFFFF",
-                      fontWeight: "bold",
-                    },
-                  ]}
-                >
-                  Nashville
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View
-              style={[
-                styles.harmonicCard,
-                { backgroundColor: t.bg, borderColor: t.border },
-              ]}
-            >
-              <Text style={[styles.harmonicTitle, { color: t.textMain }]}>
-                🎵 ANÁLISIS ARMÓNICO
-              </Text>
-              <Text style={[styles.harmonicSub, { color: t.textSub }]}>
-                Acordes escritos (en detectado):{" "}
-                <Text style={{ color: t.primary, fontWeight: "bold" }}>
-                  {repertorio[0]?.tono || "C"}
-                </Text>
-              </Text>
-              <Text
-                style={[
-                  styles.harmonicSub,
-                  { color: t.textMain, fontWeight: "bold", marginTop: 6 },
-                ]}
-              >
-                Acordes prestados
-              </Text>
-              <Text style={{ color: "#EF4444", fontSize: 11, marginTop: 2 }}>
-                • A/C# III/bVI — dominante secundario (V/vi)
-              </Text>
-              <Text style={{ color: "#EF4444", fontSize: 11, marginTop: 2 }}>
-                • G/B II/#IV — dominante secundario (V/V)
-              </Text>
-              <Text style={{ color: "#EF4444", fontSize: 11, marginTop: 2 }}>
-                • Estribillo V/estribillo — dominante secundario (V/iii)
-              </Text>
-              <Text
-                style={{
-                  color: "#F59E0B",
-                  fontSize: 10,
-                  fontStyle: "italic",
-                  marginTop: 6,
-                }}
-              >
-                ⚠️ Se detectaron acordes fuera de la tonalidad principal.
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.transposeContainer,
-                { backgroundColor: t.bg, borderColor: t.border },
-              ]}
-            >
-              <Text style={[styles.transposeLabel, { color: t.textMain }]}>
-                Tono: {repertorio[0]?.tono || "C"} (
-                {transposicion >= 0 ? "+" + transposicion : transposicion})
-              </Text>
-              <View style={styles.transposeActions}>
-                <TouchableOpacity
-                  style={[
-                    styles.transBtn,
-                    { backgroundColor: t.cardBg, borderColor: t.border },
-                  ]}
-                  onPress={() => setTransposicion(transposicion - 1)}
-                >
-                  <Text style={{ color: t.textMain, fontWeight: "bold" }}>
-                    -
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.transBtn,
-                    { backgroundColor: t.cardBg, borderColor: t.border },
-                  ]}
-                  onPress={() => setTransposicion(transposicion + 1)}
-                >
-                  <Text style={{ color: t.textMain, fontWeight: "bold" }}>
-                    +
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.resetBtn,
-                    { backgroundColor: t.cardBg, borderColor: t.border },
-                  ]}
-                  onPress={() => setTransposicion(0)}
-                >
-                  <Text
-                    style={{
-                      color: t.textSub,
-                      fontSize: 11,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Reset
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View
-              style={[
-                styles.lyricContainer,
-                { backgroundColor: t.bg, borderColor: t.border },
-              ]}
-            >
-              <Text style={[styles.lyricText, { color: t.textMain }]}>
-                {repertorio[0]?.letra || "Sin letra registrada."}
-              </Text>
-            </View>
-          </View>
-        )}
+                </>
+              )}
+            </>
+          )}
+        </View>
       </ScrollView>
 
       <View
         style={[
-          styles.navBar,
+          styles.tabBar,
           { backgroundColor: t.cardBg, borderTopColor: t.border },
         ]}
       >
         {[
-          { key: "inicio", icon: "🏠", label: "Inicio" },
-          { key: "eventos", icon: "📅", label: "Eventos" },
-          { key: "equipo", icon: "👥", label: "Equipo" },
-          { key: "repertorio", icon: "🎵", label: "Repertorio" },
-          { key: "atril", icon: "📜", label: "Atril" },
+          { key: "inicio", label: "🏠 Inicio" },
+          { key: "eventos", label: "📅 Eventos" },
+          ...(esAdminOLider ? [{ key: "equipo", label: "👥 Equipo" }] : []),
+          { key: "repertorio", label: "🎵 Repertorio" },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
-            style={styles.navItem}
-            onPress={() => setPestana(tab.key)}
+            style={[
+              styles.tabItem,
+              pestana === tab.key && {
+                borderTopWidth: 3,
+                borderTopColor: t.primary,
+              },
+            ]}
+            onPress={() => {
+              setPestana(tab.key);
+              if (tab.key === "repertorio") {
+                setCancionSeleccionadaDetalle(null);
+                setSemitonosTransposicion(0);
+              }
+            }}
           >
-            <Text style={styles.navIcon}>{tab.icon}</Text>
             <Text
               style={[
-                styles.navLabel,
+                styles.tabText,
                 { color: t.textSub },
-                pestana === tab.key && { color: t.primary, fontWeight: "bold" },
+                pestana === tab.key && {
+                  color: t.textMain,
+                  fontWeight: "bold",
+                },
               ]}
+              numberOfLines={1}
             >
               {tab.label}
             </Text>
@@ -2558,312 +3724,106 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, height: "100vh", width: "100%" },
+  container: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    minHeight: "100vh",
+  },
   loginContainer: {
     flex: 1,
-    height: "100vh",
-    width: "100%",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+    width: "100%",
+    minHeight: "100vh",
   },
   loginCard: {
     width: "100%",
     maxWidth: 400,
-    borderRadius: 16,
     padding: 24,
+    borderRadius: 12,
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
   loginTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    marginBottom: 8,
     textAlign: "center",
+    marginBottom: 8,
   },
-  loginSubtitle: { fontSize: 14, marginBottom: 24, textAlign: "center" },
-  loginLabel: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
+  loginSubtitle: { fontSize: 13, textAlign: "center", marginBottom: 20 },
   loginInput: {
     borderWidth: 1,
+    padding: 12,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 12,
+    marginBottom: 14,
+    fontSize: 15,
   },
-  loginInputArea: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 14,
-    height: 100,
-    textAlignVertical: "top",
-    marginBottom: 12,
-  },
-  loginButton: { borderRadius: 8, paddingVertical: 14, alignItems: "center" },
-  loginButtonText: { fontSize: 16, fontWeight: "bold", color: "#FFFFFF" },
+  loginButton: { padding: 14, borderRadius: 8, alignItems: "center" },
+  loginButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 16 },
   header: {
     paddingHorizontal: 12,
     paddingTop: 12,
-    paddingBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
+    width: "100%",
   },
   headerTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
-  headerSubtitle: { fontSize: 11, marginTop: 1 },
-  sedeBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-  sedeBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 11 },
+  headerSubtitle: { fontSize: 11, marginTop: 2 },
+  headerActions: { flexDirection: "row", gap: 6 },
   logoutBtn: {
     backgroundColor: "#EF4444",
+    paddingVertical: 5,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   logoutBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 11 },
-  themeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    gap: 4,
-    flexWrap: "wrap",
-  },
-  themeLabel: { fontSize: 11, fontWeight: "bold", marginRight: 2 },
-  themeBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
+  content: { flex: 1, padding: 12, width: "100%" },
+  mainWrapper: { width: "100%", maxWidth: 650 },
+  card: {
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
+    marginBottom: 14,
+    width: "100%",
   },
-  themeText: { fontSize: 10 },
-  content: { flex: 1, padding: 12 },
-  welcomeBanner: { borderRadius: 10, padding: 16, marginBottom: 12 },
+  cardTitle: { fontSize: 15, fontWeight: "bold", marginBottom: 10 },
+  welcomeBanner: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 14,
+    width: "100%",
+  },
   welcomeTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
     color: "#FFFFFF",
-    marginBottom: 4,
-  },
-  welcomeBannerText: { fontSize: 12, color: "#E2E8F0" },
-  card: { borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1 },
-  cardTitle: { fontSize: 14, fontWeight: "bold", marginBottom: 4 },
-  teamSubtitle: { fontSize: 11, marginBottom: 12, fontStyle: "italic" },
-  memberCard: { borderRadius: 8, padding: 10, marginBottom: 8, borderWidth: 1 },
-  memberHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 4,
-    marginBottom: 8,
-  },
-  memberTitle: { fontSize: 13, fontWeight: "bold" },
-  memberRolesRow: { flexDirection: "row", gap: 4, flexWrap: "wrap" },
-  memberRoleTag: { fontSize: 11, fontWeight: "600" },
-  modifyRoleBtn: {
-    borderRadius: 6,
-    paddingVertical: 6,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  modifyRoleBtnText: { fontSize: 11, fontWeight: "bold" },
-  editModalContainer: {
-    marginTop: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-  },
-  statsRow: { flexDirection: "row", justifyContent: "space-between", gap: 6 },
-  statBox: {
-    flex: 1,
-    borderRadius: 6,
-    padding: 10,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  statNumber: { fontSize: 16, fontWeight: "bold" },
-  statLabel: { fontSize: 10, marginTop: 2 },
-  eventCard: { padding: 10, borderRadius: 6, borderWidth: 1 },
-  eventCardHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 2,
-  },
-  eventMainTitle: { fontSize: 15, fontWeight: "bold" },
-  eventSubDate: { fontSize: 11, marginBottom: 8 },
-  editServiceBtn: {
-    backgroundColor: "#FEF08A",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#CA8A04",
-  },
-  deleteServiceBtn: {
-    backgroundColor: "#FEE2E2",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#EF4444",
-  },
-
-  paletaSectionContainer: {
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 10,
-    marginVertical: 10,
-  },
-  paletaHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  paletaSectionTitle: {
-    color: "#FFFFFF",
+    fontSize: 17,
     fontWeight: "bold",
-    fontSize: 12,
-    letterSpacing: 0.5,
+    marginBottom: 6,
   },
-  paletaGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  paletaCard: {
-    width: "23.5%",
-    aspectRatio: 1.3,
-    borderRadius: 6,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "transparent",
-    position: "relative",
-  },
-  paletaCardSelected: { borderColor: "#3B82F6", borderWidth: 2 },
-  paletaImage: { width: "100%", height: "100%", position: "absolute" },
-  swatchContainerOverlay: {
-    position: "absolute",
-    bottom: 4,
-    right: 4,
-    flexDirection: "column",
-    gap: 2,
-  },
-  swatchMini: {
-    width: 12,
-    height: 12,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
-  },
-  checkIconBadge: {
-    position: "absolute",
-    top: 4,
-    left: 4,
-    backgroundColor: "#3B82F6",
-    borderRadius: 10,
-    width: 16,
-    height: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  paletaFooterHint: {
-    color: "#8D99AE",
-    fontSize: 10,
-    marginTop: 8,
-    fontStyle: "italic",
-  },
-  paletaPreviewBox: {
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  paletaPreviewRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 4,
-  },
-  paletaThumbImage: { width: 48, height: 36, borderRadius: 4 },
-  paletaSwatchesRow: { flexDirection: "row", gap: 4 },
-  swatchBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-
-  setlistContainerBox: {
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  setlistHeaderBoxText: { fontSize: 10, fontWeight: "bold", marginBottom: 4 },
-  setlistItemBoxText: { fontSize: 12, fontWeight: "600", marginBottom: 2 },
-  rolesGridRow: { flexDirection: "row", gap: 6, marginBottom: 8 },
-  roleBoxHalf: { flex: 1, padding: 8, borderRadius: 6, borderWidth: 1 },
-  roleBoxTitle: { fontSize: 11, fontWeight: "bold", marginBottom: 4 },
-  roleBoxText: { fontSize: 11, marginBottom: 2 },
-  roleItemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 2,
-  },
-  quitarRolBtn: {
-    backgroundColor: "#FEE2E2",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#EF4444",
-  },
-  obsContainerBox: {
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  obsHeaderBoxText: { fontSize: 11, fontWeight: "bold", marginBottom: 2 },
-  obsContentBoxText: { fontSize: 11 },
-  postulateActionBtn: {
-    borderRadius: 6,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  whatsappActionBtn: {
-    borderRadius: 6,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  eventTitle: { fontSize: 13, fontWeight: "bold", marginBottom: 4 },
-  welcomeText: { fontSize: 12 },
-  monthsRow: { flexDirection: "row", gap: 6, marginBottom: 10 },
+  welcomeBannerText: { color: "#E2E8F0", fontSize: 14, fontStyle: "italic" },
+  inputLabel: { fontSize: 11, marginBottom: 4, fontWeight: "500" },
+  monthsRow: { flexDirection: "row", gap: 6, marginBottom: 10, width: "100%" },
   monthTab: {
     flex: 1,
     paddingVertical: 6,
     alignItems: "center",
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
   },
-  monthText: { fontSize: 12, fontWeight: "bold" },
-  monthTextActive: { color: "#FFFFFF" },
+  monthText: { fontSize: 11 },
+  monthTextActive: { color: "#FFFFFF", fontWeight: "bold" },
   calendarCard: {
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
+    marginBottom: 14,
+    width: "100%",
+    alignItems: "center",
   },
   calendarHeaderTitle: {
     fontSize: 14,
@@ -2871,158 +3831,146 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 8,
   },
-  weekHeaderRow: { flexDirection: "row", marginBottom: 4 },
-  weekHeaderCell: {
-    fontSize: 10,
-    width: "14.28%",
-    textAlign: "center",
-    fontWeight: "bold",
+  weekHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginBottom: 6,
   },
-  daysGrid: { flexDirection: "row", flexWrap: "wrap" },
+  weekHeaderText: {
+    fontSize: 11,
+    fontWeight: "bold",
+    width: "13%",
+    textAlign: "center",
+  },
+  daysGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    justifyContent: "flex-start",
+    width: "100%",
+  },
   dayCell: {
-    width: "14.28%",
+    width: "13%",
     aspectRatio: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginVertical: 1,
-    borderRadius: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 4,
+    position: "relative",
   },
-  dayText: { fontSize: 11, fontWeight: "500" },
-  dayTextSelected: { fontWeight: "bold", color: "#FFFFFF" },
+  dayCellEmpty: { width: "13%", aspectRatio: 1, marginBottom: 4 },
+  dayText: { fontSize: 13, fontWeight: "bold" },
+  dayTextSelected: { color: "#FFFFFF", fontWeight: "bold" },
   serviceSectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
-    flexWrap: "wrap",
-    gap: 4,
+    marginBottom: 10,
+    width: "100%",
   },
-  serviceSectionTitle: { fontSize: 13, fontWeight: "bold" },
-  programBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
+  serviceSectionTitle: { fontSize: 13, fontWeight: "bold", flex: 1 },
+  programBtn: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
   programBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
-  inputLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginBottom: 2,
-    marginTop: 4,
-  },
-  subHeaderLabel: { fontSize: 11, fontWeight: "bold", marginBottom: 4 },
-  editSetlistRow: {
+  eventCardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 8,
-    borderRadius: 6,
+    marginBottom: 4,
+  },
+  eventMainTitle: { fontSize: 15, fontWeight: "bold" },
+  editServiceBtn: {
+    backgroundColor: "#3B82F6",
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  deleteServiceBtn: {
+    backgroundColor: "#EF4444",
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  columnsContainer: { flexDirection: "row", gap: 8, marginTop: 10 },
+  columnBox: { flex: 1, padding: 8, borderRadius: 8, borderWidth: 1 },
+  columnHeaderTitle: { fontSize: 12, fontWeight: "bold", marginBottom: 6 },
+  roleRowClean: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  repertorioItemRowPro: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
     borderWidth: 1,
     marginBottom: 6,
   },
-  notaInput: {
-    width: 40,
-    height: 26,
-    borderWidth: 1,
-    borderRadius: 4,
-    textAlign: "center",
-    fontSize: 12,
-    fontWeight: "bold",
+  tabBar: {
+    flexDirection: "row",
+    height: 55,
+    borderTopWidth: 1,
+    width: "100%",
   },
-  miniBtn: { paddingHorizontal: 6, paddingVertical: 4, borderRadius: 4 },
-  miniBtnDanger: { paddingHorizontal: 6, paddingVertical: 4, borderRadius: 4 },
-  songLibraryRow: {
+  tabItem: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 2,
+  },
+  tabText: { fontSize: 10, textAlign: "center" },
+  memberCard: { padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
+  memberHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  memberTitle: { fontSize: 14, fontWeight: "bold" },
+  setlistItemRow: {
+    flexDirection: "row",
     alignItems: "center",
     padding: 8,
     borderRadius: 6,
     borderWidth: 1,
     marginBottom: 4,
   },
-  songLibraryText: { fontSize: 12 },
-  chipsRow: {
+  libSongRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    marginVertical: 4,
-  },
-  chip: {
-    paddingHorizontal: 8,
+    alignItems: "center",
     paddingVertical: 6,
-    borderRadius: 6,
+    borderBottomWidth: 1,
+  },
+  addSongBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 },
+  chipRole: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 16,
     borderWidth: 1,
-    alignItems: "center",
   },
-  itemTitle: { fontSize: 13, fontWeight: "bold" },
-  itemSub: { fontSize: 11, marginTop: 1 },
-  trashBtn: { paddingHorizontal: 4 },
-  closeBtn: { marginTop: 8, alignSelf: "flex-end" },
-  closeBtnText: { color: "#EF4444", fontWeight: "bold", fontSize: 11 },
-  atrilSwitchRow: {
-    flexDirection: "row",
-    borderRadius: 6,
-    borderWidth: 1,
-    padding: 2,
-    marginVertical: 6,
-  },
-  atrilSwitchBtn: {
-    flex: 1,
-    paddingVertical: 6,
-    alignItems: "center",
-    borderRadius: 4,
-  },
-  atrilSwitchText: { fontSize: 11, color: "#8D99AE" },
-  harmonicCard: {
-    padding: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginVertical: 6,
-  },
-  harmonicTitle: { fontSize: 11, fontWeight: "bold", marginBottom: 2 },
-  harmonicSub: { fontSize: 11 },
-  transposeContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginVertical: 6,
-  },
-  transposeLabel: { fontSize: 12, fontWeight: "bold" },
-  transposeActions: { flexDirection: "row", gap: 4 },
-  transBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 4,
-    borderWidth: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  resetBtn: {
-    paddingHorizontal: 8,
-    height: 28,
-    borderRadius: 4,
-    borderWidth: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  lyricContainer: {
+  whatsappBtn: {
+    backgroundColor: "#22C55E",
     padding: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    minHeight: 100,
-    marginTop: 6,
-  },
-  lyricText: {
-    fontSize: 13,
-    fontFamily: Platform.OS === "web" ? "monospace" : "Courier",
-  },
-  navBar: {
-    flexDirection: "row",
-    borderTopWidth: 1,
-    paddingVertical: 6,
-    justifyContent: "space-around",
+    borderRadius: 8,
     alignItems: "center",
   },
-  navItem: { alignItems: "center" },
-  navIcon: { fontSize: 14, marginBottom: 1 },
-  navLabel: { fontSize: 10, fontWeight: "600" },
+  postulateBtn: {
+    backgroundColor: "#F97316",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
+  postulateRoleOption: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 8,
+    alignItems: "center",
+  },
 });

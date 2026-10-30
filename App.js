@@ -47,10 +47,10 @@ const TEMAS = {
 };
 
 const SEDES_DISPONIBLES = [
-  { id: "general", nombre: "Iglesia General", codigo: "GEN2026" },
-  { id: "norte", nombre: "Sede Norte", codigo: "NORTE2026" },
-  { id: "sur", nombre: "Sede Sur", codigo: "SUR2026" },
-  { id: "occidente", nombre: "Sede Occidente", codigo: "OCC2026" },
+  { id: "general", nombre: "Sede General" },
+  { id: "norte", nombre: "Sede Norte" },
+  { id: "sur", nombre: "Sede Sur" },
+  { id: "occidente", nombre: "Sede Occidente" },
 ];
 
 export default function App() {
@@ -221,7 +221,7 @@ export default function App() {
                   value={s.id}
                   style={{ backgroundColor: t.cardBg, color: t.textMain }}
                 >
-                  {s.nombre} ({s.codigo})
+                  {s.nombre}
                 </option>
               ))}
             </select>
@@ -232,9 +232,7 @@ export default function App() {
                 { backgroundColor: t.bg, borderColor: t.border },
               ]}
             >
-              <Text style={{ color: t.textMain }}>
-                {sedeActual.nombre} ({sedeActual.codigo})
-              </Text>
+              <Text style={{ color: t.textMain }}>{sedeActual.nombre}</Text>
             </View>
           )}
 

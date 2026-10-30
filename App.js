@@ -140,9 +140,10 @@ const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
 
 const transponerTextoLetra = (texto, semitonos) => {
   if (semitonos === 0 || !texto) return texto;
-  return texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
+  let textoTranspuesto = texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
     return "[" + transponerAcordeCompuesto(p1, semitonos) + "]";
   });
+  return textoTranspuesto;
 };
 
 export default function App() {
@@ -152,7 +153,7 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_v3");
+        const guardados = localStorage.getItem("soundteam_integrantes_v4");
         return guardados
           ? JSON.parse(guardados)
           : [
@@ -172,7 +173,7 @@ export default function App() {
   useEffect(() => {
     if (Platform.OS === "web") {
       try {
-        localStorage.setItem("soundteam_integrantes_v3", JSON.stringify(integrantes));
+        localStorage.setItem("soundteam_integrantes_v4", JSON.stringify(integrantes));
       } catch (e) {}
     }
   }, [integrantes]);
@@ -281,6 +282,8 @@ export default function App() {
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
+  const [idMensajeEditando, setIdMensajeEditando] = useState(null);
+  const [textoOriginalEditando, setTextoOriginalEditando] = useState("");
   const [mostrarSelectorEmojis, setMostrarSelectorEmojis] = useState(false);
 
   const cargarMensajesSupabase = async () => {
@@ -354,7 +357,7 @@ export default function App() {
   const tocaInstrumento = miembroActualObj?.rolesMusicales?.some((r) => /piano|guitarra|bajo|batería|bateria/i.test(r));
   const puedeControlarRepertorio = esAdminOLider || tocaInstrumento;
 
-  const enviarMensajeChat = async () => {
+  const enviarOActualizarMensajeChat = async () => {
     if (nuevoMensajeTexto.trim() !== "") {
       const horaActual = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       await supabase.from("mensajes").insert([{ autor: usuario, texto: nuevoMensajeTexto.trim(), hora: horaActual, canal: canalChatActivo, editado: false }]);
@@ -363,32 +366,89 @@ export default function App() {
     }
   };
 
-  const guardarOActualizarCancion = () => {
-    if (!puedeControlarRepertorio) {
-      alert("⚠️ No tienes permisos para modificar el repertorio.");
-      return;
-    }
-    if (nuevoTituloCancion.trim() !== "") {
-      if (cancionSeleccionadaDetalle !== null && modoEdicionCancion) {
-        const actualizada = { ...cancionSeleccionadaDetalle, titulo: nuevoTituloCancion, artista: nuevoArtistaCancion || "Sin artista", tono: nuevoTonoCancion || "C", letra: nuevaLetraCancion || "" };
-        setRepertorio(repertorio.map((c) => (c.id === actualizada.id ? actualizada : c)));
-        setCancionSeleccionadaDetalle(actualizada);
-        setModoEdicionCancion(false);
-      } else {
-        const nueva = { id: Date.now(), titulo: nuevoTituloCancion, artista: nuevoArtistaCancion || "Sin artista", tono: nuevoTonoCancion || "C", etiquetas: ["Adoración"], letra: nuevaLetraCancion || "" };
-        setRepertorio([...repertorio, nueva]);
-        setModoEdicionCancion(false);
-      }
-      setNuevoTituloCancion("");
-      setNuevoArtistaCancion("");
-      setNuevoTonoCancion("");
-      setNuevaLetraCancion("");
-    }
-  };
-
   const mesNumStr = String(mesSeleccionadoObj.mesIndex + 1).padStart(2, "0");
   const fechaActualClave = `${mesSeleccionadoObj.year}-${mesNumStr}-${diaSeleccionado < 10 ? "0" + diaSeleccionado : diaSeleccionado}`;
   const serviciosDelDia = servicios.filter((s) => s.fecha === fechaActualClave);
+
+  const usuarioEstaPostuladoEnFecha = (fechaStr) => {
+    const servs = servicios.filter((s) => s.fecha === fechaStr);
+    for (const serv of servs) {
+      const vp = serv.voces?.principal;
+      const coros = serv.voces?.coros || "";
+      const piano = serv.instrumentos?.piano;
+      const guitarra = serv.instrumentos?.guitarra;
+      const bajo = serv.instrumentos?.bajo;
+      const bateria = serv.instrumentos?.bateria;
+      if (vp === usuario || coros.includes(usuario) || piano === usuario || guitarra === usuario || bajo === usuario || bateria === usuario) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const obtenerDiasDelMesDinamico = (mIndex, year) => {
+    let totalDias = new Date(year, mIndex + 1, 0).getDate();
+    let lista = [];
+    let primerDiaIndex = new Date(year, mIndex, 1).getDay();
+    for (let i = 0; i < primerDiaIndex; i++) {
+      lista.push({ vacio: true, id: `vacio-${i}` });
+    }
+    for (let d = 1; d <= totalDias; d++) {
+      const dStr = d < 10 ? "0" + d : String(d);
+      const mStr = String(mIndex + 1).padStart(2, "0");
+      const claveFecha = `${year}-${mStr}-${dStr}`;
+      const postulado = usuarioEstaPostuladoEnFecha(claveFecha);
+      lista.push({ vacio: false, diaNum: d, postulado: postulado });
+    }
+    return lista;
+  };
+
+  const confirmarPostulacionRol = async (rol) => {
+    if (idServicioPostulando === null) return;
+    const servicioObjetivo = servicios.find((s) => s.id === idServicioPostulando);
+    if (!servicioObjetivo) return;
+
+    let nuevaVozP = servicioObjetivo.voces?.principal || "Sin asignar";
+    let nuevosCoros = servicioObjetivo.voces?.coros ? servicioObjetivo.voces.coros.split(", ").filter((c) => c !== "Sin asignar" && c !== "") : [];
+    let nuevoPiano = servicioObjetivo.instrumentos?.piano || "Sin asignar";
+    let nuevaGuitarra = servicioObjetivo.instrumentos?.guitarra || "Sin asignar";
+    let nuevoBajo = servicioObjetivo.instrumentos?.bajo || "Sin asignar";
+    let nuevaBateria = servicioObjetivo.instrumentos?.bateria || "Sin asignar";
+
+    if (rol === "vozPrincipal") nuevaVozP = usuario;
+    else if (rol === "coros") nuevosCoros.push(usuario);
+    else if (rol === "piano") nuevoPiano = usuario;
+    else if (rol === "guitarra") nuevaGuitarra = usuario;
+    else if (rol === "bajo") nuevoBajo = usuario;
+    else if (rol === "bateria") nuevaBateria = usuario;
+
+    const nVoces = { principal: nuevaVozP, coros: nuevosCoros.length > 0 ? nuevosCoros.join(", ") : "Sin asignar" };
+    const nInst = { piano: nuevoPiano, guitarra: nuevaGuitarra, bajo: nuevoBajo, bateria: nuevaBateria };
+
+    const actualizados = servicios.map((s) => (s.id === idServicioPostulando ? { ...s, voces: nVoces, instrumentos: nInst } : s));
+    setServicios(actualizados);
+    await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicioPostulando);
+    setModalPostularVisible(false);
+    alert(`🚀 Te has postulado exitosamente.`);
+  };
+
+  const liberarRol = async (idServicio, categoria) => {
+    const servicioObjetivo = servicios.find((s) => s.id === idServicio);
+    if (!servicioObjetivo) return;
+    let nVoces = { ...servicioObjetivo.voces };
+    let nInst = { ...servicioObjetivo.instrumentos };
+    if (categoria === "vozPrincipal") nVoces.principal = "Sin asignar";
+    else if (categoria === "coros") nVoces.coros = "Sin asignar";
+    else if (categoria === "piano") nInst.piano = "Sin asignar";
+    else if (categoria === "guitarra") nInst.guitarra = "Sin asignar";
+    else if (categoria === "bajo") nInst.bajo = "Sin asignar";
+    else if (categoria === "bateria") nInst.bateria = "Sin asignar";
+
+    const actualizados = servicios.map((s) => (s.id === idServicio ? { ...s, voces: nVoces, instrumentos: nInst } : s));
+    setServicios(actualizados);
+    await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicio);
+    alert("🔄 Rol liberado exitosamente.");
+  };
 
   if (!sesionIniciada) {
     return (
@@ -483,11 +543,9 @@ export default function App() {
               👤 {usuario} • ROL: {rolUsuario.toUpperCase()}
             </Text>
           </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <Text style={styles.logoutBtnText}>Salir</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <Text style={styles.logoutBtnText}>Salir</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -520,11 +578,179 @@ export default function App() {
                     value={nuevoMensajeTexto}
                     onChangeText={setNuevoMensajeTexto}
                   />
-                  <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 8, paddingHorizontal: 14 }]} onPress={enviarMensajeChat}>
+                  <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 8, paddingHorizontal: 14 }]} onPress={enviarOActualizarMensajeChat}>
                     <Text style={[styles.loginButtonText, { fontSize: 12 }]}>Enviar</Text>
                   </TouchableOpacity>
                 </View>
               </View>
+            </View>
+          )}
+
+          {pestana === "eventos" && (
+            <View style={{ width: "100%" }}>
+              <View style={styles.monthsRow}>
+                {listaMesesDinamicos.map((itemMes) => {
+                  const esSeleccionado = mesSeleccionadoObj.key === itemMes.key;
+                  return (
+                    <TouchableOpacity
+                      key={itemMes.key}
+                      style={[styles.monthTab, { backgroundColor: t.cardBg, borderColor: t.border }, esSeleccionado && { backgroundColor: t.primary, borderColor: t.primary }]}
+                      onPress={() => { setMesSeleccionadoObj(itemMes); setDiaSeleccionado(1); }}
+                    >
+                      <Text style={[styles.monthText, { color: t.textSub }, esSeleccionado && styles.monthTextActive]}>{itemMes.nombre}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+                <Text style={[styles.cardTitle, { color: t.textMain, textAlign: "center" }]}>{mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}</Text>
+                <View style={styles.daysGrid}>
+                  {obtenerDiasDelMesDinamico(mesSeleccionadoObj.mesIndex, mesSeleccionadoObj.year).map((item, index) => {
+                    if (item.vacio) return <View key={item.id} style={styles.dayCellEmpty} />;
+                    const esSeleccionado = diaSeleccionado === item.diaNum;
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[styles.dayCell, { backgroundColor: t.bg, borderColor: t.border }, esSeleccionado && { backgroundColor: t.selectedDay, borderColor: t.selectedDay }]}
+                        onPress={() => setDiaSeleccionado(item.diaNum)}
+                      >
+                        <Text style={[styles.dayText, { color: t.textMain }, esSeleccionado && styles.dayTextSelected]}>{item.diaNum}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={styles.serviceSectionHeader}>
+                <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>Servicios del Día {diaSeleccionado} de {mesSeleccionadoObj.nombre}</Text>
+                {esAdminOLider && (
+                  <TouchableOpacity
+                    style={[styles.programBtn, { backgroundColor: t.primary }]}
+                    onPress={() => {
+                      setIdServicioEditando(null);
+                      setNombreEvento(esDomingoSeleccionado ? "Culto Dominical" : "Culto");
+                      setObservaciones("");
+                      setSetlistActivo([]);
+                      setModalProgramarVisible(true);
+                    }}
+                  >
+                    <Text style={styles.programBtnText}>+ Programar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {modalProgramarVisible && (
+                <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.primary, borderWidth: 2 }]}>
+                  <Text style={[styles.cardTitle, { color: t.textMain }]}>Programar Servicio ({diaSeleccionado} {mesSeleccionadoObj.nombre})</Text>
+                  <TextInput
+                    style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
+                    placeholder="Nombre del evento"
+                    placeholderTextColor={t.textSub}
+                    value={nombreEvento}
+                    onChangeText={setNombreEvento}
+                  />
+                  <TextInput
+                    style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
+                    placeholder="Observaciones"
+                    placeholderTextColor={t.textSub}
+                    value={observaciones}
+                    onChangeText={setObservaciones}
+                  />
+                  <TouchableOpacity
+                    style={[styles.loginButton, { backgroundColor: t.primary, marginBottom: 8 }]}
+                    onPress={async () => {
+                      if (nombreEvento.trim() !== "") {
+                        const nuevoId = Date.now();
+                        const nuevoServicioObj = {
+                          id: nuevoId,
+                          fecha: fechaActualClave,
+                          titulo: nombreEvento,
+                          observaciones: observaciones || "Sin observaciones",
+                          setlist: [],
+                          voces: { principal: "Sin asignar", coros: "Sin asignar" },
+                          instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
+                        };
+                        setServicios([...servicios, nuevoServicioObj]);
+                        await supabase.from("servicios").insert([nuevoServicioObj]);
+                        setModalProgramarVisible(false);
+                        alert("✅ Servicio guardado.");
+                      } else {
+                        alert("⚠️ Ingresa el nombre del evento.");
+                      }
+                    }}
+                  >
+                    <Text style={styles.loginButtonText}>Guardar Servicio</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.loginButton, { backgroundColor: "#EF4444" }]} onPress={() => setModalProgramarVisible(false)}>
+                    <Text style={styles.loginButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {modalPostularVisible && (
+                <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.selectedDay, borderWidth: 2 }]}>
+                  <Text style={[styles.cardTitle, { color: t.textMain }]}>✨ Selecciona tu Rol para Postularte</Text>
+                  {["vozPrincipal", "coros", "piano", "guitarra", "bajo", "bateria"].map((rolKey) => (
+                    <TouchableOpacity
+                      key={rolKey}
+                      style={[styles.postulateRoleOption, { backgroundColor: t.bg, borderColor: t.border }]}
+                      onPress={() => confirmarPostulacionRol(rolKey)}
+                    >
+                      <Text style={{ color: t.textMain, fontWeight: "bold" }}>Servir en {rolKey.toUpperCase()}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity style={[styles.loginButton, { backgroundColor: "#EF4444", padding: 10 }]} onPress={() => setModalPostularVisible(false)}>
+                    <Text style={styles.loginButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {serviciosDelDia.length > 0 ? (
+                serviciosDelDia.map((serv) => (
+                  <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+                    <Text style={[styles.eventMainTitle, { color: t.textMain }]}>📅 {serv.titulo}</Text>
+                    <Text style={{ color: t.textSub, fontSize: 12, marginTop: 4 }}>Obs: {serv.observaciones}</Text>
+                    <View style={styles.columnsContainer}>
+                      <View style={[styles.columnBox, { backgroundColor: t.bg, borderColor: t.border }]}>
+                        <Text style={[styles.columnHeaderTitle, { color: t.primary }]}>🎤 VOCES</Text>
+                        <Text style={{ color: t.textMain, fontSize: 11 }}>• Principal: {serv.voces?.principal || "Sin asignar"}</Text>
+                        <Text style={{ color: t.textMain, fontSize: 11 }}>• Coros: {serv.voces?.coros || "Sin asignar"}</Text>
+                      </View>
+                      <View style={[styles.columnBox, { backgroundColor: t.bg, borderColor: t.border }]}>
+                        <Text style={[styles.columnHeaderTitle, { color: t.primary }]}>🎸 INSTRUMENTOS</Text>
+                        <Text style={{ color: t.textMain, fontSize: 11 }}>• Piano: {serv.instrumentos?.piano || "Sin asignar"}</Text>
+                        <Text style={{ color: t.textMain, fontSize: 11 }}>• Guitarra: {serv.instrumentos?.guitarra || "Sin asignar"}</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.postulateBtn, { marginTop: 10 }]}
+                      onPress={() => {
+                        setIdServicioPostulando(serv.id);
+                        setModalPostularVisible(true);
+                      }}
+                    >
+                      <Text style={styles.actionBtnText}>Postularme (Confirmar asistencia)</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              ) : (
+                <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día.</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {pestana === "equipo" && esAdminOLider && (
+            <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, width: "100%" }]}>
+              <Text style={[styles.cardTitle, { color: t.textMain }]}>👥 Miembros de {sedeActual.nombre} ({integrantes.length})</Text>
+              {integrantes.map((int) => (
+                <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
+                  <Text style={[styles.memberTitle, { color: t.textMain }]}>👤 {int.nombre}</Text>
+                  <Text style={{ color: t.textSub, fontSize: 11 }}>Acceso: {(int.rolAcceso || "miembro").toUpperCase()}</Text>
+                </View>
+              ))}
             </View>
           )}
 
@@ -574,7 +800,6 @@ const styles = StyleSheet.create({
   headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerTitle: { fontSize: 16, fontWeight: "bold" },
   headerSubtitle: { fontSize: 11, marginTop: 2 },
-  headerActions: { flexDirection: "row", gap: 6 },
   logoutBtn: { backgroundColor: "#EF4444", paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
   logoutBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 11 },
   content: { flex: 1, padding: 12, width: "100%" },
@@ -584,7 +809,29 @@ const styles = StyleSheet.create({
   welcomeBanner: { padding: 16, borderRadius: 12, marginBottom: 14, width: "100%" },
   welcomeTitle: { color: "#FFFFFF", fontSize: 17, fontWeight: "bold", marginBottom: 6 },
   welcomeBannerText: { color: "#E2E8F0", fontSize: 14, fontStyle: "italic" },
+  monthsRow: { flexDirection: "row", gap: 6, marginBottom: 10, width: "100%" },
+  monthTab: { flex: 1, paddingVertical: 6, alignItems: "center", borderRadius: 8, borderWidth: 1 },
+  monthText: { fontSize: 11 },
+  monthTextActive: { color: "#FFFFFF", fontWeight: "bold" },
+  daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, justifyContent: "flex-start", width: "100%", marginTop: 8 },
+  dayCell: { width: "13%", aspectRatio: 1, justifyContent: "center", alignItems: "center", borderRadius: 6, borderWidth: 1, marginBottom: 4 },
+  dayCellEmpty: { width: "13%", aspectRatio: 1, marginBottom: 4 },
+  dayText: { fontSize: 13, fontWeight: "bold" },
+  dayTextSelected: { color: "#FFFFFF", fontWeight: "bold" },
+  serviceSectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, width: "100%" },
+  serviceSectionTitle: { fontSize: 13, fontWeight: "bold", flex: 1 },
+  programBtn: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
+  programBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
+  eventMainTitle: { fontSize: 15, fontWeight: "bold" },
+  columnsContainer: { flexDirection: "row", gap: 8, marginTop: 10 },
+  columnBox: { flex: 1, padding: 8, borderRadius: 8, borderWidth: 1 },
+  columnHeaderTitle: { fontSize: 12, fontWeight: "bold", marginBottom: 6 },
+  memberCard: { padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
+  memberTitle: { fontSize: 14, fontWeight: "bold" },
   repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
+  postulateBtn: { backgroundColor: "#F97316", padding: 10, borderRadius: 8, alignItems: "center" },
+  actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 13 },
+  postulateRoleOption: { padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6, alignItems: "center" },
   tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1, width: "100%" },
   tabItem: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 2 },
   tabText: { fontSize: 10, textAlign: "center" },

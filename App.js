@@ -209,21 +209,23 @@ export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [esRegistroNuevo, setEsRegistroNuevo] = useState(false);
 
-  // --- GESTIÓN DE INTEGRANTES CON SUS ADMINS ESPECÍFICOS POR SEDE ---
+  // --- ESTRUCTURA DE INTEGRANTES ---
+  // Todos los usuarios/miembros están en la 'general'.
+  // Cada sede tiene asignado su Administrador correspondiente.
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v8");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v9");
         return guardados
           ? JSON.parse(guardados)
           : [
-              // Administradores independientes para cada una de las 4 sedes
+              // Administradores independientes por sede
               { id: 101, nombre: "Admin", pin: "1234", sedeId: "general", rolAcceso: "admin", rolesMusicales: ["👑 Director General"] },
               { id: 102, nombre: "AdminNorte", pin: "1234", sedeId: "norte", rolAcceso: "admin", rolesMusicales: ["👑 Director Norte"] },
               { id: 103, nombre: "AdminSur", pin: "1234", sedeId: "sur", rolAcceso: "admin", rolesMusicales: ["👑 Director Sur"] },
               { id: 104, nombre: "AdminOccidente", pin: "1234", sedeId: "occidente", rolAcceso: "admin", rolesMusicales: ["👑 Director Occidente"] },
 
-              // Miembros comunes pertenecientes a la Sede General
+              // Todos los usuarios/miembros están asignados a la Sede General
               { id: 1, nombre: "Líder", pin: "1234", sedeId: "general", rolAcceso: "lider", rolesMusicales: ["⭐ Líder de Grupo"] },
               { id: 2, nombre: "Lina", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎤 Coros"] },
               { id: 3, nombre: "Arley", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎹 Piano"] },
@@ -242,7 +244,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v8",
+          "soundteam_integrantes_sedes_v9",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -311,7 +313,7 @@ export default function App() {
   const t = TEMAS[nombreTema];
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
-  // En la pestaña Equipo se muestran los miembros generales + los admins de la sede actual
+  // Filtro de equipo: Muestra los miembros de la sede general + el Admin específico de la sede seleccionada
   const integrantesSeccionEquipo = integrantes.filter(
     (m) => m.sedeId === "general" || m.sedeId === sedeIdSeleccionada
   );
@@ -564,7 +566,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  // --- LÓGICA CHATS POR CANAL ---
+  // --- CHATS POR CANAL ---
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -616,6 +618,7 @@ export default function App() {
       return;
     }
 
+    // Busca si existe en la sede elegida (para admins de sede) o en la Sede General (para todos los usuarios)
     const miembroEncontrado = integrantes.find(
       (m) =>
         m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() &&
@@ -623,7 +626,7 @@ export default function App() {
     );
 
     if (!miembroEncontrado) {
-      alert(`⚠️ El usuario "${usuario}" no fue encontrado en esta sede.`);
+      alert(`⚠️ El usuario "${usuario}" no existe. Si eres nuevo, puedes registrarte.`);
       return;
     }
 
@@ -663,6 +666,7 @@ export default function App() {
       return;
     }
 
+    // Todos los registros nuevos se dirigen a la Sede General
     const nuevoMiembro = {
       id: Date.now(),
       nombre: usuario.trim(),
@@ -675,7 +679,7 @@ export default function App() {
     setIntegrantes([...integrantes, nuevoMiembro]);
     setRolUsuario("miembro");
     setSesionIniciada(true);
-    alert(`🎉 ¡Registro exitoso!`);
+    alert(`🎉 ¡Registro exitoso en Sede General!`);
   };
 
   const handleLogout = () => {
@@ -698,7 +702,7 @@ export default function App() {
   const recargarDatosApp = async () => {
     await cargarServiciosSupabase();
     await cargarMensajesSupabase();
-    alert("🔄 ¡Datos actualizados desde la nube correctamente!");
+    alert("🔄 ¡Datos actualizados correctamente!");
   };
 
   const esAdmin = rolUsuario === "admin";
@@ -742,7 +746,7 @@ export default function App() {
 
         if (error) {
           alert(
-            `⚠️ No se pudo actualizar el mensaje en la nube: ${error.message}`
+            `⚠️ No se pudo actualizar el mensaje: ${error.message}`
           );
           return;
         }
@@ -782,15 +786,13 @@ export default function App() {
 
   const limpiarHistorialChat = async () => {
     if (!esAdminOLider) {
-      alert(
-        "⚠️ Solo Administradores y Líderes pueden limpiar el historial del chat."
-      );
+      alert("⚠️ Solo Administradores y Líderes pueden limpiar el chat.");
       return;
     }
 
     if (
       confirm(
-        `¿Estás seguro de que deseas eliminar el historial del chat de ${canalChatActivo.toUpperCase()}?`
+        `¿Deseas borrar el historial del canal ${canalChatActivo.toUpperCase()}?`
       )
     ) {
       const { error } = await supabase
@@ -800,18 +802,16 @@ export default function App() {
 
       if (!error) {
         setMensajesChat([]);
-        alert("🧹 Historial de este canal eliminado con éxito.");
+        alert("🧹 Chat limpiado con éxito.");
       } else {
-        alert("⚠️ No se pudo limpiar el historial.");
+        alert("⚠️ No se pudo limpiar el chat.");
       }
     }
   };
 
   const guardarOActualizarCancion = () => {
     if (!puedeControlarRepertorio) {
-      alert(
-        "⚠️ No tienes permisos de instrumentista o líder para modificar el repertorio."
-      );
+      alert("⚠️ No tienes permisos suficientes para modificar el repertorio.");
       return;
     }
 
@@ -833,7 +833,7 @@ export default function App() {
         setCancionSeleccionadaDetalle(cancionActualizada);
         setModoEdicionCancion(false);
         setSemitonosTransposicion(0);
-        alert("🎵 Canción actualizada exitosamente.");
+        alert("🎵 Canción actualizada.");
       } else {
         const nuevaCancion = {
           id: Date.now(),
@@ -846,7 +846,7 @@ export default function App() {
         };
         setRepertorio([...repertorio, nuevaCancion]);
         setModoEdicionCancion(false);
-        alert("🎵 Canción guardada exitosamente.");
+        alert("🎵 Canción guardada.");
       }
       setNuevoTituloCancion("");
       setNuevoArtistaCancion("");
@@ -854,16 +854,16 @@ export default function App() {
       setNuevaLetraCancion("");
       setEtiquetasActuales([]);
     } else {
-      alert("⚠️ Ingresa al menos el título de la canción.");
+      alert("⚠️ Completa el título de la canción.");
     }
   };
 
   const eliminarCancionRepertorio = (id) => {
     if (!puedeControlarRepertorio) {
-      alert("⚠️ No tienes permisos para eliminar canciones.");
+      alert("⚠️ Sin permisos para borrar canciones.");
       return;
     }
-    if (confirm("¿Estás seguro de eliminar esta canción del repertorio?")) {
+    if (confirm("¿Deseas eliminar esta canción del repertorio?")) {
       setRepertorio(repertorio.filter((c) => c.id !== id));
       setCancionSeleccionadaDetalle(null);
     }
@@ -977,37 +977,37 @@ export default function App() {
 
     if (rol === "vozPrincipal") {
       if (nuevaVozP !== "Sin asignar") {
-        alert("⚠️ La Voz Principal ya está ocupada.");
+        alert("⚠️ Voz Principal ocupada.");
         return;
       }
       nuevaVozP = usuario;
     } else if (rol === "coros") {
       if (nuevosCoros.length >= 3) {
-        alert("⚠️ Los coros ya tienen el límite de 3 personas.");
+        alert("⚠️ Coros al límite (3 personas).");
         return;
       }
       nuevosCoros.push(usuario);
     } else if (rol === "piano") {
       if (nuevoPiano !== "Sin asignar") {
-        alert("⚠️ El Piano ya está ocupado.");
+        alert("⚠️ Piano ocupado.");
         return;
       }
       nuevoPiano = usuario;
     } else if (rol === "guitarra") {
       if (nuevaGuitarra !== "Sin asignar") {
-        alert("⚠️ La Guitarra ya está ocupada.");
+        alert("⚠️ Guitarra ocupada.");
         return;
       }
       nuevaGuitarra = usuario;
     } else if (rol === "bajo") {
       if (nuevoBajo !== "Sin asignar") {
-        alert("⚠️ El Bajo ya está ocupado.");
+        alert("⚠️ Bajo ocupado.");
         return;
       }
       nuevoBajo = usuario;
     } else if (rol === "bateria") {
       if (nuevaBateria !== "Sin asignar") {
-        alert("⚠️ La Batería ya está ocupada.");
+        alert("⚠️ Batería ocupada.");
         return;
       }
       nuevaBateria = usuario;
@@ -1037,12 +1037,12 @@ export default function App() {
       .eq("id", idServicioPostulando);
 
     setModalPostularVisible(false);
-    alert(`🚀 Te has postulado exitosamente.`);
+    alert(`🚀 Postulación realizada.`);
   };
 
   const liberarRol = async (idServicio, categoria) => {
     if (!esAdminOLider) {
-      alert("⚠️ No tienes permisos para liberar o eliminar esta postulación.");
+      alert("⚠️ No tienes permisos para liberar esta postulación.");
       return;
     }
 
@@ -1069,10 +1069,10 @@ export default function App() {
       .update({ voces: nVoces, instrumentos: nInst })
       .eq("id", idServicio);
 
-    alert("🔄 Rol liberado exitosamente.");
+    alert("🔄 Rol liberado.");
   };
 
-  // --- PANTALLA DE LOGUEO / REGISTRO CON SEDES ---
+  // --- LOGIN Y REGISTRO ---
   if (!sesionIniciada) {
     return (
       <View style={[styles.loginContainer, { backgroundColor: t.bg }]}>
@@ -1144,7 +1144,7 @@ export default function App() {
                 color: t.textMain,
               },
             ]}
-            placeholder="Ej. AdminSur, AdminNorte..."
+            placeholder="Ej. Admin, AdminSur, Lina..."
             placeholderTextColor={t.textSub}
             value={usuario}
             onChangeText={setUsuario}
@@ -2996,6 +2996,7 @@ export default function App() {
                             );
                             alert("✅ Miembro actualizado con éxito.");
                           } else {
+                            // Se registra por defecto en la Sede General para que todos tengan visibilidad
                             setIntegrantes([
                               ...integrantes,
                               {
@@ -3007,7 +3008,7 @@ export default function App() {
                                 rolesMusicales: rolesMusicalesNuevo,
                               },
                             ]);
-                            alert("✅ Miembro agregado con éxito.");
+                            alert("✅ Miembro agregado con éxito en Sede General.");
                           }
                           setModalMiembroVisible(false);
                         } else {
@@ -3050,7 +3051,7 @@ export default function App() {
                   >
                     <View style={styles.memberHeaderRow}>
                       <Text style={[styles.memberTitle, { color: t.textMain }]}>
-                        👤 {int.nombre} {int.sedeId !== "general" ? `(${int.sedeId.toUpperCase()})` : ""}
+                        👤 {int.nombre} {int.sedeId !== "general" ? `(${int.sedeId.toUpperCase()})` : "(GENERAL)"}
                       </Text>
 
                       {puedeModificarEste && (

@@ -78,6 +78,28 @@ const TEMAS = {
     selectedDay: "#059669",
     nombre: "🟢 Esmeralda",
   },
+  sunset: {
+    bg: "#1A0F0A",
+    cardBg: "#2D1911",
+    border: "#522C1E",
+    primary: "#F97316",
+    textMain: "#FFFFFF",
+    textSub: "#FDBA74",
+    banner: "#C2410C",
+    selectedDay: "#EA580C",
+    nombre: "🌅 Sunset",
+  },
+  minimal: {
+    bg: "#121212",
+    cardBg: "#1E1E1E",
+    border: "#333333",
+    primary: "#A3A3A3",
+    textMain: "#E5E5E5",
+    textSub: "#737373",
+    banner: "#525252",
+    selectedDay: "#737373",
+    nombre: "⬛ Minimal",
+  },
 };
 
 const SEDES_DISPONIBLES = [
@@ -93,7 +115,12 @@ const NOTAS_BEMOL = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
 const transponerNotaUnica = (acorde, semitonos) => {
   if (!acorde) return "";
   let base = acorde.trim();
-  let raiz = base.length >= 2 && (base[1] === "#" || base[1] === "b") ? base.substring(0, 2) : base.substring(0, 1);
+  let raiz = "";
+  if (base.length >= 2 && (base[1] === "#" || base[1] === "b")) {
+    raiz = base.substring(0, 2);
+  } else {
+    raiz = base.substring(0, 1);
+  }
   if (NOTAS_BEMOL[raiz]) raiz = NOTAS_BEMOL[raiz];
   let idx = NOTAS_SEMI.indexOf(raiz);
   if (idx === -1) return acorde;
@@ -125,12 +152,15 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v2");
+        const guardados = localStorage.getItem("soundteam_integrantes_v3");
         return guardados
           ? JSON.parse(guardados)
           : [
               { id: 1, nombre: "Admin", pin: "1234", sedeId: "general", rolAcceso: "admin", rolesMusicales: ["👑 Director"] },
-              { id: 2, nombre: "Alex", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🥁 Batería"] },
+              { id: 2, nombre: "Líder", pin: "1234", sedeId: "general", rolAcceso: "lider", rolesMusicales: ["⭐ Líder de Grupo"] },
+              { id: 3, nombre: "Lina", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎤 Coros"] },
+              { id: 4, nombre: "Arley", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎹 Piano"] },
+              { id: 5, nombre: "Alex", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🥁 Batería"] },
             ];
       } catch (e) {
         return [];
@@ -142,7 +172,7 @@ export default function App() {
   useEffect(() => {
     if (Platform.OS === "web") {
       try {
-        localStorage.setItem("soundteam_integrantes_sedes_v2", JSON.stringify(integrantes));
+        localStorage.setItem("soundteam_integrantes_v3", JSON.stringify(integrantes));
       } catch (e) {}
     }
   }, [integrantes]);
@@ -178,6 +208,7 @@ export default function App() {
   const [paletasCulto, setPaletasCulto] = useState([
     { id: 1, nombre: "Atardecer Violeta", colores: ["#064680", "#31245A", "#AC6DBF", "#2A7CA3", "#588BC2"] },
     { id: 2, nombre: "Tonos Arena", colores: ["#C29B78", "#A17651", "#5C4033", "#222222"] },
+    { id: 3, nombre: "Blanco Sacro", colores: ["#748185", "#93afb3", "#456467"] },
   ]);
 
   const [servicios, setServicios] = useState([]);
@@ -221,8 +252,24 @@ export default function App() {
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
   const [repertorio, setRepertorio] = useState([
-    { id: 1, titulo: "Creo en ti", artista: "Espíritu y Verdad", tono: "C", etiquetas: ["Alabanza"], letra: "[C] Creo en ti, [G] Señor\n[Am] Con todo el corazón" },
+    {
+      id: 1,
+      titulo: "A dónde iré",
+      artista: "Verbo y Vida",
+      tono: "F",
+      etiquetas: ["Adoración"],
+      letra: "[INTRO]\nF C Dm\nC Bb F\n\n[VERSO]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
+    },
+    {
+      id: 2,
+      titulo: "Creo en ti",
+      artista: "Espíritu y Verdad",
+      tono: "C",
+      etiquetas: ["Alabanza"],
+      letra: "[VERSO]\n[C] Creo en ti, [G] Señor\n[Am] Con todo el corazón",
+    },
   ]);
+
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
   const [modoEdicionCancion, setModoEdicionCancion] = useState(false);
@@ -230,11 +277,11 @@ export default function App() {
   const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
   const [nuevoTonoCancion, setNuevoTonoCancion] = useState("");
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
-  const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
+  const [mostrarSelectorEmojis, setMostrarSelectorEmojis] = useState(false);
 
   const cargarMensajesSupabase = async () => {
     const { data, error } = await supabase.from("mensajes").select("*").eq("canal", canalChatActivo).order("created_at", { ascending: true });
@@ -298,8 +345,10 @@ export default function App() {
     setPinInput("");
     setRolUsuario("miembro");
     setPestana("inicio");
+    setCancionSeleccionadaDetalle(null);
   };
 
+  const esAdmin = rolUsuario === "admin";
   const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
   const miembroActualObj = integrantes.find((m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase());
   const tocaInstrumento = miembroActualObj?.rolesMusicales?.some((r) => /piano|guitarra|bajo|batería|bateria/i.test(r));
@@ -326,7 +375,7 @@ export default function App() {
         setCancionSeleccionadaDetalle(actualizada);
         setModoEdicionCancion(false);
       } else {
-        const nueva = { id: Date.now(), titulo: nuevoTituloCancion, artista: nuevoArtistaCancion || "Sin artista", tono: nuevoTonoCancion || "C", letra: nuevaLetraCancion || "" };
+        const nueva = { id: Date.now(), titulo: nuevoTituloCancion, artista: nuevoArtistaCancion || "Sin artista", tono: nuevoTonoCancion || "C", etiquetas: ["Adoración"], letra: nuevaLetraCancion || "" };
         setRepertorio([...repertorio, nueva]);
         setModoEdicionCancion(false);
       }
@@ -430,11 +479,15 @@ export default function App() {
         <View style={styles.headerTopRow}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.headerTitle, { color: t.textMain }]}>SoundTeam • {sedeActual.nombre}</Text>
-            <Text style={[styles.headerSubtitle, { color: t.textSub }]}>👤 {usuario} • ROL: {rolUsuario.toUpperCase()}</Text>
+            <Text style={[styles.headerSubtitle, { color: t.textSub }]} numberOfLines={1}>
+              👤 {usuario} • ROL: {rolUsuario.toUpperCase()}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-            <Text style={styles.logoutBtnText}>Salir</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+              <Text style={styles.logoutBtnText}>Salir</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -472,86 +525,6 @@ export default function App() {
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
-          )}
-
-          {pestana === "eventos" && (
-            <View style={{ width: "100%" }}>
-              <View style={styles.monthsRow}>
-                {listaMesesDinamicos.map((itemMes) => {
-                  const esSeleccionado = mesSeleccionadoObj.key === itemMes.key;
-                  return (
-                    <TouchableOpacity
-                      key={itemMes.key}
-                      style={[styles.monthTab, { backgroundColor: t.cardBg, borderColor: t.border }, esSeleccionado && { backgroundColor: t.primary, borderColor: t.primary }]}
-                      onPress={() => { setMesSeleccionadoObj(itemMes); setDiaSeleccionado(1); }}
-                    >
-                      <Text style={[styles.monthText, { color: t.textSub }, esSeleccionado && styles.monthTextActive]}>{itemMes.nombre}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                <Text style={[styles.cardTitle, { color: t.textMain, textAlign: "center" }]}>{mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}</Text>
-                <View style={styles.daysGrid}>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => {
-                    const esSeleccionado = diaSeleccionado === dia;
-                    return (
-                      <TouchableOpacity
-                        key={dia}
-                        style={[styles.dayCell, { backgroundColor: t.bg, borderColor: t.border }, esSeleccionado && { backgroundColor: t.selectedDay, borderColor: t.selectedDay }]}
-                        onPress={() => setDiaSeleccionado(dia)}
-                      >
-                        <Text style={[styles.dayText, { color: t.textMain }, esSeleccionado && styles.dayTextSelected]}>{dia}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.serviceSectionHeader}>
-                <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>Servicios del Día {diaSeleccionado} de {mesSeleccionadoObj.nombre}</Text>
-                {esAdminOLider && (
-                  <TouchableOpacity
-                    style={[styles.programBtn, { backgroundColor: t.primary }]}
-                    onPress={() => {
-                      setIdServicioEditando(null);
-                      setNombreEvento(esDomingoSeleccionado ? "Culto Dominical" : "Culto");
-                      setObservaciones("");
-                      setSetlistActivo([]);
-                      setModalProgramarVisible(true);
-                    }}
-                  >
-                    <Text style={styles.programBtnText}>+ Programar</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {serviciosDelDia.length > 0 ? (
-                serviciosDelDia.map((serv) => (
-                  <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                    <Text style={[styles.eventMainTitle, { color: t.textMain }]}>📅 {serv.titulo}</Text>
-                    <Text style={{ color: t.textSub, fontSize: 12, marginTop: 4 }}>Obs: {serv.observaciones}</Text>
-                  </View>
-                ))
-              ) : (
-                <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día.</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {pestana === "equipo" && esAdminOLider && (
-            <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, width: "100%" }]}>
-              <Text style={[styles.cardTitle, { color: t.textMain }]}>👥 Miembros de {sedeActual.nombre} ({integrantes.length})</Text>
-              {integrantes.map((int) => (
-                <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
-                  <Text style={[styles.memberTitle, { color: t.textMain }]}>👤 {int.nombre}</Text>
-                  <Text style={{ color: t.textSub, fontSize: 11 }}>Acceso: {int.rolAcceso.toUpperCase()}</Text>
-                </View>
-              ))}
             </View>
           )}
 
@@ -601,6 +574,7 @@ const styles = StyleSheet.create({
   headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerTitle: { fontSize: 16, fontWeight: "bold" },
   headerSubtitle: { fontSize: 11, marginTop: 2 },
+  headerActions: { flexDirection: "row", gap: 6 },
   logoutBtn: { backgroundColor: "#EF4444", paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
   logoutBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 11 },
   content: { flex: 1, padding: 12, width: "100%" },
@@ -610,21 +584,6 @@ const styles = StyleSheet.create({
   welcomeBanner: { padding: 16, borderRadius: 12, marginBottom: 14, width: "100%" },
   welcomeTitle: { color: "#FFFFFF", fontSize: 17, fontWeight: "bold", marginBottom: 6 },
   welcomeBannerText: { color: "#E2E8F0", fontSize: 14, fontStyle: "italic" },
-  monthsRow: { flexDirection: "row", gap: 6, marginBottom: 10, width: "100%" },
-  monthTab: { flex: 1, paddingVertical: 6, alignItems: "center", borderRadius: 8, borderWidth: 1 },
-  monthText: { fontSize: 11 },
-  monthTextActive: { color: "#FFFFFF", fontWeight: "bold" },
-  daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, justifyContent: "flex-start", width: "100%", marginTop: 8 },
-  dayCell: { width: "13%", aspectRatio: 1, justifyContent: "center", alignItems: "center", borderRadius: 6, borderWidth: 1, marginBottom: 4 },
-  dayText: { fontSize: 13, fontWeight: "bold" },
-  dayTextSelected: { color: "#FFFFFF", fontWeight: "bold" },
-  serviceSectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, width: "100%" },
-  serviceSectionTitle: { fontSize: 13, fontWeight: "bold", flex: 1 },
-  programBtn: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
-  programBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
-  eventMainTitle: { fontSize: 15, fontWeight: "bold" },
-  memberCard: { padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
-  memberTitle: { fontSize: 14, fontWeight: "bold" },
   repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
   tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1, width: "100%" },
   tabItem: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 2 },

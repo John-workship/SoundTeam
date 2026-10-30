@@ -210,22 +210,18 @@ export default function App() {
   const [esRegistroNuevo, setEsRegistroNuevo] = useState(false);
 
   // --- ESTRUCTURA DE INTEGRANTES ---
-  // Todos los usuarios/miembros están en la 'general'.
-  // Cada sede tiene asignado su Administrador correspondiente.
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v9");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v10");
         return guardados
           ? JSON.parse(guardados)
           : [
-              // Administradores independientes por sede
               { id: 101, nombre: "Admin", pin: "1234", sedeId: "general", rolAcceso: "admin", rolesMusicales: ["👑 Director General"] },
               { id: 102, nombre: "AdminNorte", pin: "1234", sedeId: "norte", rolAcceso: "admin", rolesMusicales: ["👑 Director Norte"] },
               { id: 103, nombre: "AdminSur", pin: "1234", sedeId: "sur", rolAcceso: "admin", rolesMusicales: ["👑 Director Sur"] },
               { id: 104, nombre: "AdminOccidente", pin: "1234", sedeId: "occidente", rolAcceso: "admin", rolesMusicales: ["👑 Director Occidente"] },
 
-              // Todos los usuarios/miembros están asignados a la Sede General
               { id: 1, nombre: "Líder", pin: "1234", sedeId: "general", rolAcceso: "lider", rolesMusicales: ["⭐ Líder de Grupo"] },
               { id: 2, nombre: "Lina", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎤 Coros"] },
               { id: 3, nombre: "Arley", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎹 Piano"] },
@@ -244,7 +240,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v9",
+          "soundteam_integrantes_sedes_v10",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -313,7 +309,6 @@ export default function App() {
   const t = TEMAS[nombreTema];
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
-  // Filtro de equipo: Muestra los miembros de la sede general + el Admin específico de la sede seleccionada
   const integrantesSeccionEquipo = integrantes.filter(
     (m) => m.sedeId === "general" || m.sedeId === sedeIdSeleccionada
   );
@@ -566,7 +561,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  // --- CHATS POR CANAL ---
+  // --- CHATS FILTRADOS POR CANAL Y SEDE ACTUAL ---
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -574,11 +569,13 @@ export default function App() {
   const [textoOriginalEditando, setTextoOriginalEditando] = useState("");
   const [mostrarSelectorEmojis, setMostrarSelectorEmojis] = useState(false);
 
+  // Cargamos los mensajes filtrando tanto por el canal como por la sede activa
   const cargarMensajesSupabase = async () => {
     const { data, error } = await supabase
       .from("mensajes")
       .select("*")
       .eq("canal", canalChatActivo)
+      .eq("sedeId", sedeIdSeleccionada)
       .order("created_at", { ascending: true });
 
     if (data && !error) {
@@ -592,7 +589,7 @@ export default function App() {
     cargarMensajesSupabase();
 
     const canalSub = supabase
-      .channel(`chat-realtime-${canalChatActivo}`)
+      .channel(`chat-realtime-${sedeIdSeleccionada}-${canalChatActivo}`)
       .on(
         "postgres_changes",
         {
@@ -610,7 +607,7 @@ export default function App() {
     return () => {
       supabase.removeChannel(canalSub);
     };
-  }, [canalChatActivo]);
+  }, [canalChatActivo, sedeIdSeleccionada]);
 
   const handleLogin = () => {
     if (usuario.trim() === "" || pinInput.trim() === "") {
@@ -618,7 +615,6 @@ export default function App() {
       return;
     }
 
-    // Busca si existe en la sede elegida (para admins de sede) o en la Sede General (para todos los usuarios)
     const miembroEncontrado = integrantes.find(
       (m) =>
         m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() &&
@@ -626,7 +622,7 @@ export default function App() {
     );
 
     if (!miembroEncontrado) {
-      alert(`⚠️ El usuario "${usuario}" no existe. Si eres nuevo, puedes registrarte.`);
+      alert(`⚠️ El usuario "${usuario}" no existe. Regístrate si eres nuevo.`);
       return;
     }
 
@@ -666,7 +662,6 @@ export default function App() {
       return;
     }
 
-    // Todos los registros nuevos se dirigen a la Sede General
     const nuevoMiembro = {
       id: Date.now(),
       nombre: usuario.trim(),
@@ -745,9 +740,7 @@ export default function App() {
           .eq("id", idNumerico);
 
         if (error) {
-          alert(
-            `⚠️ No se pudo actualizar el mensaje: ${error.message}`
-          );
+          alert(`⚠️ No se pudo actualizar el mensaje: ${error.message}`);
           return;
         }
 
@@ -756,6 +749,7 @@ export default function App() {
           texto: `${usuario} editó un mensaje.\n• Antes: "${textoOriginalEditando}"\n• Ahora: "${textoModificado}"`,
           hora: horaActual,
           canal: canalChatActivo,
+          sedeId: sedeIdSeleccionada,
           editado: false,
         };
 
@@ -771,6 +765,7 @@ export default function App() {
           texto: nuevoMensajeTexto.trim(),
           hora: horaActual,
           canal: canalChatActivo,
+          sedeId: sedeIdSeleccionada, // Guarda el mensaje exclusivamente para esta sede
           editado: false,
         };
 
@@ -792,17 +787,18 @@ export default function App() {
 
     if (
       confirm(
-        `¿Deseas borrar el historial del canal ${canalChatActivo.toUpperCase()}?`
+        `¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} para esta sede (${sedeActual.nombre})?`
       )
     ) {
       const { error } = await supabase
         .from("mensajes")
         .delete()
-        .eq("canal", canalChatActivo);
+        .eq("canal", canalChatActivo)
+        .eq("sedeId", sedeIdSeleccionada);
 
       if (!error) {
         setMensajesChat([]);
-        alert("🧹 Chat limpiado con éxito.");
+        alert("🧹 Chat de la sede limpiado con éxito.");
       } else {
         alert("⚠️ No se pudo limpiar el chat.");
       }
@@ -1388,7 +1384,7 @@ export default function App() {
                       { color: t.textMain, marginBottom: 0 },
                     ]}
                   >
-                    💬 Chat de Equipos ({sedeActual.nombre})
+                    💬 Chat Privado de {sedeActual.nombre}
                   </Text>
 
                   {esAdminOLider && (
@@ -1479,8 +1475,7 @@ export default function App() {
                           fontSize: 12,
                         }}
                       >
-                        No hay mensajes en este chat. ¡Sé el primero en
-                        escribir!
+                        No hay mensajes en este chat para {sedeActual.nombre}. ¡Sé el primero en escribir!
                       </Text>
                     ) : (
                       mensajesChat.map((m, i) => {
@@ -1703,7 +1698,7 @@ export default function App() {
                     placeholder={
                       idMensajeEditando !== null
                         ? "Edita tu mensaje aquí..."
-                        : `Escribir en el chat de ${canalChatActivo}...`
+                        : `Escribir en el chat de ${sedeActual.nombre}...`
                     }
                     placeholderTextColor={t.textSub}
                     value={nuevoMensajeTexto}
@@ -2996,7 +2991,6 @@ export default function App() {
                             );
                             alert("✅ Miembro actualizado con éxito.");
                           } else {
-                            // Se registra por defecto en la Sede General para que todos tengan visibilidad
                             setIntegrantes([
                               ...integrantes,
                               {

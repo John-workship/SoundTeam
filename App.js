@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
-  Linking,
 } from "react-native";
 import { supabase } from "./supabase";
 
@@ -51,11 +50,11 @@ const SEDES_DISPONIBLES = [
   { id: "general", nombre: "Iglesia General", codigo: "GEN2026" },
   { id: "norte", nombre: "Sede Norte", codigo: "NORTE2026" },
   { id: "sur", nombre: "Sede Sur", codigo: "SUR2026" },
+  { id: "occidente", nombre: "Sede Occidente", codigo: "OCC2026" },
 ];
 
 export default function App() {
-  // --- GESTIÓN DE SEDES Y ACCESOS ---
-  const [sedeSeleccionada, setSedeSeleccionada] = useState(SEDES_DISPONIBLES[0]);
+  const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [esRegistroNuevo, setEsRegistroNuevo] = useState(false);
 
   const [integrantes, setIntegrantes] = useState(() => {
@@ -80,14 +79,6 @@ export default function App() {
                 sedeId: "norte",
                 rolAcceso: "admin",
                 rolesMusicales: ["👑 Director Norte"],
-              },
-              {
-                id: 3,
-                nombre: "Alex",
-                pin: "1234",
-                sedeId: "general",
-                rolAcceso: "miembro",
-                rolesMusicales: ["🥁 Batería"],
               },
             ];
       } catch (e) {
@@ -116,17 +107,7 @@ export default function App() {
   const [nombreTema, setNombreTema] = useState("azul");
   const t = TEMAS[nombreTema];
 
-  // --- SERVICIOS Y REPERTORIO ---
-  const [servicios, setServicios] = useState([]);
-  const [repertorio, setRepertorio] = useState([
-    {
-      id: 1,
-      titulo: "Creo en ti",
-      artista: "Espíritu y Verdad",
-      tono: "C",
-      letra: "[C] Creo en ti, [G] Señor",
-    },
-  ]);
+  const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
   const handleLogin = () => {
     if (usuario.trim() === "" || pinInput.trim() === "") {
@@ -137,7 +118,7 @@ export default function App() {
     const miembroEncontrado = integrantes.find(
       (m) =>
         m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() &&
-        m.sedeId === sedeSeleccionada.id
+        m.sedeId === sedeIdSeleccionada
     );
 
     if (miembroEncontrado) {
@@ -161,7 +142,7 @@ export default function App() {
     const existe = integrantes.some(
       (m) =>
         m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() &&
-        m.sedeId === sedeSeleccionada.id
+        m.sedeId === sedeIdSeleccionada
     );
 
     if (existe) {
@@ -173,7 +154,7 @@ export default function App() {
       id: Date.now(),
       nombre: usuario.trim(),
       pin: pinInput.trim(),
-      sedeId: sedeSeleccionada.id,
+      sedeId: sedeIdSeleccionada,
       rolAcceso: "miembro",
       rolesMusicales: ["🎤 Miembro"],
     };
@@ -181,7 +162,7 @@ export default function App() {
     setIntegrantes([...integrantes, nuevoMiembro]);
     setRolUsuario("miembro");
     setSesionIniciada(true);
-    alert(`🎉 ¡Registro exitoso en ${sedeSeleccionada.nombre}!`);
+    alert(`🎉 ¡Registro exitoso en ${sedeActual.nombre}!`);
   };
 
   const handleLogout = () => {
@@ -194,7 +175,7 @@ export default function App() {
 
   const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
 
-  // --- PANTALLA DE ACCESO / SEDES / REGISTRO ---
+  // --- PANTALLA DE LOGUEO / REGISTRO CON LISTA DESPLEGABLE ---
   if (!sesionIniciada) {
     return (
       <View style={[styles.loginContainer, { backgroundColor: t.bg }]}>
@@ -208,42 +189,58 @@ export default function App() {
             SoundTeam
           </Text>
           <Text style={[styles.loginSubtitle, { color: t.textSub }]}>
-            Selecciona tu sede y accede a tu espacio
+            {esRegistroNuevo ? "Registro de Usuario Nuevo" : "Inicio de Sesión"}
           </Text>
+
+          {/* LISTA DESPLEGABLE DE SEDES */}
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>
+            🏛️ Selecciona tu Sede:
+          </Text>
+
+          {Platform.OS === "web" ? (
+            <select
+              value={sedeIdSeleccionada}
+              onChange={(e) => setSedeIdSeleccionada(e.target.value)}
+              style={{
+                backgroundColor: t.bg,
+                color: t.textMain,
+                borderColor: t.border,
+                borderWidth: "1px",
+                borderRadius: "8px",
+                padding: "12px",
+                fontSize: "15px",
+                marginBottom: "14px",
+                width: "100%",
+                outline: "none",
+                cursor: "pointer",
+              }}
+            >
+              {SEDES_DISPONIBLES.map((s) => (
+                <option
+                  key={s.id}
+                  value={s.id}
+                  style={{ backgroundColor: t.cardBg, color: t.textMain }}
+                >
+                  {s.nombre} ({s.codigo})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <View
+              style={[
+                styles.loginInput,
+                { backgroundColor: t.bg, borderColor: t.border },
+              ]}
+            >
+              <Text style={{ color: t.textMain }}>
+                {sedeActual.nombre} ({sedeActual.codigo})
+              </Text>
+            </View>
+          )}
 
           <Text style={[styles.inputLabel, { color: t.textMain }]}>
-            🏛️ Seleccionar Sede:
+            👤 Usuario o Apodo:
           </Text>
-          <View style={{ flexDirection: "row", gap: 6, marginBottom: 14 }}>
-            {SEDES_DISPONIBLES.map((s) => {
-              const activa = sedeSeleccionada.id === s.id;
-              return (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[
-                    styles.sedeOptionBtn,
-                    { backgroundColor: t.bg, borderColor: t.border },
-                    activa && {
-                      backgroundColor: t.primary,
-                      borderColor: t.primary,
-                    },
-                  ]}
-                  onPress={() => setSedeSeleccionada(s)}
-                >
-                  <Text
-                    style={{
-                      color: activa ? "#FFF" : t.textMain,
-                      fontSize: 11,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {s.nombre}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
           <TextInput
             style={[
               styles.loginInput,
@@ -253,12 +250,15 @@ export default function App() {
                 color: t.textMain,
               },
             ]}
-            placeholder="Usuario o Apodo"
+            placeholder="Ej. Alex o Admin"
             placeholderTextColor={t.textSub}
             value={usuario}
             onChangeText={setUsuario}
           />
 
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>
+            🔑 PIN de Acceso:
+          </Text>
           <TextInput
             style={[
               styles.loginInput,
@@ -268,7 +268,7 @@ export default function App() {
                 color: t.textMain,
               },
             ]}
-            placeholder="PIN de acceso"
+            placeholder="Ej. 1234"
             placeholderTextColor={t.textSub}
             secureTextEntry
             value={pinInput}
@@ -276,15 +276,15 @@ export default function App() {
           />
 
           {esRegistroNuevo ? (
-            <View>
+            <View style={{ marginTop: 6 }}>
               <TouchableOpacity
                 style={[
                   styles.loginButton,
-                  { backgroundColor: "#22C55E", marginBottom: 8 },
+                  { backgroundColor: "#22C55E", marginBottom: 10 },
                 ]}
                 onPress={handleRegistroNuevo}
               >
-                <Text style={styles.loginButtonText}>Registrarme Ahora</Text>
+                <Text style={styles.loginButtonText}>Crear Cuenta y Entrar</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setEsRegistroNuevo(false)}>
                 <Text
@@ -292,23 +292,22 @@ export default function App() {
                     color: t.primary,
                     textAlign: "center",
                     fontSize: 12,
-                    marginTop: 4,
                   }}
                 >
-                  ¿Ya tienes cuenta? Inicia sesión aquí
+                  ¿Ya estás registrado? Toca aquí para Iniciar Sesión
                 </Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <View>
+            <View style={{ marginTop: 6 }}>
               <TouchableOpacity
                 style={[
                   styles.loginButton,
-                  { backgroundColor: t.primary, marginBottom: 8 },
+                  { backgroundColor: t.primary, marginBottom: 10 },
                 ]}
                 onPress={handleLogin}
               >
-                <Text style={styles.loginButtonText}>Entrar a la App</Text>
+                <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setEsRegistroNuevo(true)}>
                 <Text
@@ -316,10 +315,9 @@ export default function App() {
                     color: t.primary,
                     textAlign: "center",
                     fontSize: 12,
-                    marginTop: 4,
                   }}
                 >
-                  ¿Eres usuario nuevo? Regístrate
+                  ¿Eres usuario nuevo? Toca aquí para Registrarte
                 </Text>
               </TouchableOpacity>
             </View>
@@ -329,7 +327,7 @@ export default function App() {
     );
   }
 
-  // --- APLICACIÓN PRINCIPAL ---
+  // --- DENTRO DE LA APP ---
   return (
     <View style={[styles.container, { backgroundColor: t.bg }]}>
       <View
@@ -341,7 +339,7 @@ export default function App() {
         <View style={styles.headerTopRow}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.headerTitle, { color: t.textMain }]}>
-              SoundTeam - {sedeSeleccionada.nombre}
+              SoundTeam • {sedeActual.nombre}
             </Text>
             <Text style={[styles.headerSubtitle, { color: t.textSub }]}>
               👤 {usuario} • ROL: {rolUsuario.toUpperCase()}
@@ -362,11 +360,14 @@ export default function App() {
             ]}
           >
             <Text style={[styles.cardTitle, { color: t.textMain }]}>
-              Bienvenido a la Sede: {sedeSeleccionada.nombre}
+              Sede Activa: {sedeActual.nombre}
             </Text>
             <Text style={{ color: t.textSub, fontSize: 13 }}>
-              Aquí gestionarás los servicios y repertorios específicos de tu
-              comunidad.
+              Has ingresado como{" "}
+              <Text style={{ color: t.primary, fontWeight: "bold" }}>
+                {rolUsuario.toUpperCase()}
+              </Text>
+              .
             </Text>
           </View>
         )}
@@ -429,21 +430,14 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   loginSubtitle: {
     fontSize: 13,
     textAlign: "center",
     marginBottom: 16,
   },
-  inputLabel: { fontSize: 12, fontWeight: "bold", marginBottom: 6 },
-  sedeOptionBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: "center",
-    borderRadius: 6,
-    borderWidth: 1,
-  },
+  inputLabel: { fontSize: 12, fontWeight: "bold", marginBottom: 4 },
   loginInput: {
     borderWidth: 1,
     padding: 12,
@@ -474,7 +468,7 @@ const styles = StyleSheet.create({
   },
   logoutBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 11 },
   content: { flex: 1, padding: 12 },
-  card: { padding: 14, borderRadius: 12, borderwidth: 1, marginBottom: 14 },
+  card: { padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 14 },
   cardTitle: { fontSize: 15, fontWeight: "bold", marginBottom: 10 },
   tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1 },
   tabItem: { flex: 1, justifyContent: "center", alignItems: "center" },

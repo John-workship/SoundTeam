@@ -206,7 +206,6 @@ const transponerTextoLetra = (texto, semitonos) => {
 };
 
 export default function App() {
-  // --- PERSISTENCIA DE SEDE SELECCIONADA ---
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState(() => {
     if (Platform.OS === "web") {
       try {
@@ -226,42 +225,37 @@ export default function App() {
     }
   }, [sedeIdSeleccionada]);
 
-  // --- ESTRUCTURA DE INTEGRANTES ---
-  const [integrantes, setIntegrantes] = useState(() => {
-    if (Platform.OS === "web") {
-      try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v20");
-        return guardados
-          ? JSON.parse(guardados)
-          : [
-              { id: 101, nombre: "Admin", pin: "1234", sedeId: "general", rolAcceso: "admin", rolesMusicales: ["👑 Director General"] },
-              { id: 102, nombre: "AdminNorte", pin: "1234", sedeId: "norte", rolAcceso: "admin", rolesMusicales: ["👑 Director Norte"] },
-              { id: 103, nombre: "AdminSur", pin: "1234", sedeId: "sur", rolAcceso: "admin", rolesMusicales: ["👑 Director Sur"] },
-              { id: 104, nombre: "AdminOccidente", pin: "1234", sedeId: "occidente", rolAcceso: "admin", rolesMusicales: ["👑 Director Occidente"] },
-              { id: 1, nombre: "Líder", pin: "1234", sedeId: "general", rolAcceso: "lider", rolesMusicales: ["⭐ Líder de Grupo"] },
-              { id: 2, nombre: "Lina", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎤 Coros"] },
-              { id: 3, nombre: "Arley", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎹 Piano"] },
-              { id: 4, nombre: "Alex", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🥁 Batería"] },
-              { id: 5, nombre: "Heidy", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎤 Coros"] },
-              { id: 6, nombre: "Juan", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎸 Guitarra"] },
-            ];
-      } catch (e) {
-        return [];
-      }
+  // --- ESTRUCTURA DE INTEGRANTES DESDE SUPABASE ---
+  const [integrantes, setIntegrantes] = useState([]);
+
+  const cargarIntegrantesSupabase = async () => {
+    const { data, error } = await supabase.from("integrantes").select("*");
+    if (data && !error && data.length > 0) {
+      const formateados = data.map((m) => ({
+        id: m.id,
+        nombre: m.nombre,
+        pin: m.pin,
+        sedeId: m.sede_id,
+        rolAcceso: m.rol_acceso,
+        rolesMusicales: m.roles_musicales || [],
+      }));
+      setIntegrantes(formateados);
     }
-    return [];
-  });
+  };
 
   useEffect(() => {
-    if (Platform.OS === "web") {
-      try {
-        localStorage.setItem(
-          "soundteam_integrantes_sedes_v20",
-          JSON.stringify(integrantes)
-        );
-      } catch (e) {}
-    }
-  }, [integrantes]);
+    cargarIntegrantesSupabase();
+    const canalSub = supabase
+      .channel("integrantes-cambios")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "integrantes" },
+        () => { cargarIntegrantesSupabase(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(canalSub); };
+  }, []);
 
   // --- PERSISTENCIA DE SESIÓN ---
   const [usuario, setUsuario] = useState(() => {
@@ -606,6 +600,7 @@ export default function App() {
   const recargarDatosApp = async () => {
     await cargarServiciosSupabase();
     await cargarMensajesSupabase();
+    await cargarIntegrantesSupabase();
     alert("🔄 ¡Datos actualizados correctamente!");
   };
 
@@ -632,7 +627,6 @@ export default function App() {
 
   const puedeControlarRepertorio = esAdminOLider || tocaInstrumento;
 
-  // --- ENVÍO Y CORRECCIÓN DE MENSAJES GUARDANDO LA SEDE ---
   const enviarOActualizarMensajeChat = async () => {
     if (nuevoMensajeTexto.trim() !== "") {
       const horaActual = new Date().toLocaleTimeString([], {
@@ -672,7 +666,7 @@ export default function App() {
         setNuevoMensajeTexto("");
         const { error } = await supabase.from("mensajes").insert([mensaje]);
         if (error) {
-          alert(`⚠️ No se pudo enviar el mensaje: ${error.message}. (Asegúrate de que la tabla 'mensajes' tenga la columna 'sede').`);
+          alert(`⚠️ No se pudo enviar el mensaje: ${error.message}.`);
         }
         await cargarMensajesSupabase();
       }
@@ -1364,7 +1358,6 @@ export default function App() {
                                 <Text style={{ color: t.textSub, fontSize: 9 }}>
                                   {m.hora}
                                 </Text>
-                                {/* CUALQUIER USUARIO PUEDE CORREGIR/EDITAR SUS PROPIOS MENSAJES */}
                                 {esMio && (
                                   <TouchableOpacity
                                     onPress={() => {
@@ -2753,38 +2746,29 @@ export default function App() {
                         styles.loginButton,
                         { flex: 1, backgroundColor: t.primary, padding: 10 },
                       ]}
-                      onPress={() => {
+                      onPress={async () => {
                         if (nombreNuevoMiembro.trim() !== "") {
-                          if (idMiembroEditando !== null) {
-                            setIntegrantes(
-                              integrantes.map((m) =>
-                                m.id === idMiembroEditando
-                                  ? {
-                                      ...m,
-                                      nombre: nombreNuevoMiembro.trim(),
-                                      pin: pinNuevoMiembro.trim() || "1234",
-                                      rolAcceso: rolAccesoNuevo,
-                                      rolesMusicales: rolesMusicalesNuevo,
-                                    }
-                                  : m
-                              )
-                            );
-                            alert("✅ Miembro actualizado con éxito.");
-                          } else {
-                            setIntegrantes([
-                              ...integrantes,
-                              {
-                                id: Date.now(),
-                                nombre: nombreNuevoMiembro.trim(),
-                                pin: pinNuevoMiembro.trim() || "1234",
-                                sedeId: sedeIdSeleccionada,
-                                rolAcceso: rolAccesoNuevo,
-                                rolesMusicales: rolesMusicalesNuevo,
-                              },
-                            ]);
+                          const nuevoId = Date.now();
+                          const nuevoIntegranteObj = {
+                            id: nuevoId,
+                            nombre: nombreNuevoMiembro.trim(),
+                            pin: pinNuevoMiembro.trim() || "1234",
+                            sede_id: sedeIdSeleccionada,
+                            rol_acceso: rolAccesoNuevo,
+                            roles_musicales: rolesMusicalesNuevo,
+                          };
+
+                          const { error } = await supabase
+                            .from("integrantes")
+                            .insert([nuevoIntegranteObj]);
+
+                          if (!error) {
                             alert(`✅ Miembro agregado con éxito en ${sedeActual.nombre}.`);
+                            await cargarIntegrantesSupabase();
+                            setModalMiembroVisible(false);
+                          } else {
+                            alert(`⚠️ Error al guardar en Supabase: ${error.message}`);
                           }
-                          setModalMiembroVisible(false);
                         } else {
                           alert("⚠️ Ingresa el nombre del integrante.");
                         }
@@ -2832,43 +2816,20 @@ export default function App() {
                         <View style={{ flexDirection: "row", gap: 6 }}>
                           <TouchableOpacity
                             style={{
-                              backgroundColor: "#3B82F6",
-                              paddingHorizontal: 6,
-                              paddingVertical: 3,
-                              borderRadius: 4,
-                            }}
-                            onPress={() => {
-                              setIdMiembroEditando(int.id);
-                              setNombreNuevoMiembro(int.nombre);
-                              setPinNuevoMiembro(int.pin || "1234");
-                              setRolAccesoNuevo(int.rolAcceso || "miembro");
-                              setRolesMusicalesNuevo(int.rolesMusicales || []);
-                              setModalMiembroVisible(true);
-                            }}
-                          >
-                            <Text
-                              style={{
-                                color: "#FFFFFF",
-                                fontSize: 10,
-                                fontWeight: "bold",
-                              }}
-                            >
-                              ✏️ Modificar
-                            </Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={{
                               backgroundColor: "#EF4444",
                               paddingHorizontal: 6,
                               paddingVertical: 3,
                               borderRadius: 4,
                             }}
-                            onPress={() =>
+                            onPress={async () => {
                               setIntegrantes(
                                 integrantes.filter((item) => item.id !== int.id)
-                              )
-                            }
+                              );
+                              await supabase
+                                .from("integrantes")
+                                .delete()
+                                .eq("id", int.id);
+                            }}
                           >
                             <Text
                               style={{

@@ -206,13 +206,31 @@ const transponerTextoLetra = (texto, semitonos) => {
 };
 
 export default function App() {
-  const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
+  // --- PERSISTENCIA DE SEDE SELECCIONADA ---
+  const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState(() => {
+    if (Platform.OS === "web") {
+      try {
+        return localStorage.getItem("soundteam_sede_activa") || "general";
+      } catch (e) {
+        return "general";
+      }
+    }
+    return "general";
+  });
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      try {
+        localStorage.setItem("soundteam_sede_activa", sedeIdSeleccionada);
+      } catch (e) {}
+    }
+  }, [sedeIdSeleccionada]);
 
   // --- ESTRUCTURA DE INTEGRANTES ---
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v19");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v20");
         return guardados
           ? JSON.parse(guardados)
           : [
@@ -238,7 +256,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v19",
+          "soundteam_integrantes_sedes_v20",
           JSON.stringify(integrantes)
         );
       } catch (e) {}

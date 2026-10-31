@@ -175,7 +175,6 @@ const convertirAcordeAModo = (acorde, semitonos, tonoBase = "G", modo = "Acordes
 
 const transponerTextoLetraAvanzado = (texto, semitonos, tonoBase, modo) => {
   if (!texto) return texto;
-
   return texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
     let acordesProcesados = p1.split("/").map(a => convertirAcordeAModo(a, semitonos, tonoBase, modo)).join("/");
     return "[" + acordesProcesados + "]";
@@ -185,24 +184,18 @@ const transponerTextoLetraAvanzado = (texto, semitonos, tonoBase, modo) => {
 export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState(() => {
     if (Platform.OS === "web") {
-      try {
-        return localStorage.getItem("soundteam_sede_activa") || "general";
-      } catch (e) {
-        return "general";
-      }
+      try { return localStorage.getItem("soundteam_sede_activa") || "general"; } catch (e) { return "general"; }
     }
     return "general";
   });
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      try {
-        localStorage.setItem("soundteam_sede_activa", sedeIdSeleccionada);
-      } catch (e) {}
+      try { localStorage.setItem("soundteam_sede_activa", sedeIdSeleccionada); } catch (e) {}
     }
   }, [sedeIdSeleccionada]);
 
-  // --- CARGA DE INTEGRANTES DESDE SUPABASE ---
+  // --- INTEGRANTES SUPABASE ---
   const [integrantes, setIntegrantes] = useState([]);
 
   const cargarIntegrantesSupabase = async () => {
@@ -267,13 +260,101 @@ export default function App() {
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
   const integrantesSeccionEquipo = integrantes.filter((m) => {
-    if (sedeIdSeleccionada === "general") {
-      return m.sedeId === "general";
-    } else {
-      return m.sedeId === sedeIdSeleccionada;
-    }
+    if (sedeIdSeleccionada === "general") return m.sedeId === "general";
+    return m.sedeId === sedeIdSeleccionada;
   });
 
+  // --- CALENDARIO Y FECHAS ---
+  const nombresMeses = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  ];
+  const fechaActualObj = new Date();
+  const listaMesesDinamicos = [];
+  for (let i = 0; i < 4; i++) {
+    const dTarget = new Date(fechaActualObj.getFullYear(), fechaActualObj.getMonth() + i, 1);
+    listaMesesDinamicos.push({
+      nombre: nombresMeses[dTarget.getMonth()],
+      mesIndex: dTarget.getMonth(),
+      year: dTarget.getFullYear(),
+      key: `${dTarget.getFullYear()}-${dTarget.getMonth()}`,
+    });
+  }
+
+  const [mesSeleccionadoObj, setMesSeleccionadoObj] = useState(listaMesesDinamicos[0]);
+  const [diaSeleccionado, setDiaSeleccionado] = useState(fechaActualObj.getDate());
+  const esDomingoSeleccionado = new Date(mesSeleccionadoObj.year, mesSeleccionadoObj.mesIndex, diaSeleccionado).getDay() === 0;
+
+  // --- SERVICIOS SUPABASE ---
+  const [servicios, setServicios] = useState([]);
+
+  const cargarServiciosSupabase = async () => {
+    const { data, error } = await supabase.from("servicios").select("*");
+    if (data && !error) {
+      const formateados = data.map((s) => ({
+        id: s.id,
+        fecha: s.fecha,
+        titulo: s.titulo,
+        observaciones: s.observaciones || "Sin observaciones",
+        setlist: s.setlist || [],
+        paletaSeleccionada: s.paleta_seleccionada || null,
+        voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
+        instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
+      }));
+      setServicios(formateados);
+    }
+  };
+
+  useEffect(() => {
+    cargarServiciosSupabase();
+    const canalSub = supabase
+      .channel("servicios-cambios")
+      .on("postgres_changes", { event: "*", schema: "public", table: "servicios" }, () => {
+        cargarServiciosSupabase();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(canalSub); };
+  }, []);
+
+  const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
+  const [modalPostularVisible, setModalPostularVisible] = useState(false);
+  const [idServicioEditando, setIdServicioEditando] = useState(null);
+  const [idServicioPostulando, setIdServicioPostulando] = useState(null);
+  const [nombreEvento, setNombreEvento] = useState("");
+  const [observaciones, setObservaciones] = useState("");
+  const [setlistActivo, setSetlistActivo] = useState([]);
+  const [indiceParaMover, setIndiceParaMover] = useState(null);
+
+  // --- CHAT EN TIEMPO REAL ---
+  const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
+  const [mensajesChat, setMensajesChat] = useState([]);
+  const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
+
+  const cargarMensajesSupabase = async () => {
+    const { data, error } = await supabase
+      .from("mensajes")
+      .select("*")
+      .eq("canal", canalChatActivo)
+      .eq("sede", sedeIdSeleccionada)
+      .order("created_at", { ascending: true });
+
+    if (data && !error) setMensajesChat(data);
+    else setMensajesChat([]);
+  };
+
+  useEffect(() => {
+    cargarMensajesSupabase();
+    const canalSub = supabase
+      .channel(`chat-${sedeIdSeleccionada}-${canalChatActivo}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "mensajes", filter: `canal=eq.${canalChatActivo}` }, () => {
+        cargarMensajesSupabase();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(canalSub); };
+  }, [canalChatActivo, sedeIdSeleccionada]);
+
+  // --- REPERTORIO / CANCIONES ---
   const [repertorio, setRepertorio] = useState([
     {
       id: 1,
@@ -301,6 +382,12 @@ export default function App() {
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
   const [modoNotacion, setModoNotacion] = useState("Acordes");
 
+  const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
+  const [nombreNuevoMiembro, setNombreNuevoMiembro] = useState("");
+  const [pinNuevoMiembro, setPinNuevoMiembro] = useState("1234");
+  const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
+  const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
+
   const esAdmin = rolUsuario === "admin";
   const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
 
@@ -309,21 +396,17 @@ export default function App() {
       alert("⚠️ Ingresa tu usuario y PIN.");
       return;
     }
-
     const miembroEncontrado = integrantes.find(
       (m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() && m.sedeId === sedeIdSeleccionada
     );
-
     if (!miembroEncontrado) {
       alert(`⚠️ El usuario "${usuario}" no está registrado en ${sedeActual.nombre}.`);
       return;
     }
-
     if (miembroEncontrado.pin !== pinInput.trim()) {
       alert("⚠️ PIN incorrecto.");
       return;
     }
-
     const rolAsignado = miembroEncontrado.rolAcceso || "miembro";
     const nombreReal = miembroEncontrado.nombre;
 
@@ -347,7 +430,6 @@ export default function App() {
     setRolUsuario("miembro");
     setPestana("inicio");
     setCancionSeleccionadaDetalle(null);
-
     if (Platform.OS === "web") {
       try {
         localStorage.removeItem("soundteam_sesion_activa");
@@ -355,6 +437,70 @@ export default function App() {
         localStorage.removeItem("soundteam_sesion_rol");
       } catch (e) {}
     }
+  };
+
+  const mesNumStr = String(mesSeleccionadoObj.mesIndex + 1).padStart(2, "0");
+  const fechaActualClave = `${mesSeleccionadoObj.year}-${mesNumStr}-${diaSeleccionado < 10 ? "0" + diaSeleccionado : diaSeleccionado}`;
+  const serviciosDelDia = servicios.filter((s) => s.fecha === fechaActualClave);
+
+  const usuarioEstaPostuladoEnFecha = (fechaStr) => {
+    const servs = servicios.filter((s) => s.fecha === fechaStr);
+    for (const serv of servs) {
+      const vp = serv.voces?.principal;
+      const coros = serv.voces?.coros || "";
+      const p = serv.instrumentos?.piano;
+      const g = serv.instrumentos?.guitarra;
+      const b = serv.instrumentos?.bajo;
+      const bat = serv.instrumentos?.bateria;
+      if (vp === usuario || coros.includes(usuario) || p === usuario || g === usuario || b === usuario || bat === usuario) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const obtenerDiasDelMesDinamico = (mIndex, year) => {
+    let totalDias = new Date(year, mIndex + 1, 0).getDate();
+    let lista = [];
+    let primerDiaIndex = new Date(year, mIndex, 1).getDay();
+    for (let i = 0; i < primerDiaIndex; i++) {
+      lista.push({ vacio: true, id: `vacio-${i}` });
+    }
+    for (let d = 1; d <= totalDias; d++) {
+      const dStr = d < 10 ? "0" + d : String(d);
+      const mStr = String(mIndex + 1).padStart(2, "0");
+      const claveFecha = `${year}-${mStr}-${dStr}`;
+      lista.push({ vacio: false, diaNum: d, postulado: usuarioEstaPostuladoEnFecha(claveFecha) });
+    }
+    return lista;
+  };
+
+  const confirmarPostulacionRol = async (rol) => {
+    if (idServicioPostulando === null) return;
+    const servicioObjetivo = servicios.find((s) => s.id === idServicioPostulando);
+    if (!servicioObjetivo) return;
+
+    let nuevaVozP = servicioObjetivo.voces?.principal || "Sin asignar";
+    let nuevosCoros = servicioObjetivo.voces?.coros ? servicioObjetivo.voces.coros.split(", ").filter((c) => c !== "Sin asignar" && c !== "") : [];
+    let nuevoPiano = servicioObjetivo.instrumentos?.piano || "Sin asignar";
+    let nuevaGuitarra = servicioObjetivo.instrumentos?.guitarra || "Sin asignar";
+    let nuevoBajo = servicioObjetivo.instrumentos?.bajo || "Sin asignar";
+    let nuevaBateria = servicioObjetivo.instrumentos?.bateria || "Sin asignar";
+
+    if (rol === "vozPrincipal") { nuevaVozP = usuario; }
+    else if (rol === "coros") { nuevosCoros.push(usuario); }
+    else if (rol === "piano") { nuevoPiano = usuario; }
+    else if (rol === "guitarra") { nuevaGuitarra = usuario; }
+    else if (rol === "bajo") { nuevoBajo = usuario; }
+    else if (rol === "bateria") { nuevaBateria = usuario; }
+
+    const nVoces = { principal: nuevaVozP, coros: nuevosCoros.length > 0 ? nuevosCoros.join(", ") : "Sin asignar" };
+    const nInst = { piano: nuevoPiano, guitarra: nuevaGuitarra, bajo: nuevoBajo, bateria: nuevaBateria };
+
+    setServicios(servicios.map((s) => s.id === idServicioPostulando ? { ...s, voces: nVoces, instrumentos: nInst } : s));
+    await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicioPostulando);
+    setModalPostularVisible(false);
+    alert("🚀 Postulación realizada.");
   };
 
   if (!sesionIniciada) {
@@ -384,15 +530,11 @@ export default function App() {
               }}
             >
               {SEDES_DISPONIBLES.map((s) => (
-                <option key={s.id} value={s.id} style={{ backgroundColor: t.cardBg, color: t.textMain }}>
-                  {s.nombre}
-                </option>
+                <option key={s.id} value={s.id} style={{ backgroundColor: t.cardBg, color: t.textMain }}>{s.nombre}</option>
               ))}
             </select>
           ) : (
-            <View style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border }]}>
-              <Text style={{ color: t.textMain }}>{sedeActual.nombre}</Text>
-            </View>
+            <View style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border }]}><Text style={{ color: t.textMain }}>{sedeActual.nombre}</Text></View>
           )}
 
           <Text style={[styles.inputLabel, { color: t.textMain }]}>👤 Usuario o Apodo:</Text>
@@ -444,22 +586,240 @@ export default function App() {
             <View style={{ width: "100%" }}>
               <View style={[styles.welcomeBanner, { backgroundColor: t.banner }]}>
                 <Text style={styles.welcomeTitle}>✨ Colosenses 3:23</Text>
-                <Text style={styles.welcomeBannerText}>
-                  "Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."
-                </Text>
+                <Text style={styles.welcomeBannerText}>"Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."</Text>
+              </View>
+
+              <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+                <Text style={[styles.cardTitle, { color: t.textMain }]}>💬 Chat de {sedeActual.nombre}</Text>
+                <View style={{ flexDirection: "row", gap: 6, marginBottom: 10 }}>
+                  {[
+                    { key: "martes", label: "🗓️ Martes" },
+                    { key: "jueves", label: "🗓️ Jueves" },
+                    { key: "finsemana", label: "⛪ Sáb & Dom" },
+                  ].map((ch) => (
+                    <TouchableOpacity
+                      key={ch.key}
+                      style={[
+                        { flex: 1, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg, alignItems: "center" },
+                        canalChatActivo === ch.key && { backgroundColor: t.primary, borderColor: t.primary },
+                      ]}
+                      onPress={() => setCanalChatActivo(ch.key)}
+                    >
+                      <Text style={{ fontSize: 11, color: canalChatActivo === ch.key ? "#FFF" : t.textSub }}>{ch.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <View style={{ backgroundColor: t.bg, borderRadius: 8, borderWidth: 1, borderColor: t.border, padding: 10, height: 200, marginBottom: 10 }}>
+                  <ScrollView>
+                    {mensajesChat.length === 0 ? (
+                      <Text style={{ color: t.textSub, textAlign: "center", marginTop: 20, fontSize: 12 }}>No hay mensajes en este chat.</Text>
+                    ) : (
+                      mensajesChat.map((m, i) => (
+                        <View key={m.id || i} style={{ marginBottom: 6, backgroundColor: t.cardBg, padding: 6, borderRadius: 6 }}>
+                          <Text style={{ color: t.primary, fontWeight: "bold", fontSize: 11 }}>{m.autor}</Text>
+                          <Text style={{ color: t.textMain, fontSize: 12 }}>{m.texto}</Text>
+                        </View>
+                      ))
+                    )}
+                  </ScrollView>
+                </View>
+
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  <TextInput
+                    style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                    placeholder="Escribir mensaje..."
+                    placeholderTextColor={t.textSub}
+                    value={nuevoMensajeTexto}
+                    onChangeText={setNuevoMensajeTexto}
+                  />
+                  <TouchableOpacity
+                    style={[styles.loginButton, { backgroundColor: t.primary, justifyContent: "center", paddingVertical: 8, paddingHorizontal: 14 }]}
+                    onPress={async () => {
+                      if (nuevoMensajeTexto.trim() !== "") {
+                        const m = {
+                          autor: usuario,
+                          texto: nuevoMensajeTexto.trim(),
+                          hora: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                          canal: canalChatActivo,
+                          sede: sedeIdSeleccionada,
+                        };
+                        setNuevoMensajeTexto("");
+                        await supabase.from("mensajes").insert([m]);
+                        await cargarMensajesSupabase();
+                      }
+                    }}
+                  >
+                    <Text style={[styles.loginButtonText, { fontSize: 12 }]}>Enviar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           )}
 
           {pestana === "eventos" && (
-            <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-              <Text style={{ color: t.textMain, textAlign: "center" }}>Sección de Eventos</Text>
+            <>
+              <View style={styles.monthsRow}>
+                {listaMesesDinamicos.map((itemMes) => (
+                  <TouchableOpacity
+                    key={itemMes.key}
+                    style={[styles.monthTab, { backgroundColor: t.cardBg, borderColor: t.border }, mesSeleccionadoObj.key === itemMes.key && { backgroundColor: t.primary, borderColor: t.primary }]}
+                    onPress={() => { setMesSeleccionadoObj(itemMes); setDiaSeleccionado(1); }}
+                  >
+                    <Text style={[styles.monthText, { color: t.textSub }, mesSeleccionadoObj.key === itemMes.key && styles.monthTextActive]}>
+                      {itemMes.nombre}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={[styles.calendarCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+                <Text style={[styles.calendarHeaderTitle, { color: t.textMain }]}>{mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}</Text>
+                <View style={styles.weekHeaderRow}>
+                  {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((dSem, idx) => (
+                    <Text key={idx} style={[styles.weekHeaderText, { color: t.textSub }]}>{dSem}</Text>
+                  ))}
+                </View>
+                <View style={styles.daysGrid}>
+                  {obtenerDiasDelMesDinamico(mesSeleccionadoObj.mesIndex, mesSeleccionadoObj.year).map((item, index) => {
+                    if (item.vacio) return <View key={item.id} style={styles.dayCellEmpty} />;
+                    const esSeleccionado = diaSeleccionado === item.diaNum;
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[styles.dayCell, { backgroundColor: t.bg, borderColor: t.border }, esSeleccionado && { backgroundColor: t.selectedDay, borderColor: t.selectedDay }]}
+                        onPress={() => setDiaSeleccionado(item.diaNum)}
+                      >
+                        <Text style={[styles.dayText, { color: t.textMain }, esSeleccionado && styles.dayTextSelected]}>{item.diaNum}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={styles.serviceSectionHeader}>
+                <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>Servicios del Día {diaSeleccionado} ({serviciosDelDia.length})</Text>
+                {esAdminOLider && (
+                  <TouchableOpacity
+                    style={[styles.programBtn, { backgroundColor: t.primary }]}
+                    onPress={() => {
+                      setIdServicioEditando(null);
+                      setNombreEvento(esDomingoSeleccionado ? "Culto Dominical" : "Culto");
+                      setObservaciones("");
+                      setSetlistActivo([]);
+                      setModalProgramarVisible(true);
+                    }}
+                  >
+                    <Text style={styles.programBtnText}>+ Programar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {modalProgramarVisible && (
+                <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.primary, borderWidth: 2 }]}>
+                  <Text style={[styles.cardTitle, { color: t.textMain }]}>Nuevo Servicio</Text>
+                  <TextInput
+                    style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
+                    placeholder="Nombre del evento"
+                    placeholderTextColor={t.textSub}
+                    value={nombreEvento}
+                    onChangeText={setNombreEvento}
+                  />
+                  <TouchableOpacity
+                    style={[styles.loginButton, { backgroundColor: t.primary, padding: 10 }]}
+                    onPress={async () => {
+                      if (nombreEvento.trim() !== "") {
+                        const nuevoServicio = {
+                          id: Date.now(),
+                          fecha: fechaActualClave,
+                          titulo: nombreEvento,
+                          observaciones: observaciones || "Sin observaciones",
+                          setlist: [],
+                          voces: { principal: "Sin asignar", coros: "Sin asignar" },
+                          instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
+                        };
+                        setServicios([...servicios, nuevoServicio]);
+                        await supabase.from("servicios").insert([nuevoServicio]);
+                        setModalProgramarVisible(false);
+                      }
+                    }}
+                  >
+                    <Text style={styles.loginButtonText}>Guardar Servicio</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {serviciosDelDia.map((serv) => (
+                <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+                  <Text style={[styles.eventMainTitle, { color: t.textMain }]}>📅 {serv.titulo}</Text>
+                  <Text style={{ color: t.textSub, fontSize: 12, marginVertical: 4 }}>{serv.observaciones}</Text>
+                  <TouchableOpacity
+                    style={styles.postulateBtn}
+                    onPress={() => { setIdServicioPostulando(serv.id); setModalPostularVisible(true); }}
+                  >
+                    <Text style={styles.actionBtnText}>Postularme (Confirmar asistencia)</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </>
+          )}
+
+          {modalPostularVisible && (
+            <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.selectedDay, borderWidth: 2 }]}>
+              <Text style={[styles.cardTitle, { color: t.textMain }]}>Selecciona tu Rol</Text>
+              {["vozPrincipal", "coros", "piano", "guitarra", "bajo", "bateria"].map((rolKey) => (
+                <TouchableOpacity
+                  key={rolKey}
+                  style={[styles.postulateRoleOption, { backgroundColor: t.bg, borderColor: t.border }]}
+                  onPress={() => confirmarPostulacionRol(rolKey)}
+                >
+                  <Text style={{ color: t.textMain, fontWeight: "bold" }}>{rolKey.toUpperCase()}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
 
           {pestana === "equipo" && esAdminOLider && (
             <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-              <Text style={[styles.cardTitle, { color: t.textMain }]}>👥 Miembros de {sedeActual.nombre} ({integrantesSeccionEquipo.length})</Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>👥 Miembros de {sedeActual.nombre} ({integrantesSeccionEquipo.length})</Text>
+                <TouchableOpacity style={[styles.programBtn, { backgroundColor: t.primary }]} onPress={() => setModalMiembroVisible(true)}>
+                  <Text style={styles.programBtnText}>+ Agregar Miembro</Text>
+                </TouchableOpacity>
+              </View>
+
+              {modalMiembroVisible && (
+                <View style={[styles.card, { backgroundColor: t.bg, borderColor: t.primary, borderWidth: 2 }]}>
+                  <TextInput
+                    style={[styles.loginInput, { backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain }]}
+                    placeholder="Nombre del integrante"
+                    placeholderTextColor={t.textSub}
+                    value={nombreNuevoMiembro}
+                    onChangeText={setNombreNuevoMiembro}
+                  />
+                  <TouchableOpacity
+                    style={[styles.loginButton, { backgroundColor: t.primary, padding: 10 }]}
+                    onPress={async () => {
+                      if (nombreNuevoMiembro.trim() !== "") {
+                        const nuevoInt = {
+                          id: Date.now(),
+                          nombre: nombreNuevoMiembro.trim(),
+                          pin: pinNuevoMiembro,
+                          sede_id: sedeIdSeleccionada,
+                          rol_acceso: rolAccesoNuevo,
+                          roles_musicales: rolesMusicalesNuevo,
+                        };
+                        await supabase.from("integrantes").insert([nuevoInt]);
+                        await cargarIntegrantesSupabase();
+                        setModalMiembroVisible(false);
+                      }
+                    }}
+                  >
+                    <Text style={styles.loginButtonText}>Guardar Miembro</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               {integrantesSeccionEquipo.map((int) => (
                 <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
                   <Text style={[styles.memberTitle, { color: t.textMain }]}>👤 {int.nombre}</Text>
@@ -473,38 +833,23 @@ export default function App() {
             <>
               {cancionSeleccionadaDetalle !== null ? (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <TouchableOpacity
-                    style={styles.backBtn}
-                    onPress={() => {
-                      setCancionSeleccionadaDetalle(null);
-                      setSemitonosTransposicion(0);
-                    }}
-                  >
+                  <TouchableOpacity style={styles.backBtn} onPress={() => { setCancionSeleccionadaDetalle(null); setSemitonosTransposicion(0); }}>
                     <Text style={{ color: t.primary, fontWeight: "bold" }}>← Volver a Canciones</Text>
                   </TouchableOpacity>
 
                   <View style={{ flexDirection: "row", gap: 6, marginVertical: 8, flexWrap: "wrap" }}>
-                    <View style={styles.tagChipActive}>
-                      <Text style={{ color: "#FFF", fontSize: 11 }}>Acordes escritos en {cancionSeleccionadaDetalle.tono}</Text>
-                    </View>
-                    {cancionSeleccionadaDetalle.etiquetas?.map((tag, idx) => (
-                      <View key={idx} style={styles.tagChip}>
-                        <Text style={{ color: t.textSub, fontSize: 11 }}>{tag}</Text>
-                      </View>
-                    ))}
+                    <View style={styles.tagChipActive}><Text style={{ color: "#FFF", fontSize: 11 }}>Acordes escritos en {cancionSeleccionadaDetalle.tono}</Text></View>
                   </View>
 
                   {!cancionSeleccionadaDetalle.publicado && (
                     <View style={styles.revisionBanner}>
-                      <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
-                        Pendiente de revisión: esta canción aún no es visible para la banda.
-                      </Text>
+                      <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>Pendiente de revisión: esta canción aún no es visible para la banda.</Text>
                       <TouchableOpacity
                         style={styles.publishBtn}
                         onPress={() => {
                           setRepertorio(repertorio.map(c => c.id === cancionSeleccionadaDetalle.id ? { ...c, publicado: true } : c));
                           setCancionSeleccionadaDetalle({ ...cancionSeleccionadaDetalle, publicado: true });
-                          alert("✓ Canción aprobada y publicada.");
+                          alert("✓ Canción aprobada.");
                         }}
                       >
                         <Text style={{ color: "#FFF", fontWeight: "bold", textAlign: "center" }}>Aprobar y publicar</Text>
@@ -526,26 +871,17 @@ export default function App() {
                     </View>
 
                     <View style={styles.transposerGroup}>
-                      <TouchableOpacity style={styles.stepBtn} onPress={() => setSemitonosTransposicion(prev => prev - 1)}>
-                        <Text style={{ color: "#FFF", fontWeight: "bold" }}>-</Text>
-                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.stepBtn} onPress={() => setSemitonosTransposicion(prev => prev - 1)}><Text style={{ color: "#FFF", fontWeight: "bold" }}>-</Text></TouchableOpacity>
                       <Text style={{ color: t.textMain, fontWeight: "bold", paddingHorizontal: 8, fontSize: 12 }}>
                         {transponerNotaUnica(cancionSeleccionadaDetalle.tono, semitonosTransposicion)}
                       </Text>
-                      <TouchableOpacity style={styles.stepBtn} onPress={() => setSemitonosTransposicion(prev => prev + 1)}>
-                        <Text style={{ color: "#FFF", fontWeight: "bold" }}>+</Text>
-                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.stepBtn} onPress={() => setSemitonosTransposicion(prev => prev + 1)}><Text style={{ color: "#FFF", fontWeight: "bold" }}>+</Text></TouchableOpacity>
                     </View>
                   </View>
 
                   <View style={[styles.lyricsBox, { backgroundColor: t.bg, borderColor: t.border }]}>
                     <Text style={{ color: t.textMain, fontSize: 13, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace", lineHeight: 22 }}>
-                      {transponerTextoLetraAvanzado(
-                        cancionSeleccionadaDetalle.letra,
-                        semitonosTransposicion,
-                        cancionSeleccionadaDetalle.tono,
-                        modoNotacion
-                      )}
+                      {transponerTextoLetraAvanzado(cancionSeleccionadaDetalle.letra, semitonosTransposicion, cancionSeleccionadaDetalle.tono, modoNotacion)}
                     </Text>
                   </View>
                 </View>
@@ -575,22 +911,22 @@ export default function App() {
       </ScrollView>
 
       <View style={[styles.tabBar, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => setPestana("inicio")}>
-          <Text style={[styles.tabText, { color: pestana === "inicio" ? t.primary : t.textSub }]}>🏠 Inicio</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => setPestana("eventos")}>
-          <Text style={[styles.tabText, { color: pestana === "eventos" ? t.primary : t.textSub }]}>📅 Eventos</Text>
-        </TouchableOpacity>
-        {esAdminOLider && (
-          <TouchableOpacity style={styles.tabItem} onPress={() => setPestana("equipo")}>
-            <Text style={[styles.tabText, { color: pestana === "equipo" ? t.primary : t.textSub }]}>👥 Equipo</Text>
+        {[
+          { key: "inicio", label: "🏠 Inicio" },
+          { key: "eventos", label: "📅 Eventos" },
+          ...(esAdminOLider ? [{ key: "equipo", label: "👥 Equipo" }] : []),
+          { key: "repertorio", label: "🎵 Canciones" },
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tabItem, pestana === tab.key && { borderTopWidth: 3, borderTopColor: t.primary }]}
+            onPress={() => { setPestana(tab.key); if (tab.key === "repertorio") setCancionSeleccionadaDetalle(null); }}
+          >
+            <Text style={[styles.tabText, { color: pestana === tab.key ? t.textMain : t.textSub, fontWeight: pestana === tab.key ? "bold" : "normal" }]} numberOfLines={1}>
+              {tab.label}
+            </Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.tabItem} onPress={() => setPestana("repertorio")}>
-          <Text style={[styles.tabText, { color: pestana === "repertorio" ? t.primary : t.textSub, fontWeight: "bold" }]}>
-            🎵 Canciones
-          </Text>
-        </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -619,6 +955,24 @@ const styles = StyleSheet.create({
   welcomeBanner: { padding: 16, borderRadius: 12, marginBottom: 14, width: "100%" },
   welcomeTitle: { color: "#FFFFFF", fontSize: 17, fontWeight: "bold", marginBottom: 6 },
   welcomeBannerText: { color: "#E2E8F0", fontSize: 14, fontStyle: "italic" },
+  monthsRow: { flexDirection: "row", gap: 6, marginBottom: 10, width: "100%" },
+  monthTab: { flex: 1, paddingVertical: 6, alignItems: "center", borderRadius: 8, borderWidth: 1 },
+  monthText: { fontSize: 11 },
+  monthTextActive: { color: "#FFFFFF", fontWeight: "bold" },
+  calendarCard: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 14, width: "100%", alignItems: "center" },
+  calendarHeaderTitle: { fontSize: 14, fontWeight: "bold", textAlign: "center", marginBottom: 8 },
+  weekHeaderRow: { flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 6 },
+  weekHeaderText: { fontSize: 11, fontWeight: "bold", width: "13%", textAlign: "center" },
+  daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, justifyContent: "flex-start", width: "100%" },
+  dayCell: { width: "13%", aspectRatio: 1, justifyContent: "center", alignItems: "center", borderRadius: 6, borderWidth: 1, marginBottom: 4 },
+  dayCellEmpty: { width: "13%", aspectRatio: 1, marginBottom: 4 },
+  dayText: { fontSize: 13, fontWeight: "bold" },
+  dayTextSelected: { color: "#FFFFFF", fontWeight: "bold" },
+  serviceSectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, width: "100%" },
+  serviceSectionTitle: { fontSize: 13, fontWeight: "bold", flex: 1 },
+  programBtn: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
+  programBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
+  eventMainTitle: { fontSize: 15, fontWeight: "bold" },
   backBtn: { paddingVertical: 6, marginBottom: 6 },
   tagChip: { backgroundColor: "#1E293B", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   tagChipActive: { backgroundColor: "#1E40AF", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
@@ -638,4 +992,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 11 },
   memberCard: { padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
   memberTitle: { fontSize: 14, fontWeight: "bold" },
+  postulateBtn: { backgroundColor: "#F97316", padding: 12, borderRadius: 8, alignItems: "center", marginTop: 8 },
+  actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
+  postulateRoleOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
 });

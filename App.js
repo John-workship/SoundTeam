@@ -1044,20 +1044,20 @@ export default function App() {
                       alignItems: "center",
                       gap: 6,
                     }}
-                    onPress={() => setMostrarMenuEmojis(!mostrarMenuEmojis)}
+                    onPress={() => setMostrarSelectorEmojis(!mostrarSelectorEmojis)}
                   >
                     <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>
-                      {mostrarMenuEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
+                      {mostrarSelectorEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
                     </Text>
                   </TouchableOpacity>
 
-                  {mostrarMenuEmojis && (
+                  {mostrarSelectorEmojis && (
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6, backgroundColor: t.bg, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: t.border }}>
                       {["😀", "😢", "❤️", "🔥", "🙏", "🎸", "🎹", "🥁", "🙌", "✨", "⭐", "✅", "❌", "💬", "🎵"].map((emoji) => (
                         <TouchableOpacity
                           key={emoji}
                           style={{ backgroundColor: t.cardBg, borderWidth: 1, borderColor: t.border, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}
-                          onPress={() => { setNuevoMensajeTexto((prev) => prev + emoji); setMostrarMenuEmojis(false); }}
+                          onPress={() => { setNuevoMensajeTexto((prev) => prev + emoji); setMostrarSelectorEmojis(false); }}
                         >
                           <Text style={{ fontSize: 16 }}>{emoji}</Text>
                         </TouchableOpacity>

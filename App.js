@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
-  Linking,
 } from "react-native";
 import { supabase } from "./supabase";
 
@@ -146,22 +145,7 @@ const transponerTextoLetra = (texto, semitonos) => {
   let textoTranspuesto = texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
     return "[" + transponerAcordeCompuesto(p1, semitonos) + "]";
   });
-  const lineas = textoTranspuesto.split("\n");
-  const lineasProcesadas = lineas.map((linea) => {
-    if (linea.trim().startsWith("[") && linea.trim().endsWith("]")) return linea;
-    const palabras = linea.trim().split(/\s+/);
-    const esLineaDeAcordes =
-      palabras.length > 0 &&
-      palabras.every((p) => {
-        const limpia = p.replace(/[^A-G#bm0-9/]/g, "");
-        return /^[A-G](#|b)?(m|maj|min|dim|aug|sus|[0-9])*(\/[A-G](#|b)?)?$/.test(limpia);
-      });
-    if (esLineaDeAcordes) {
-      return palabras.map((p) => transponerAcordeCompuesto(p, semitonos)).join("   ");
-    }
-    return linea;
-  });
-  return lineasProcesadas.join("\n");
+  return textoTranspuesto;
 };
 
 export default function App() {
@@ -251,6 +235,7 @@ export default function App() {
     return m.sedeId === sedeIdSeleccionada;
   });
 
+  // Calendario y Eventos
   const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const fechaActualObj = new Date();
   const listaMesesDinamicos = [];
@@ -279,7 +264,6 @@ export default function App() {
         titulo: s.titulo,
         observaciones: s.observaciones || "Sin observaciones",
         setlist: s.setlist || [],
-        paletaSeleccionada: s.paleta_seleccionada || null,
         voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
         instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
       }));
@@ -304,7 +288,7 @@ export default function App() {
   const [nombreEvento, setNombreEvento] = useState("");
   const [observaciones, setObservaciones] = useState("");
 
-  // Control para Creación / Modificación de Miembros
+  // Gestión de Miembros
   const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
   const [idMiembroEditando, setIdMiembroEditando] = useState(null);
   const [nombreNuevoMiembro, setNombreNuevoMiembro] = useState("");
@@ -312,36 +296,15 @@ export default function App() {
   const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
+  // Repertorio
   const [repertorio, setRepertorio] = useState([
-    {
-      id: 1,
-      titulo: "A dónde iré",
-      artista: "Verbo y Vida",
-      tono: "F",
-      etiquetas: ["Adoración", "Entrega"],
-      letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
-    },
-    {
-      id: 2,
-      titulo: "Creo en ti",
-      artista: "Espíritu y Verdad",
-      tono: "C",
-      etiquetas: ["Adoración"],
-      letra: "[INTRO]\nC G Am F",
-    },
-    {
-      id: 3,
-      titulo: "Digno",
-      artista: "Elevation Worship",
-      tono: "E",
-      etiquetas: ["Adoración"],
-      letra: "[INTRO]\nE B C#m A",
-    },
+    { id: 1, titulo: "A dónde iré", artista: "Verbo y Vida", tono: "F", etiquetas: ["Adoración"], letra: "[INTRO]\nF C Dm\nC Bb F\n\n[VERSO]\n[F] Siento que sin ti\n[Bb] Mi vida es nada" },
+    { id: 2, titulo: "Creo en ti", artista: "Espíritu y Verdad", tono: "C", etiquetas: ["Adoración"], letra: "[INTRO]\nC G Am F" },
   ]);
-
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
 
+  // Chat
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -554,11 +517,9 @@ export default function App() {
               👤 {usuario} • <Text style={{ color: t.primary, fontWeight: "bold" }}>ROL: {rolUsuario.toUpperCase()}</Text>
             </Text>
           </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <Text style={styles.logoutBtnText}>Salir</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <Text style={styles.logoutBtnText}>Salir</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={{ marginTop: 8 }}>
@@ -850,7 +811,6 @@ export default function App() {
                     onPress={async () => {
                       if (nombreNuevoMiembro.trim() !== "") {
                         if (idMiembroEditando !== null) {
-                          // Actualizar
                           const actualizado = {
                             nombre: nombreNuevoMiembro.trim(),
                             pin: pinNuevoMiembro,
@@ -860,7 +820,6 @@ export default function App() {
                           };
                           await supabase.from("integrantes").update(actualizado).eq("id", idMiembroEditando);
                         } else {
-                          // Crear
                           const nuevoInt = {
                             id: Date.now(),
                             nombre: nombreNuevoMiembro.trim(),

@@ -442,16 +442,7 @@ export default function App() {
   const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
 
   const [setlistActivo, setSetlistActivo] = useState([]);
-
-  const moverCancionSetlist = (index, direccion) => {
-    const nuevoSetlist = [...setlistActivo];
-    const nuevoIndex = direccion === "arriba" ? index - 1 : index + 1;
-    if (nuevoIndex < 0 || nuevoIndex >= nuevoSetlist.length) return;
-    const temp = nuevoSetlist[index];
-    nuevoSetlist[index] = nuevoSetlist[nuevoIndex];
-    nuevoSetlist[nuevoIndex] = temp;
-    setSetlistActivo(nuevoSetlist);
-  };
+  const [indiceParaMover, setIndiceParaMover] = useState(null);
 
   const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
   const [idMiembroEditando, setIdMiembroEditando] = useState(null);
@@ -503,7 +494,6 @@ export default function App() {
   const [nuevoTonoCancion, setNuevoTonoCancion] = useState("");
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
-  const [vistaCancionTab, setVistaCancionTab] = useState("Acordes");
 
   // --- CHATS EN TIEMPO REAL (FILTRADOS POR SEDE Y CANAL) ---
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
@@ -1674,6 +1664,7 @@ export default function App() {
                       setObservaciones("");
                       setPaletaSeleccionadaModal(null);
                       setSetlistActivo([]);
+                      setIndiceParaMover(null);
                       setModalProgramarVisible(true);
                     }}
                   >
@@ -1684,7 +1675,7 @@ export default function App() {
                 )}
               </View>
 
-              {modalProgramarVisible && esAdminOLider && (
+              {modalProgramarVisible && (
                 <View
                   style={[
                     styles.card,
@@ -1840,7 +1831,7 @@ export default function App() {
                       { color: t.textMain, fontWeight: "bold", marginTop: 8 },
                     ]}
                   >
-                    Organización del Setlist (Usa ⬆️ ⬇️ para ordenar)
+                    Organización del Setlist
                   </Text>
 
                   {setlistActivo.length > 0 && (
@@ -1855,114 +1846,107 @@ export default function App() {
                       >
                         Setlist Activo ({setlistActivo.length}):
                       </Text>
-                      {setlistActivo.map((item, idx) => (
-                        <View
-                          key={idx}
-                          style={[
-                            styles.setlistItemRow,
-                            { backgroundColor: t.bg, borderColor: t.border },
-                          ]}
-                        >
-                          <Text
-                            style={{
-                              color: t.textMain,
-                              fontSize: 13,
-                              fontWeight: "bold",
-                              flex: 1,
-                              marginRight: 6,
-                            }}
-                            numberOfLines={1}
-                          >
-                            {idx + 1}. {item.titulo}
-                          </Text>
-
+                      {setlistActivo.map((item, idx) => {
+                        const estaSeleccionadoParaMover = indiceParaMover === idx;
+                        return (
                           <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
+                            key={idx}
+                            style={[
+                              styles.setlistItemRow,
+                              { backgroundColor: t.bg, borderColor: t.border },
+                              estaSeleccionadoParaMover && {
+                                borderColor: t.primary,
+                                borderWidth: 2,
+                              },
+                            ]}
                           >
-                            {idx > 0 && (
-                              <TouchableOpacity
-                                style={{
-                                  backgroundColor: t.cardBg,
-                                  borderWidth: 1,
-                                  borderColor: t.border,
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 2,
-                                  borderRadius: 4,
-                                }}
-                                onPress={() => moverCancionSetlist(idx, "arriba")}
-                              >
-                                <Text style={{ fontSize: 11, color: t.textMain }}>⬆️</Text>
-                              </TouchableOpacity>
-                            )}
-
-                            {idx < setlistActivo.length - 1 && (
-                              <TouchableOpacity
-                                style={{
-                                  backgroundColor: t.cardBg,
-                                  borderWidth: 1,
-                                  borderColor: t.border,
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 2,
-                                  borderRadius: 4,
-                                }}
-                                onPress={() => moverCancionSetlist(idx, "abajo")}
-                              >
-                                <Text style={{ fontSize: 11, color: t.textMain }}>⬇️</Text>
-                              </TouchableOpacity>
-                            )}
-
-                            <Text style={{ color: t.textSub, fontSize: 11, marginLeft: 4 }}>
-                              Tono:
-                            </Text>
-                            <TextInput
-                              style={{
-                                backgroundColor: t.cardBg,
-                                color: t.textMain,
-                                borderWidth: 1,
-                                borderColor: t.border,
-                                borderRadius: 4,
-                                width: 32,
-                                textAlign: "center",
-                                fontSize: 12,
-                                padding: 2,
-                              }}
-                              value={item.tono}
-                              onChangeText={(nuevoTono) => {
-                                const actualizado = [...setlistActivo];
-                                actualizado[idx].tono = nuevoTono;
-                                setSetlistActivo(actualizado);
-                              }}
-                            />
                             <TouchableOpacity
                               style={{
-                                backgroundColor: "#EF4444",
-                                paddingHorizontal: 6,
-                                paddingVertical: 4,
-                                borderRadius: 4,
+                                flex: 1,
+                                flexDirection: "row",
+                                alignItems: "center",
                               }}
                               onPress={() => {
-                                setSetlistActivo(
-                                  setlistActivo.filter((_, i) => i !== idx)
-                                );
+                                if (indiceParaMover === null) {
+                                  setIndiceParaMover(idx);
+                                } else {
+                                  const nuevoSetlist = [...setlistActivo];
+                                  const temp = nuevoSetlist[indiceParaMover];
+                                  nuevoSetlist[indiceParaMover] = nuevoSetlist[idx];
+                                  nuevoSetlist[idx] = temp;
+                                  setSetlistActivo(nuevoSetlist);
+                                  setIndiceParaMover(null);
+                                }
                               }}
                             >
                               <Text
                                 style={{
-                                  color: "#FFF",
-                                  fontSize: 10,
+                                  color: t.textMain,
+                                  fontSize: 13,
                                   fontWeight: "bold",
+                                  marginRight: 8,
                                 }}
                               >
-                                X
+                                {idx + 1}. {item.titulo}
                               </Text>
                             </TouchableOpacity>
+
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                            >
+                              <Text style={{ color: t.textSub, fontSize: 11 }}>
+                                Tono:
+                              </Text>
+                              <TextInput
+                                style={{
+                                  backgroundColor: t.cardBg,
+                                  color: t.textMain,
+                                  borderWidth: 1,
+                                  borderColor: t.border,
+                                  borderRadius: 4,
+                                  width: 32,
+                                  textAlign: "center",
+                                  fontSize: 12,
+                                  padding: 2,
+                                }}
+                                value={item.tono}
+                                onChangeText={(nuevoTono) => {
+                                  const actualizado = [...setlistActivo];
+                                  actualizado[idx].tono = nuevoTono;
+                                  setSetlistActivo(actualizado);
+                                }}
+                              />
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: "#EF4444",
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 4,
+                                  borderRadius: 4,
+                                }}
+                                onPress={() => {
+                                  setSetlistActivo(
+                                    setlistActivo.filter((_, i) => i !== idx)
+                                  );
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: "#FFF",
+                                    fontSize: 10,
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  X
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
                           </View>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </View>
                   )}
 
@@ -2240,6 +2224,7 @@ export default function App() {
                                     null
                                 );
                                 setSetlistActivo(serv.setlist || []);
+                                setIndiceParaMover(null);
                                 setModalProgramarVisible(true);
                               }}
                             >
@@ -3115,51 +3100,6 @@ export default function App() {
                     </View>
                   ) : (
                     <View>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                        <View style={{ flexDirection: "row", gap: 6 }}>
-                          {["Acordes", "Nashville"].map((tabNombre) => {
-                            const activoTab = vistaCancionTab === tabNombre;
-                            return (
-                              <TouchableOpacity
-                                key={tabNombre}
-                                style={{
-                                  backgroundColor: activoTab ? t.primary : t.bg,
-                                  borderColor: t.border,
-                                  borderWidth: 1,
-                                  paddingVertical: 6,
-                                  paddingHorizontal: 12,
-                                  borderRadius: 6,
-                                }}
-                                onPress={() => setVistaCancionTab(tabNombre)}
-                              >
-                                <Text style={{ color: activoTab ? "#FFF" : t.textSub, fontSize: 12, fontWeight: "bold" }}>
-                                  {tabNombre}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: t.bg, borderColor: t.border, borderWidth: 1, padding: 4, borderRadius: 6 }}>
-                          <TouchableOpacity
-                            style={{ backgroundColor: t.cardBg, width: 28, height: 28, justifyContent: "center", alignItems: "center", borderRadius: 4 }}
-                            onPress={() => setSemitonosTransposicion((prev) => prev - 1)}
-                          >
-                            <Text style={{ color: t.textMain, fontWeight: "bold", fontSize: 14 }}>-</Text>
-                          </TouchableOpacity>
-                          <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold", paddingHorizontal: 4 }}>
-                            {transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}{" "}
-                            <Text style={{ fontSize: 9, color: t.textSub, fontWeight: "normal" }}>original: {cancionSeleccionadaDetalle.tono || "C"}</Text>
-                          </Text>
-                          <TouchableOpacity
-                            style={{ backgroundColor: t.cardBg, width: 28, height: 28, justifyContent: "center", alignItems: "center", borderRadius: 4 }}
-                            onPress={() => setSemitonosTransposicion((prev) => prev + 1)}
-                          >
-                            <Text style={{ color: t.textMain, fontWeight: "bold", fontSize: 14 }}>+</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-
                       <View style={{ marginBottom: 14 }}>
                         <Text
                           style={{
@@ -3348,7 +3288,7 @@ export default function App() {
               )}
             </>
           )}
-        </div>
+        </View>
       </ScrollView>
 
       <View

@@ -1092,7 +1092,7 @@ export default function App() {
                           <Text style={{ color: t.textMain, fontSize: 13, fontWeight: "bold" }}>{index + 1}. {cancion.titulo}</Text>
                         </View>
 
-                        {/* CONTROLES DE TONO, FLECHAS Y ELIMINAR EXACTOS */}
+                        {/* CONTROLES DE TONO, FLECHAS (ÚNICAS) Y ELIMINAR */}
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                           <Text style={{ color: t.textSub, fontSize: 12 }}>Tono:</Text>
                           <TextInput

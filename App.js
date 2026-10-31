@@ -155,6 +155,21 @@ const SEDES_DISPONIBLES = [
 const NOTAS_SEMI = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const NOTAS_BEMOL = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
 
+const MAPA_NASHVILLE = {
+  0: "1",
+  1: "b2",
+  2: "2",
+  3: "b3",
+  4: "3",
+  5: "4",
+  6: "#4",
+  7: "5",
+  8: "b6",
+  9: "6",
+  10: "b7",
+  11: "7",
+};
+
 const transponerNotaUnica = (acorde, semitonos) => {
   if (!acorde) return "";
   let base = acorde.trim();
@@ -182,6 +197,50 @@ const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
     return transponerNotaUnica(partes[0], semitonos) + "/" + transponerNotaUnica(partes[1], semitonos);
   }
   return transponerNotaUnica(acordeCompuesto, semitonos);
+};
+
+const convertirAcordeANashville = (acordeCompuesto, tonoBase) => {
+  if (!acordeCompuesto || !tonoBase) return acordeCompuesto;
+  let raizTono = tonoBase.trim().substring(0, 2);
+  if (raizTono.length === 2 && (raizTono[1] !== "#" && raizTono[1] !== "b")) {
+    raizTono = raizTono.substring(0, 1);
+  }
+  if (NOTAS_BEMOL[raizTono]) raizTono = NOTAS_BEMOL[raizTono];
+  let idxTono = NOTAS_SEMI.indexOf(raizTono);
+  if (idxTono === -1) return acordeCompuesto;
+
+  const convertirUna = (nota) => {
+    let base = nota.trim();
+    let resto = "";
+    let raiz = "";
+    if (base.length >= 2 && (base[1] === "#" || base[1] === "b")) {
+      raiz = base.substring(0, 2);
+      resto = base.substring(2);
+    } else {
+      raiz = base.substring(0, 1);
+      resto = base.substring(1);
+    }
+    if (NOTAS_BEMOL[raiz]) raiz = NOTAS_BEMOL[raiz];
+    let idxNota = NOTAS_SEMI.indexOf(raiz);
+    if (idxNota === -1) return nota;
+
+    let diff = (idxNota - idxTono) % 12;
+    if (diff < 0) diff += 12;
+    return (MAPA_NASHVILLE[diff] || "") + resto;
+  };
+
+  if (acordeCompuesto.includes("/")) {
+    const partes = acordeCompuesto.split("/");
+    return convertirUna(partes[0]) + "/" + convertirUna(partes[1]);
+  }
+  return convertirUna(acordeCompuesto);
+};
+
+const convertirTextoNashville = (texto, tonoBase) => {
+  if (!texto || !tonoBase) return texto;
+  return texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
+    return "[" + convertirAcordeANashville(p1, tonoBase) + "]";
+  });
 };
 
 const transponerTextoLetra = (texto, semitonos) => {
@@ -436,6 +495,7 @@ export default function App() {
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
+  const [modoVisualizacionRepertorio, setModoVisualizacionRepertorio] = useState("Acordes");
   const [modoEdicionCancion, setModoEdicionCancion] = useState(false);
   const [nuevoTituloCancion, setNuevoTituloCancion] = useState("");
   const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
@@ -984,20 +1044,20 @@ export default function App() {
                       alignItems: "center",
                       gap: 6,
                     }}
-                    onPress={() => setMostrarSelectorEmojis(!mostrarSelectorEmojis)}
+                    onPress={() => setMostrarMenuEmojis(!mostrarMenuEmojis)}
                   >
                     <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>
-                      {mostrarSelectorEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
+                      {mostrarMenuEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
                     </Text>
                   </TouchableOpacity>
 
-                  {mostrarSelectorEmojis && (
+                  {mostrarMenuEmojis && (
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6, backgroundColor: t.bg, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: t.border }}>
                       {["😀", "😢", "❤️", "🔥", "🙏", "🎸", "🎹", "🥁", "🙌", "✨", "⭐", "✅", "❌", "💬", "🎵"].map((emoji) => (
                         <TouchableOpacity
                           key={emoji}
                           style={{ backgroundColor: t.cardBg, borderWidth: 1, borderColor: t.border, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}
-                          onPress={() => { setNuevoMensajeTexto((prev) => prev + emoji); setMostrarSelectorEmojis(false); }}
+                          onPress={() => { setNuevoMensajeTexto((prev) => prev + emoji); setMostrarMenuEmojis(false); }}
                         >
                           <Text style={{ fontSize: 16 }}>{emoji}</Text>
                         </TouchableOpacity>
@@ -1657,6 +1717,7 @@ export default function App() {
                         setCancionSeleccionadaDetalle(null);
                         setModoEdicionCancion(false);
                         setSemitonosTransposicion(0);
+                        setModoVisualizacionRepertorio("Acordes");
                       }}
                     >
                       <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>← Volver al repertorio</Text>
@@ -1753,40 +1814,47 @@ export default function App() {
 
                       {/* Pestañas de Visualización (Acordes / Nashville) */}
                       <View style={{ flexDirection: "row", gap: 6, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: t.border, paddingBottom: 8 }}>
-                        {["Acordes", "Nashville"].map((modoVista, idx) => (
-                          <TouchableOpacity
-                            key={modoVista}
-                            style={{
-                              paddingVertical: 6,
-                              paddingHorizontal: 14,
-                              borderRadius: 6,
-                              backgroundColor: idx === 0 ? t.primary : t.bg,
-                              borderWidth: 1,
-                              borderColor: t.border,
-                            }}
-                            onPress={() => {
-                              if (idx > 0) alert("🚧 Vista de Nashville en desarrollo.");
-                            }}
-                          >
-                            <Text style={{ color: idx === 0 ? "#FFF" : t.textSub, fontSize: 12, fontWeight: "bold" }}>
-                              {modoVista}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
+                        {["Acordes", "Nashville"].map((modoVista) => {
+                          const activo = modoVisualizacionRepertorio === modoVista;
+                          return (
+                            <TouchableOpacity
+                              key={modoVista}
+                              style={{
+                                paddingVertical: 6,
+                                paddingHorizontal: 14,
+                                borderRadius: 6,
+                                backgroundColor: activo ? t.primary : t.bg,
+                                borderWidth: 1,
+                                borderColor: t.border,
+                              }}
+                              onPress={() => setModoVisualizacionRepertorio(modoVista)}
+                            >
+                              <Text style={{ color: activo ? "#FFF" : t.textSub, fontSize: 12, fontWeight: "bold" }}>
+                                {modoVista}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
 
                       {/* Bloque de Análisis Armónico */}
                       <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border, marginBottom: 12 }}>
                         <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginBottom: 4 }}>📊 ANÁLISIS ARMÓNICO (DETECTADO)</Text>
                         <Text style={{ color: t.textSub, fontSize: 11 }}>
-                          Tonalidad base: {cancionSeleccionadaDetalle.tono || "C"} | Estructura optimizada para la banda en vivo.
+                          Tonalidad base: {transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)} | Estructura optimizada para la banda en vivo.
                         </Text>
                       </View>
 
-                      {/* Contenedor de Letra y Cifrado */}
+                      {/* Contenedor de Letra y Cifrado según el modo */}
                       <View style={{ backgroundColor: t.bg, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
                         <Text style={{ color: t.textMain, fontSize: 14, lineHeight: 22, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" }}>
-                          {transponerTextoLetra(cancionSeleccionadaDetalle.letra || "Sin letra registrada.", semitonosTransposicion)}
+                          {modoVisualizacionRepertorio === "Nashville"
+                            ? convertirTextoNashville(
+                                transponerTextoLetra(cancionSeleccionadaDetalle.letra || "Sin letra registrada.", semitonosTransposicion),
+                                transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)
+                              )
+                            : transponerTextoLetra(cancionSeleccionadaDetalle.letra || "Sin letra registrada.", semitonosTransposicion)
+                          }
                         </Text>
                       </View>
                     </View>
@@ -1840,7 +1908,7 @@ export default function App() {
                       <TouchableOpacity
                         key={c.id}
                         style={[styles.repertorioItemRowPro, { borderBottomColor: t.border, backgroundColor: t.bg }]}
-                        onPress={() => { setCancionSeleccionadaDetalle(c); setSemitonosTransposicion(0); }}
+                        onPress={() => { setCancionSeleccionadaDetalle(c); setSemitonosTransposicion(0); setModoVisualizacionRepertorio("Acordes"); }}
                       >
                         <View style={{ flex: 1, paddingVertical: 4 }}>
                           <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "bold", marginBottom: 2 }}>{c.titulo}</Text>
@@ -1871,7 +1939,7 @@ export default function App() {
             style={[styles.tabItem, pestana === tab.key && { borderTopWidth: 3, borderTopColor: t.primary }]}
             onPress={() => {
               setPestana(tab.key);
-              if (tab.key === "repertorio") { setCancionSeleccionadaDetalle(null); setSemitonosTransposicion(0); }
+              if (tab.key === "repertorio") { setCancionSeleccionadaDetalle(null); setSemitonosTransposicion(0); setModoVisualizacionRepertorio("Acordes"); }
             }}
           >
             <Text style={[styles.tabText, { color: t.textSub }, pestana === tab.key && { color: t.textMain, fontWeight: "bold" }]} numberOfLines={1}>

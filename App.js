@@ -103,45 +103,22 @@ const TEMAS = {
 };
 
 const PAPELES_TAPIZ = {
-  ninguno: { 
-    nombre: "🎨 Liso", 
-    css: {} 
-  },
+  ninguno: { nombre: "🎨 Liso", css: {} },
   ipuc: { 
     nombre: "⛪ IPUC", 
-    css: Platform.OS === "web" ? { 
-      backgroundImage: `url('https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1200&auto=format&fit=crop')`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundAttachment: "fixed"
-    } : {} 
+    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
   },
   patronMusical: { 
     nombre: "🎵 Notas Musicales", 
-    css: Platform.OS === "web" ? { 
-      backgroundImage: `url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1200&auto=format&fit=crop')`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundAttachment: "fixed"
-    } : {} 
+    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
   },
   eventos: { 
     nombre: "📷 Eventos", 
-    css: Platform.OS === "web" ? { 
-      backgroundImage: `url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop')`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundAttachment: "fixed"
-    } : {} 
+    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
   },
   maderaAcustica: { 
     nombre: "🪵 Madera Estudio", 
-    css: Platform.OS === "web" ? { 
-      backgroundImage: `url('https://images.unsplash.com/photo-1546484475-7f7bd55792da?q=80&w=1200&auto=format&fit=crop')`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundAttachment: "fixed"
-    } : {} 
+    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1546484475-7f7bd55792da?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
   },
 };
 
@@ -156,25 +133,13 @@ const NOTAS_SEMI = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", 
 const NOTAS_BEMOL = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
 
 const MAPA_NASHVILLE = {
-  0: "1",
-  1: "b2",
-  2: "2",
-  3: "b3",
-  4: "3",
-  5: "4",
-  6: "#4",
-  7: "5",
-  8: "b6",
-  9: "6",
-  10: "b7",
-  11: "7",
+  0: "1", 1: "b2", 2: "2", 3: "b3", 4: "3", 5: "4", 6: "#4", 7: "5", 8: "b6", 9: "6", 10: "b7", 11: "7",
 };
 
 const transponerNotaUnica = (acorde, semitonos) => {
   if (!acorde) return "";
   let base = acorde.trim();
-  let resto = "";
-  let raiz = "";
+  let resto = "", raiz = "";
   if (base.length >= 2 && (base[1] === "#" || base[1] === "b")) {
     raiz = base.substring(0, 2);
     resto = base.substring(2);
@@ -211,8 +176,7 @@ const convertirAcordeANashville = (acordeCompuesto, tonoBase) => {
 
   const convertirUna = (nota) => {
     let base = nota.trim();
-    let resto = "";
-    let raiz = "";
+    let resto = "", raiz = "";
     if (base.length >= 2 && (base[1] === "#" || base[1] === "b")) {
       raiz = base.substring(0, 2);
       resto = base.substring(2);
@@ -440,8 +404,12 @@ export default function App() {
   const [nombreEvento, setNombreEvento] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
-
   const [setlistActivo, setSetlistActivo] = useState([]);
+
+  // Estados para el MODO EN VIVO
+  const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
+  const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
+  const [setlistEnVivoActual, setSetlistEnVivoActual] = useState([]);
 
   const moverCancionArriba = (index) => {
     if (index <= 0) return;
@@ -569,6 +537,7 @@ export default function App() {
     setRolUsuario("miembro");
     setPestana("inicio");
     setCancionSeleccionadaDetalle(null);
+    setModoEnVivoActivo(false);
     if (Platform.OS === "web") {
       try {
         localStorage.removeItem("soundteam_sesion_activa");
@@ -842,6 +811,73 @@ export default function App() {
             </Text>
           </View>
         </View>
+      </View>
+    );
+  }
+
+  // PANTALLA MODO EN VIVO (ESTILO TELEPROMPTER / ESCENARIO)
+  if (modoEnVivoActivo) {
+    const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo];
+    const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo.toLowerCase());
+    const letraMostrar = objetoRepertorioEnVivo ? objetoRepertorioEnVivo.letra : "[INTRO]\nLetra no disponible en biblioteca.";
+
+    return (
+      <View style={[styles.container, { backgroundColor: "#0B0F19", padding: 16 }]}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 10 }}>
+          <TouchableOpacity 
+            style={{ backgroundColor: "#1E293B", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 }}
+            onPress={() => setModoEnVivoActivo(false)}
+          >
+            <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>✕ Salir del Modo en Vivo</Text>
+          </TouchableOpacity>
+          <Text style={{ color: "#94A3B8", fontSize: 13, fontWeight: "bold" }}>
+            Canción {indiceCancionEnVivo + 1} de {setlistEnVivoActual.length}
+          </Text>
+        </View>
+
+        <ScrollView contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
+          <View style={{ width: "100%", maxWidth: 700 }}>
+            <View style={{ backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderWidth: 1, borderColor: "#334155" }}>
+              <View>
+                <Text style={{ color: "#38BDF8", fontSize: 12, fontWeight: "bold", marginBottom: 2 }}>EN ESCENARIO AHORA:</Text>
+                <Text style={{ color: "#FFF", fontSize: 24, fontWeight: "bold" }}>{cancionActualEnVivo?.titulo}</Text>
+              </View>
+              <View style={{ backgroundColor: "#3B82F6", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}>
+                <Text style={{ color: "#FFF", fontSize: 18, fontWeight: "bold" }}>Tono: {cancionActualEnVivo?.tono}</Text>
+              </View>
+            </View>
+
+            <View style={{ backgroundColor: "#0F172A", padding: 20, borderRadius: 12, borderWidth: 1, borderColor: "#1E293B", marginBottom: 20 }}>
+              <Text style={{ color: "#F8FAFC", fontSize: 18, lineHeight: 30, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" }}>
+                {transponerTextoLetra(letraMostrar, 0)}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+              <TouchableOpacity
+                style={[
+                  { flex: 1, padding: 14, borderRadius: 8, alignItems: "center", backgroundColor: "#334155" },
+                  indiceCancionEnVivo === 0 && { opacity: 0.4 }
+                ]}
+                disabled={indiceCancionEnVivo === 0}
+                onPress={() => setIndiceCancionEnVivo(prev => Math.max(0, prev - 1))}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 15 }}>← Canción Anterior</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  { flex: 1, padding: 14, borderRadius: 8, alignItems: "center", backgroundColor: "#3B82F6" },
+                  indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.4 }
+                ]}
+                disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
+                onPress={() => setIndiceCancionEnVivo(prev => Math.min(setlistEnVivoActual.length - 1, prev + 1))}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 15 }}>Siguiente Canción →</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -1435,13 +1471,29 @@ export default function App() {
                         </View>
                       )}
 
-                      <Text style={{ color: t.primary, fontSize: 13, fontWeight: "bold", marginTop: 6 }}>🎵 Setlist del Servicio:</Text>
+                      <Text style={{ color: t.primary, fontSize: 13, fontWeight: "bold", marginTop: 6, marginBottom: 6 }}>🎵 SETLIST ({serv.setlist?.length || 0}):</Text>
                       {serv.setlist && serv.setlist.length > 0 ? (
                         serv.setlist.map((s, i) => (
-                          <Text key={i} style={{ color: t.textMain, fontSize: 12, marginLeft: 8 }}>• {s.titulo} (Tono: {s.tono})</Text>
+                          <View key={i} style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border, marginBottom: 6, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                            <Text style={{ color: t.textMain, fontSize: 13, fontWeight: "bold" }}>{i + 1}. {s.titulo} <Text style={{ color: t.textSub, fontWeight: "normal" }}>(Tono: {s.tono})</Text></Text>
+                          </View>
                         ))
                       ) : (
-                        <Text style={{ color: t.textSub, fontSize: 12, marginLeft: 8, fontStyle: "italic" }}>Sin canciones agregadas.</Text>
+                        <Text style={{ color: t.textSub, fontSize: 12, marginLeft: 8, fontStyle: "italic" }}>Sin canciones agregadas al setlist.</Text>
+                      )}
+
+                      {/* BOTÓN MODO EN VIVO */}
+                      {serv.setlist && serv.setlist.length > 0 && (
+                        <TouchableOpacity
+                          style={{ backgroundColor: "#2563EB", padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8, marginBottom: 10 }}
+                          onPress={() => {
+                            setSetlistEnVivoActual(serv.setlist);
+                            setIndiceCancionEnVivo(0);
+                            setModoEnVivoActivo(true);
+                          }}
+                        >
+                          <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 15 }}>▶️ Modo en vivo</Text>
+                        </TouchableOpacity>
                       )}
 
                       <View style={styles.columnsContainer}>
@@ -1723,22 +1775,15 @@ export default function App() {
                       <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>← Volver al repertorio</Text>
                     </TouchableOpacity>
 
-                    {/* Controles de Transposición Pro */}
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: t.bg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
                       <Text style={{ color: t.textSub, fontSize: 11 }}>Tono:</Text>
-                      <TouchableOpacity 
-                        style={{ padding: 4 }}
-                        onPress={() => setSemitonosTransposicion(prev => prev - 1)}
-                      >
+                      <TouchableOpacity style={{ padding: 4 }} onPress={() => setSemitonosTransposicion(prev => prev - 1)}>
                         <Text style={{ color: t.primary, fontWeight: "bold", fontSize: 16 }}>-</Text>
                       </TouchableOpacity>
                       <Text style={{ color: t.textMain, fontWeight: "bold", fontSize: 13 }}>
                         {transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}
                       </Text>
-                      <TouchableOpacity 
-                        style={{ padding: 4 }}
-                        onPress={() => setSemitonosTransposicion(prev => prev + 1)}
-                      >
+                      <TouchableOpacity style={{ padding: 4 }} onPress={() => setSemitonosTransposicion(prev => prev + 1)}>
                         <Text style={{ color: t.primary, fontWeight: "bold", fontSize: 16 }}>+</Text>
                       </TouchableOpacity>
                     </View>
@@ -1812,7 +1857,6 @@ export default function App() {
                         <Text style={{ color: t.textSub, fontSize: 13 }}>{cancionSeleccionadaDetalle.artista} • Tonalidad: <Text style={{ color: t.primary, fontWeight: "bold" }}>{transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}</Text></Text>
                       </View>
 
-                      {/* Pestañas de Visualización (Acordes / Nashville) */}
                       <View style={{ flexDirection: "row", gap: 6, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: t.border, paddingBottom: 8 }}>
                         {["Acordes", "Nashville"].map((modoVista) => {
                           const activo = modoVisualizacionRepertorio === modoVista;
@@ -1837,7 +1881,6 @@ export default function App() {
                         })}
                       </View>
 
-                      {/* Bloque de Análisis Armónico */}
                       <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border, marginBottom: 12 }}>
                         <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginBottom: 4 }}>📊 ANÁLISIS ARMÓNICO (DETECTADO)</Text>
                         <Text style={{ color: t.textSub, fontSize: 11 }}>
@@ -1845,7 +1888,6 @@ export default function App() {
                         </Text>
                       </View>
 
-                      {/* Contenedor de Letra y Cifrado según el modo */}
                       <View style={{ backgroundColor: t.bg, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
                         <Text style={{ color: t.textMain, fontSize: 14, lineHeight: 22, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" }}>
                           {modoVisualizacionRepertorio === "Nashville"

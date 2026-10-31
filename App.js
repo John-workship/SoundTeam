@@ -109,24 +109,14 @@ const SEDES_DISPONIBLES = [
   { id: "occidente", nombre: "Sede Occidente" },
 ];
 
-// --- MOTOR DE TRANSPOSICIÓN Y CONVERSIÓN ARMÓNICA ---
 const NOTAS_SEMI = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const NOTAS_BEMOL = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
-
-const MAPA_NASHVILLE = {
-  0: "1", 1: "1#", 2: "2", 3: "2#", 4: "3", 5: "4", 6: "4#", 7: "5", 8: "5#", 9: "6", 10: "6#", 11: "7"
-};
-
-const MAPA_ROMANOS = {
-  0: "I", 1: "I#", 2: "ii", 3: "iii♭", 4: "iii", 5: "IV", 6: "IV#", 7: "V", 8: "VI♭", 9: "vi", 10: "VII♭", 11: "vii°"
-};
 
 const transponerNotaUnica = (acorde, semitonos) => {
   if (!acorde) return "";
   let base = acorde.trim();
   let resto = "";
   let raiz = "";
-
   if (base.length >= 2 && (base[1] === "#" || base[1] === "b")) {
     raiz = base.substring(0, 2);
     resto = base.substring(2);
@@ -134,51 +124,44 @@ const transponerNotaUnica = (acorde, semitonos) => {
     raiz = base.substring(0, 1);
     resto = base.substring(1);
   }
-
   if (NOTAS_BEMOL[raiz]) raiz = NOTAS_BEMOL[raiz];
   let idx = NOTAS_SEMI.indexOf(raiz);
   if (idx === -1) return acorde;
-
   let nuevoIdx = (idx + semitonos) % 12;
   if (nuevoIdx < 0) nuevoIdx += 12;
-
   return NOTAS_SEMI[nuevoIdx] + resto;
 };
 
-const convertirAcordeAModo = (acorde, semitonos, tonoBase = "G", modo = "Acordes") => {
-  if (!acorde) return "";
-  let acordeTranspuesto = transponerNotaUnica(acorde, semitonos);
-  if (modo === "Acordes") return acordeTranspuesto;
-
-  let raiz = acordeTranspuesto.length >= 2 && (acordeTranspuesto[1] === "#" || acordeTranspuesto[1] === "b") 
-    ? acordeTranspuesto.substring(0, 2) 
-    : acordeTranspuesto.substring(0, 1);
-  let resto = acordeTranspuesto.substring(raiz.length);
-
-  if (NOTAS_BEMOL[raiz]) raiz = NOTAS_BEMOL[raiz];
-  let raizTonoBase = NOTAS_BEMOL[tonoBase] || tonoBase;
-  
-  let idxTono = NOTAS_SEMI.indexOf(raizTonoBase);
-  let idxAcorde = NOTAS_SEMI.indexOf(raiz);
-
-  if (idxTono === -1 || idxAcorde === -1) return acordeTranspuesto;
-
-  let diff = (idxAcorde - idxTono + 12) % 12;
-
-  if (modo === "Nashville") {
-    return (MAPA_NASHVILLE[diff] || raiz) + resto;
-  } else if (modo === "Romanos") {
-    return (MAPA_ROMANOS[diff] || raiz) + resto;
+const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
+  if (semitonos === 0) return acordeCompuesto;
+  if (acordeCompuesto.includes("/")) {
+    const partes = acordeCompuesto.split("/");
+    return transponerNotaUnica(partes[0], semitonos) + "/" + transponerNotaUnica(partes[1], semitonos);
   }
-  return acordeTranspuesto;
+  return transponerNotaUnica(acordeCompuesto, semitonos);
 };
 
-const transponerTextoLetraAvanzado = (texto, semitonos, tonoBase, modo) => {
-  if (!texto) return texto;
-  return texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
-    let acordesProcesados = p1.split("/").map(a => convertirAcordeAModo(a, semitonos, tonoBase, modo)).join("/");
-    return "[" + acordesProcesados + "]";
+const transponerTextoLetra = (texto, semitonos) => {
+  if (semitonos === 0 || !texto) return texto;
+  let textoTranspuesto = texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
+    return "[" + transponerAcordeCompuesto(p1, semitonos) + "]";
   });
+  const lineas = textoTranspuesto.split("\n");
+  const lineasProcesadas = lineas.map((linea) => {
+    if (linea.trim().startsWith("[") && linea.trim().endsWith("]")) return linea;
+    const palabras = linea.trim().split(/\s+/);
+    const esLineaDeAcordes =
+      palabras.length > 0 &&
+      palabras.every((p) => {
+        const limpia = p.replace(/[^A-G#bm0-9/]/g, "");
+        return /^[A-G](#|b)?(m|maj|min|dim|aug|sus|[0-9])*(\/[A-G](#|b)?)?$/.test(limpia);
+      });
+    if (esLineaDeAcordes) {
+      return palabras.map((p) => transponerAcordeCompuesto(p, semitonos)).join("   ");
+    }
+    return linea;
+  });
+  return lineasProcesadas.join("\n");
 };
 
 export default function App() {
@@ -195,7 +178,6 @@ export default function App() {
     }
   }, [sedeIdSeleccionada]);
 
-  // --- INTEGRANTES SUPABASE ---
   const [integrantes, setIntegrantes] = useState([]);
 
   const cargarIntegrantesSupabase = async () => {
@@ -221,7 +203,6 @@ export default function App() {
         cargarIntegrantesSupabase();
       })
       .subscribe();
-
     return () => { supabase.removeChannel(canalSub); };
   }, []);
 
@@ -256,6 +237,12 @@ export default function App() {
   });
   const [mostrarMenuTemas, setMostrarMenuTemas] = useState(false);
 
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      try { localStorage.setItem("soundteam_tema_app", nombreTema); } catch (e) {}
+    }
+  }, [nombreTema]);
+
   const t = TEMAS[nombreTema];
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
@@ -264,11 +251,7 @@ export default function App() {
     return m.sedeId === sedeIdSeleccionada;
   });
 
-  // --- CALENDARIO Y FECHAS ---
-  const nombresMeses = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-  ];
+  const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const fechaActualObj = new Date();
   const listaMesesDinamicos = [];
   for (let i = 0; i < 4; i++) {
@@ -285,7 +268,13 @@ export default function App() {
   const [diaSeleccionado, setDiaSeleccionado] = useState(fechaActualObj.getDate());
   const esDomingoSeleccionado = new Date(mesSeleccionadoObj.year, mesSeleccionadoObj.mesIndex, diaSeleccionado).getDay() === 0;
 
-  // --- SERVICIOS SUPABASE ---
+  const [paletasCulto, setPaletasCulto] = useState([
+    { id: 1, nombre: "Atardecer Violeta", colores: ["#064680", "#31245A", "#AC6DBF", "#2A7CA3", "#588BC2"] },
+    { id: 2, nombre: "Tonos Arena", colores: ["#C29B78", "#A17651", "#5C4033", "#222222"] },
+    { id: 3, nombre: "Blanco Sacro", colores: ["#748185", "#93afb3", "#456467"] },
+    { id: 4, nombre: "Rosa Alba", colores: ["#E29578", "#FFDDD2", "#83C5BE", "#006D77"] },
+  ]);
+
   const [servicios, setServicios] = useState([]);
 
   const cargarServiciosSupabase = async () => {
@@ -313,7 +302,6 @@ export default function App() {
         cargarServiciosSupabase();
       })
       .subscribe();
-
     return () => { supabase.removeChannel(canalSub); };
   }, []);
 
@@ -323,10 +311,46 @@ export default function App() {
   const [idServicioPostulando, setIdServicioPostulando] = useState(null);
   const [nombreEvento, setNombreEvento] = useState("");
   const [observaciones, setObservaciones] = useState("");
+  const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
   const [setlistActivo, setSetlistActivo] = useState([]);
   const [indiceParaMover, setIndiceParaMover] = useState(null);
 
-  // --- CHAT EN TIEMPO REAL ---
+  const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
+  const [nombreNuevoMiembro, setNombreNuevoMiembro] = useState("");
+  const [pinNuevoMiembro, setPinNuevoMiembro] = useState("1234");
+  const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
+  const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
+
+  const [repertorio, setRepertorio] = useState([
+    {
+      id: 1,
+      titulo: "A dónde iré",
+      artista: "Verbo y Vida",
+      tono: "F",
+      etiquetas: ["Adoración", "Entrega"],
+      letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
+    },
+    {
+      id: 2,
+      titulo: "Creo en ti",
+      artista: "Espíritu y Verdad",
+      tono: "C",
+      etiquetas: ["Adoración"],
+      letra: "[INTRO]\nC G Am F",
+    },
+    {
+      id: 3,
+      titulo: "Digno",
+      artista: "Elevation Worship",
+      tono: "E",
+      etiquetas: ["Adoración"],
+      letra: "[INTRO]\nE B C#m A",
+    },
+  ]);
+
+  const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
+  const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
+
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -338,7 +362,6 @@ export default function App() {
       .eq("canal", canalChatActivo)
       .eq("sede", sedeIdSeleccionada)
       .order("created_at", { ascending: true });
-
     if (data && !error) setMensajesChat(data);
     else setMensajesChat([]);
   };
@@ -353,40 +376,6 @@ export default function App() {
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
   }, [canalChatActivo, sedeIdSeleccionada]);
-
-  // --- REPERTORIO / CANCIONES ---
-  const [repertorio, setRepertorio] = useState([
-    {
-      id: 1,
-      titulo: "A tus pies",
-      artista: "Miel San Marcos",
-      tono: "G",
-      tonoDetectado: "C",
-      publicado: false,
-      etiquetas: ["Adoración", "Gracia y perdón", "Entrega"],
-      letra: `[INTRO]\n[G] [C] [G] [C]\n\n[PRIMERA PARTE]\n[G] A tus pies arde mi [D] corazón\n[Em] A tus pies entrego [C] lo que soy\n[G] Es el lugar de mi [D] seguridad\n[Em] Donde nadie me puede [C] señalar\n\n[PRE-ESTRIBILLO]\nMe perdonaste, me acercaste a tu [D] presencia\nMe levantaste, hoy me postro a [D] adorarte\n\n[ESTRIBILLO]\nNo hay lugar más alto, más [C] grande\nQue estar a tus pies, que [D] estar a tus [G] pies`,
-    },
-    {
-      id: 2,
-      titulo: "A dónde iré",
-      artista: "Verbo y Vida",
-      tono: "F",
-      tonoDetectado: "F",
-      publicado: true,
-      etiquetas: ["Adoración", "Entrega"],
-      letra: `[INTRO]\n[F] [C] [Dm]\n[C] [Bb] [F]\n[Gm] [Bb]\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada`,
-    },
-  ]);
-
-  const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
-  const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
-  const [modoNotacion, setModoNotacion] = useState("Acordes");
-
-  const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
-  const [nombreNuevoMiembro, setNombreNuevoMiembro] = useState("");
-  const [pinNuevoMiembro, setPinNuevoMiembro] = useState("1234");
-  const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
-  const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
   const esAdmin = rolUsuario === "admin";
   const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
@@ -487,12 +476,12 @@ export default function App() {
     let nuevoBajo = servicioObjetivo.instrumentos?.bajo || "Sin asignar";
     let nuevaBateria = servicioObjetivo.instrumentos?.bateria || "Sin asignar";
 
-    if (rol === "vozPrincipal") { nuevaVozP = usuario; }
-    else if (rol === "coros") { nuevosCoros.push(usuario); }
-    else if (rol === "piano") { nuevoPiano = usuario; }
-    else if (rol === "guitarra") { nuevaGuitarra = usuario; }
-    else if (rol === "bajo") { nuevoBajo = usuario; }
-    else if (rol === "bateria") { nuevaBateria = usuario; }
+    if (rol === "vozPrincipal") nuevaVozP = usuario;
+    else if (rol === "coros") nuevosCoros.push(usuario);
+    else if (rol === "piano") nuevoPiano = usuario;
+    else if (rol === "guitarra") nuevaGuitarra = usuario;
+    else if (rol === "bajo") nuevoBajo = usuario;
+    else if (rol === "bateria") nuevaBateria = usuario;
 
     const nVoces = { principal: nuevaVozP, coros: nuevosCoros.length > 0 ? nuevosCoros.join(", ") : "Sin asignar" };
     const nInst = { piano: nuevoPiano, guitarra: nuevaGuitarra, bajo: nuevoBajo, bateria: nuevaBateria };
@@ -574,9 +563,59 @@ export default function App() {
               👤 {usuario} • <Text style={{ color: t.primary, fontWeight: "bold" }}>ROL: {rolUsuario.toUpperCase()}</Text>
             </Text>
           </View>
-          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-            <Text style={styles.logoutBtnText}>Salir</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+              <Text style={styles.logoutBtnText}>Salir</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={{ marginTop: 8 }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: t.bg,
+              borderWidth: 1,
+              borderColor: t.border,
+              paddingVertical: 5,
+              paddingHorizontal: 10,
+              borderRadius: 6,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+            onPress={() => setMostrarMenuTemas(!mostrarMenuTemas)}
+          >
+            <Text style={{ fontSize: 11, color: t.textMain, fontWeight: "bold" }}>🎨 Tema actual: {t.nombre}</Text>
+            <Text style={{ fontSize: 11, color: t.primary, fontWeight: "bold" }}>{mostrarMenuTemas ? "▲ Ocultar" : "▼ Cambiar tema"}</Text>
           </TouchableOpacity>
+
+          {mostrarMenuTemas && (
+            <View style={{ marginTop: 4, backgroundColor: t.cardBg, borderRadius: 6, borderWidth: 1, borderColor: t.border, padding: 6, gap: 4 }}>
+              {[
+                { key: "azul", label: "🔵 Azul" },
+                { key: "claro", label: "☀️ Claro" },
+                { key: "oscuro", label: "🌙 Oscuro" },
+                { key: "rosado", label: "🌸 Rosado" },
+                { key: "morado", label: "🟣 Morado" },
+                { key: "esmeralda", label: "🟢 Esmeralda" },
+                { key: "sunset", label: "🌅 Sunset" },
+                { key: "minimal", label: "⬛ Minimal" },
+              ].map((itemTema) => {
+                const activo = nombreTema === itemTema.key;
+                return (
+                  <TouchableOpacity
+                    key={itemTema.key}
+                    style={{ paddingVertical: 6, paddingHorizontal: 8, borderRadius: 4, backgroundColor: activo ? t.primary + "33" : "transparent" }}
+                    onPress={() => { setNombreTema(itemTema.key); setMostrarMenuTemas(false); }}
+                  >
+                    <Text style={{ fontSize: 11, color: activo ? t.primary : t.textMain, fontWeight: activo ? "bold" : "normal" }}>
+                      {itemTema.label} {activo ? "✓" : ""}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
       </View>
 
@@ -822,8 +861,19 @@ export default function App() {
 
               {integrantesSeccionEquipo.map((int) => (
                 <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
-                  <Text style={[styles.memberTitle, { color: t.textMain }]}>👤 {int.nombre}</Text>
-                  <Text style={{ color: t.primary, fontSize: 12 }}>🎵 Roles: {int.rolesMusicales?.join(", ") || "Ninguno"}</Text>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={[styles.memberTitle, { color: t.textMain }]}>👤 {int.nombre}</Text>
+                    <TouchableOpacity
+                      style={{ backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
+                      onPress={async () => {
+                        setIntegrantes(integrantes.filter((item) => item.id !== int.id));
+                        await supabase.from("integrantes").delete().eq("id", int.id);
+                      }}
+                    >
+                      <Text style={{ color: "#FFF", fontSize: 10, fontWeight: "bold" }}>🗑️ Eliminar</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={{ color: t.primary, fontSize: 12, marginTop: 4 }}>🎵 Roles: {int.rolesMusicales?.join(", ") || "Ninguno"}</Text>
                 </View>
               ))}
             </View>
@@ -834,65 +884,26 @@ export default function App() {
               {cancionSeleccionadaDetalle !== null ? (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                   <TouchableOpacity style={styles.backBtn} onPress={() => { setCancionSeleccionadaDetalle(null); setSemitonosTransposicion(0); }}>
-                    <Text style={{ color: t.primary, fontWeight: "bold" }}>← Volver a Canciones</Text>
+                    <Text style={{ color: t.primary, fontWeight: "bold" }}>← Volver al repertorio</Text>
                   </TouchableOpacity>
 
-                  <View style={{ flexDirection: "row", gap: 6, marginVertical: 8, flexWrap: "wrap" }}>
-                    <View style={styles.tagChipActive}><Text style={{ color: "#FFF", fontSize: 11 }}>Acordes escritos en {cancionSeleccionadaDetalle.tono}</Text></View>
-                  </View>
-
-                  {!cancionSeleccionadaDetalle.publicado && (
-                    <View style={styles.revisionBanner}>
-                      <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>Pendiente de revisión: esta canción aún no es visible para la banda.</Text>
-                      <TouchableOpacity
-                        style={styles.publishBtn}
-                        onPress={() => {
-                          setRepertorio(repertorio.map(c => c.id === cancionSeleccionadaDetalle.id ? { ...c, publicado: true } : c));
-                          setCancionSeleccionadaDetalle({ ...cancionSeleccionadaDetalle, publicado: true });
-                          alert("✓ Canción aprobada.");
-                        }}
-                      >
-                        <Text style={{ color: "#FFF", fontWeight: "bold", textAlign: "center" }}>Aprobar y publicar</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  <View style={styles.controlsRow}>
-                    <View style={styles.notationToggleGroup}>
-                      {["Acordes", "Nashville", "Romanos"].map((modo) => (
-                        <TouchableOpacity
-                          key={modo}
-                          style={[styles.toggleOption, modoNotacion === modo && styles.toggleOptionActive]}
-                          onPress={() => setModoNotacion(modo)}
-                        >
-                          <Text style={{ color: modoNotacion === modo ? "#FFF" : t.textSub, fontSize: 11, fontWeight: "bold" }}>{modo}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-
-                    <View style={styles.transposerGroup}>
-                      <TouchableOpacity style={styles.stepBtn} onPress={() => setSemitonosTransposicion(prev => prev - 1)}><Text style={{ color: "#FFF", fontWeight: "bold" }}>-</Text></TouchableOpacity>
-                      <Text style={{ color: t.textMain, fontWeight: "bold", paddingHorizontal: 8, fontSize: 12 }}>
-                        {transponerNotaUnica(cancionSeleccionadaDetalle.tono, semitonosTransposicion)}
-                      </Text>
-                      <TouchableOpacity style={styles.stepBtn} onPress={() => setSemitonosTransposicion(prev => prev + 1)}><Text style={{ color: "#FFF", fontWeight: "bold" }}>+</Text></TouchableOpacity>
-                    </View>
-                  </View>
+                  <Text style={{ fontSize: 20, fontWeight: "bold", color: t.textMain, marginTop: 6 }}>{cancionSeleccionadaDetalle.titulo}</Text>
+                  <Text style={{ color: t.textSub, fontSize: 12, marginBottom: 10 }}>{cancionSeleccionadaDetalle.artista}</Text>
 
                   <View style={[styles.lyricsBox, { backgroundColor: t.bg, borderColor: t.border }]}>
                     <Text style={{ color: t.textMain, fontSize: 13, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace", lineHeight: 22 }}>
-                      {transponerTextoLetraAvanzado(cancionSeleccionadaDetalle.letra, semitonosTransposicion, cancionSeleccionadaDetalle.tono, modoNotacion)}
+                      {transponerTextoLetra(cancionSeleccionadaDetalle.letra, semitonosTransposicion)}
                     </Text>
                   </View>
                 </View>
               ) : (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <Text style={[styles.cardTitle, { color: t.textMain }]}>Canciones ({repertorio.length})</Text>
+                  <Text style={[styles.cardTitle, { color: t.textMain }]}>Repertorio ({repertorio.length})</Text>
                   {repertorio.map((c) => (
                     <TouchableOpacity
                       key={c.id}
                       style={[styles.repertorioItemRowPro, { borderBottomColor: t.border, backgroundColor: t.bg }]}
-                      onPress={() => setCancionSeleccionadaDetalle(c)}
+                      onPress={() => { setCancionSeleccionadaDetalle(c); setSemitonosTransposicion(0); }}
                     >
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: t.textMain, fontWeight: "bold", fontSize: 14 }}>{c.titulo}</Text>
@@ -915,7 +926,7 @@ export default function App() {
           { key: "inicio", label: "🏠 Inicio" },
           { key: "eventos", label: "📅 Eventos" },
           ...(esAdminOLider ? [{ key: "equipo", label: "👥 Equipo" }] : []),
-          { key: "repertorio", label: "🎵 Canciones" },
+          { key: "repertorio", label: "🎵 Repertorio" },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -946,6 +957,7 @@ const styles = StyleSheet.create({
   headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
   headerSubtitle: { fontSize: 11, marginTop: 2 },
+  headerActions: { flexDirection: "row", gap: 6 },
   logoutBtn: { backgroundColor: "#EF4444", paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
   logoutBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 11 },
   content: { flex: 1, padding: 12, width: "100%" },
@@ -974,17 +986,7 @@ const styles = StyleSheet.create({
   programBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
   eventMainTitle: { fontSize: 15, fontWeight: "bold" },
   backBtn: { paddingVertical: 6, marginBottom: 6 },
-  tagChip: { backgroundColor: "#1E293B", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  tagChipActive: { backgroundColor: "#1E40AF", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  revisionBanner: { backgroundColor: "#0F172A", padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#1E3A8A", marginVertical: 8 },
-  publishBtn: { backgroundColor: "#2563EB", padding: 8, borderRadius: 6, marginTop: 6 },
   toneBadgeActive: { backgroundColor: "#2563EB", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
-  controlsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 10 },
-  notationToggleGroup: { flexDirection: "row", backgroundColor: "#0F172A", borderRadius: 6, padding: 2 },
-  toggleOption: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4 },
-  toggleOptionActive: { backgroundColor: "#2563EB" },
-  transposerGroup: { flexDirection: "row", alignItems: "center", backgroundColor: "#0F172A", borderRadius: 6, padding: 2 },
-  stepBtn: { backgroundColor: "#1E293B", width: 28, height: 28, borderRadius: 4, justifyContent: "center", alignItems: "center" },
   lyricsBox: { padding: 12, borderRadius: 8, borderWidth: 1, marginTop: 8 },
   repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
   tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1, width: "100%" },

@@ -212,7 +212,7 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v17");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v18");
         return guardados
           ? JSON.parse(guardados)
           : [
@@ -238,7 +238,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v17",
+          "soundteam_integrantes_sedes_v18",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -483,7 +483,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  // --- CHATS EN TIEMPO REAL (LIBRE DE COLUMNA 'sede_id' PARA EVITAR ERRORES) ---
+  // --- CHATS EN TIEMPO REAL (FILTRADOS POR SEDE Y CANAL USANDO EL CAMPO 'sede') ---
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -496,6 +496,7 @@ export default function App() {
       .from("mensajes")
       .select("*")
       .eq("canal", canalChatActivo)
+      .eq("sede", sedeIdSeleccionada)
       .order("created_at", { ascending: true });
 
     if (data && !error) {
@@ -509,7 +510,7 @@ export default function App() {
     cargarMensajesSupabase();
 
     const canalSub = supabase
-      .channel(`chat-realtime-${canalChatActivo}`)
+      .channel(`chat-realtime-${sedeIdSeleccionada}-${canalChatActivo}`)
       .on(
         "postgres_changes",
         {
@@ -527,7 +528,7 @@ export default function App() {
     return () => {
       supabase.removeChannel(canalSub);
     };
-  }, [canalChatActivo]);
+  }, [canalChatActivo, sedeIdSeleccionada]);
 
   const handleLogin = () => {
     if (usuario.trim() === "" || pinInput.trim() === "") {
@@ -613,7 +614,7 @@ export default function App() {
 
   const puedeControlarRepertorio = esAdminOLider || tocaInstrumento;
 
-  // --- ENVÍO Y CORRECCIÓN DE MENSAJES PARA CUALQUIER PERFIL ---
+  // --- ENVÍO Y CORRECCIÓN DE MENSAJES GUARDANDO LA SEDE ---
   const enviarOActualizarMensajeChat = async () => {
     if (nuevoMensajeTexto.trim() !== "") {
       const horaActual = new Date().toLocaleTimeString([], {
@@ -622,7 +623,6 @@ export default function App() {
       });
 
       if (idMensajeEditando !== null) {
-        // CUALQUIER USUARIO PUEDE CORREGIR/EDITAR SU PROPIO MENSAJE (Ortografía)
         const textoModificado = nuevoMensajeTexto.trim();
         const idNumerico = Number(idMensajeEditando);
 
@@ -642,19 +642,19 @@ export default function App() {
         await cargarMensajesSupabase();
         alert("✏️ Mensaje corregido con éxito.");
       } else {
-        // CUALQUIER USUARIO PUEDE ENVIAR MENSAJES
         const mensaje = {
           autor: usuario,
           texto: nuevoMensajeTexto.trim(),
           hora: horaActual,
           canal: canalChatActivo,
+          sede: sedeIdSeleccionada,
           editado: false,
         };
 
         setNuevoMensajeTexto("");
         const { error } = await supabase.from("mensajes").insert([mensaje]);
         if (error) {
-          alert(`⚠️ No se pudo enviar el mensaje: ${error.message}.`);
+          alert(`⚠️ No se pudo enviar el mensaje: ${error.message}. (Asegúrate de que la tabla 'mensajes' tenga la columna 'sede').`);
         }
         await cargarMensajesSupabase();
       }
@@ -669,17 +669,18 @@ export default function App() {
 
     if (
       confirm(
-        `¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()}?`
+        `¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} para esta sede (${sedeActual.nombre})?`
       )
     ) {
       const { error } = await supabase
         .from("mensajes")
         .delete()
-        .eq("canal", canalChatActivo);
+        .eq("canal", canalChatActivo)
+        .eq("sede", sedeIdSeleccionada);
 
       if (!error) {
         setMensajesChat([]);
-        alert("🧹 Chat limpiado con éxito.");
+        alert("🧹 Chat de la sede limpiado con éxito.");
       } else {
         alert("⚠️ No se pudo limpiar el chat.");
       }
@@ -1211,7 +1212,7 @@ export default function App() {
                       { color: t.textMain, marginBottom: 0 },
                     ]}
                   >
-                    💬 Chat General
+                    💬 Chat de {sedeActual.nombre}
                   </Text>
 
                   {esAdminOLider && (
@@ -1302,7 +1303,7 @@ export default function App() {
                           fontSize: 12,
                         }}
                       >
-                        No hay mensajes en este chat. ¡Sé el primero en escribir!
+                        No hay mensajes en este chat para {sedeActual.nombre}. ¡Sé el primero en escribir!
                       </Text>
                     ) : (
                       mensajesChat.map((m, i) => {
@@ -1493,7 +1494,7 @@ export default function App() {
                     placeholder={
                       idMensajeEditando !== null
                         ? "Corrige tu mensaje aquí..."
-                        : "Escribir en el chat..."
+                        : `Escribir en el chat de ${sedeActual.nombre}...`
                     }
                     placeholderTextColor={t.textSub}
                     value={nuevoMensajeTexto}
@@ -3341,7 +3342,7 @@ const styles = StyleSheet.create({
   daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, justifyContent: "flex-start", width: "100%" },
   dayCell: { width: "13%", aspectRatio: 1, justifyContent: "center", alignItems: "center", borderRadius: 6, borderWidth: 1, marginBottom: 4, position: "relative" },
   dayCellEmpty: { width: "13%", aspectRatio: 1, marginBottom: 4 },
-  dayText: { fontSize: 13, fontWeight: "bold" },
+  dayTest: { fontSize: 13, fontWeight: "bold" },
   dayTextSelected: { color: "#FFFFFF", fontWeight: "bold" },
   serviceSectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, width: "100%" },
   serviceSectionTitle: { fontSize: 13, fontWeight: "bold", flex: 1 },
@@ -3366,8 +3367,8 @@ const styles = StyleSheet.create({
   libSongRow: { flexDirection: "row", alignItems: "center", paddingVertical: 6, borderBottomWidth: 1 },
   addSongBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 },
   chipRole: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 16, borderWidth: 1 },
-  whatsappBtn: { backgroundColor: "#22C55E", padding: 12, borderRadius: 8, alignItems: "center" },
+  whatsappBtn: { `--webkit-tap-highlight-color`: `transparent`, backgroundColor: "#22C55E", padding: 12, borderRadius: 8, alignItems: "center" },
   postulateBtn: { backgroundColor: "#F97316", padding: 12, borderRadius: 8, alignItems: "center" },
   actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
-  postulateRoleOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
+  postulateRoleOption: { padding: `12px`, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
 });

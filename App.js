@@ -213,15 +213,17 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v10");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v11");
         return guardados
           ? JSON.parse(guardados)
           : [
+              // Administradores específicos de cada sede
               { id: 101, nombre: "Admin", pin: "1234", sedeId: "general", rolAcceso: "admin", rolesMusicales: ["👑 Director General"] },
               { id: 102, nombre: "AdminNorte", pin: "1234", sedeId: "norte", rolAcceso: "admin", rolesMusicales: ["👑 Director Norte"] },
               { id: 103, nombre: "AdminSur", pin: "1234", sedeId: "sur", rolAcceso: "admin", rolesMusicales: ["👑 Director Sur"] },
               { id: 104, nombre: "AdminOccidente", pin: "1234", sedeId: "occidente", rolAcceso: "admin", rolesMusicales: ["👑 Director Occidente"] },
 
+              // Miembros comunes pertenecientes exclusivamente a la Sede General
               { id: 1, nombre: "Líder", pin: "1234", sedeId: "general", rolAcceso: "lider", rolesMusicales: ["⭐ Líder de Grupo"] },
               { id: 2, nombre: "Lina", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎤 Coros"] },
               { id: 3, nombre: "Arley", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎹 Piano"] },
@@ -240,7 +242,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v10",
+          "soundteam_integrantes_sedes_v11",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -309,9 +311,16 @@ export default function App() {
   const t = TEMAS[nombreTema];
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
-  const integrantesSeccionEquipo = integrantes.filter(
-    (m) => m.sedeId === "general" || m.sedeId === sedeIdSeleccionada
-  );
+  // FILTRO ESTRICTO: 
+  // - Si la sede seleccionada es "general", muestra los miembros generales + el admin general.
+  // - Si es otra sede (norte, sur, occidente), muestra ÚNICAMENTE el administrador correspondiente a esa sede.
+  const integrantesSeccionEquipo = integrantes.filter((m) => {
+    if (sedeIdSeleccionada === "general") {
+      return m.sedeId === "general";
+    } else {
+      return m.sedeId === sedeIdSeleccionada;
+    }
+  });
 
   const nombresMeses = [
     "Enero",
@@ -561,7 +570,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  // --- CHATS FILTRADOS POR CANAL Y SEDE ACTUAL ---
+  // --- CHATS FILTRADOS POR SEDE Y CANAL ---
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -569,7 +578,6 @@ export default function App() {
   const [textoOriginalEditando, setTextoOriginalEditando] = useState("");
   const [mostrarSelectorEmojis, setMostrarSelectorEmojis] = useState(false);
 
-  // Cargamos los mensajes filtrando tanto por el canal como por la sede activa
   const cargarMensajesSupabase = async () => {
     const { data, error } = await supabase
       .from("mensajes")
@@ -622,7 +630,7 @@ export default function App() {
     );
 
     if (!miembroEncontrado) {
-      alert(`⚠️ El usuario "${usuario}" no existe. Regístrate si eres nuevo.`);
+      alert(`⚠️ El usuario "${usuario}" no existe en esta sede.`);
       return;
     }
 
@@ -765,7 +773,7 @@ export default function App() {
           texto: nuevoMensajeTexto.trim(),
           hora: horaActual,
           canal: canalChatActivo,
-          sedeId: sedeIdSeleccionada, // Guarda el mensaje exclusivamente para esta sede
+          sedeId: sedeIdSeleccionada,
           editado: false,
         };
 

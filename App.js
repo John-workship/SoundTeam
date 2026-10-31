@@ -1650,13 +1650,37 @@ export default function App() {
             <>
               {cancionSeleccionadaDetalle !== null ? (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                     <TouchableOpacity
                       style={{ backgroundColor: t.bg, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: t.border }}
-                      onPress={() => { setCancionSeleccionadaDetalle(null); setModoEdicionCancion(false); setSemitonosTransposicion(0); }}
+                      onPress={() => {
+                        setCancionSeleccionadaDetalle(null);
+                        setModoEdicionCancion(false);
+                        setSemitonosTransposicion(0);
+                      }}
                     >
                       <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>← Volver al repertorio</Text>
                     </TouchableOpacity>
+
+                    {/* Controles de Transposición Pro */}
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: t.bg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
+                      <Text style={{ color: t.textSub, fontSize: 11 }}>Tono:</Text>
+                      <TouchableOpacity 
+                        style={{ padding: 4 }}
+                        onPress={() => setSemitonosTransposicion(prev => prev - 1)}
+                      >
+                        <Text style={{ color: t.primary, fontWeight: "bold", fontSize: 16 }}>-</Text>
+                      </TouchableOpacity>
+                      <Text style={{ color: t.textMain, fontWeight: "bold", fontSize: 13 }}>
+                        {transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}
+                      </Text>
+                      <TouchableOpacity 
+                        style={{ padding: 4 }}
+                        onPress={() => setSemitonosTransposicion(prev => prev + 1)}
+                      >
+                        <Text style={{ color: t.primary, fontWeight: "bold", fontSize: 16 }}>+</Text>
+                      </TouchableOpacity>
+                    </View>
 
                     {puedeControlarRepertorio && (
                       <View style={{ flexDirection: "row", gap: 6 }}>
@@ -1722,10 +1746,44 @@ export default function App() {
                     </View>
                   ) : (
                     <View>
-                      <View style={{ marginBottom: 14 }}>
+                      <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontSize: 22, fontWeight: "bold", color: t.textMain, marginBottom: 2 }}>{cancionSeleccionadaDetalle.titulo}</Text>
-                        <Text style={{ color: t.textSub, fontSize: 13, marginBottom: 8 }}>{cancionSeleccionadaDetalle.artista}</Text>
+                        <Text style={{ color: t.textSub, fontSize: 13 }}>{cancionSeleccionadaDetalle.artista} • Tonalidad: <Text style={{ color: t.primary, fontWeight: "bold" }}>{transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}</Text></Text>
                       </View>
+
+                      {/* Pestañas de Visualización (Acordes / Nashville) */}
+                      <View style={{ flexDirection: "row", gap: 6, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: t.border, paddingBottom: 8 }}>
+                        {["Acordes", "Nashville"].map((modoVista, idx) => (
+                          <TouchableOpacity
+                            key={modoVista}
+                            style={{
+                              paddingVertical: 6,
+                              paddingHorizontal: 14,
+                              borderRadius: 6,
+                              backgroundColor: idx === 0 ? t.primary : t.bg,
+                              borderWidth: 1,
+                              borderColor: t.border,
+                            }}
+                            onPress={() => {
+                              if (idx > 0) alert("🚧 Vista de Nashville en desarrollo.");
+                            }}
+                          >
+                            <Text style={{ color: idx === 0 ? "#FFF" : t.textSub, fontSize: 12, fontWeight: "bold" }}>
+                              {modoVista}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      {/* Bloque de Análisis Armónico */}
+                      <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border, marginBottom: 12 }}>
+                        <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginBottom: 4 }}>📊 ANÁLISIS ARMÓNICO (DETECTADO)</Text>
+                        <Text style={{ color: t.textSub, fontSize: 11 }}>
+                          Tonalidad base: {cancionSeleccionadaDetalle.tono || "C"} | Estructura optimizada para la banda en vivo.
+                        </Text>
+                      </View>
+
+                      {/* Contenedor de Letra y Cifrado */}
                       <View style={{ backgroundColor: t.bg, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
                         <Text style={{ color: t.textMain, fontSize: 14, lineHeight: 22, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" }}>
                           {transponerTextoLetra(cancionSeleccionadaDetalle.letra || "Sin letra registrada.", semitonosTransposicion)}

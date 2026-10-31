@@ -102,6 +102,22 @@ const TEMAS = {
   },
 };
 
+const PAPELES_TAPIZ = {
+  ninguno: { nombre: "🎨 Liso (Por defecto)", css: {} },
+  escenario: { 
+    nombre: "💡 Luces de Escenario", 
+    css: Platform.OS === "web" ? { backgroundImage: "radial-gradient(circle at 50% 10%, rgba(109,40,217,0.3) 0%, rgba(11,19,43,0) 70%)" } : {} 
+  },
+  acustico: { 
+    nombre: "🎙️ Estudio Acústico", 
+    css: Platform.OS === "web" ? { backgroundImage: "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)", backgroundSize: "16px 16px" } : {} 
+  },
+  madera: { 
+    nombre: "🪵 Textura Cálida", 
+    css: Platform.OS === "web" ? { backgroundImage: "linear-gradient(135deg, rgba(249,115,22,0.05) 0%, rgba(0,0,0,0.3) 100%)" } : {} 
+  },
+};
+
 const SEDES_DISPONIBLES = [
   { id: "general", nombre: "Sede General" },
   { id: "norte", nombre: "Sede Norte" },
@@ -233,7 +249,14 @@ export default function App() {
     return "azul";
   });
 
-  const [mostrarMenuTemas, setMostrarMenuTemas] = useState(false);
+  const [nombreTapiz, setNombreTapiz] = useState(() => {
+    if (Platform.OS === "web") {
+      try { return localStorage.getItem("soundteam_tapiz_app") || "ninguno"; } catch (e) { return "ninguno"; }
+    }
+    return "ninguno";
+  });
+
+  const [mostrarMenuPersonalizacion, setMostrarMenuPersonalizacion] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === "web") {
@@ -241,7 +264,14 @@ export default function App() {
     }
   }, [nombreTema]);
 
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      try { localStorage.setItem("soundteam_tapiz_app", nombreTapiz); } catch (e) {}
+    }
+  }, [nombreTapiz]);
+
   const t = TEMAS[nombreTema];
+  const tapizActual = PAPELES_TAPIZ[nombreTapiz] || PAPELES_TAPIZ.ninguno;
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
   const integrantesSeccionEquipo = integrantes.filter((m) => {
@@ -328,7 +358,6 @@ export default function App() {
 
   const [setlistActivo, setSetlistActivo] = useState([]);
 
-  // --- FUNCIONES PARA SUBIR Y BAJAR CANCIONES EN EL SETLIST ---
   const moverCancionArriba = (index) => {
     if (index <= 0) return;
     const nuevoSetlist = [...setlistActivo];
@@ -732,7 +761,7 @@ export default function App() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: t.bg }]}>
+    <View style={[styles.container, { backgroundColor: t.bg }, tapizActual.css]}>
       <View style={[styles.header, { backgroundColor: t.cardBg, borderBottomColor: t.border }]}>
         <View style={styles.headerTopRow}>
           <View style={{ flex: 1 }}>
@@ -764,37 +793,61 @@ export default function App() {
               justifyContent: "space-between",
               alignItems: "center",
             }}
-            onPress={() => setMostrarMenuTemas(!mostrarMenuTemas)}
+            onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
           >
-            <Text style={{ fontSize: 11, color: t.textMain, fontWeight: "bold" }}>🎨 Tema actual: {t.nombre}</Text>
-            <Text style={{ fontSize: 11, color: t.primary, fontWeight: "bold" }}>{mostrarMenuTemas ? "▲ Ocultar" : "▼ Cambiar tema"}</Text>
+            <Text style={{ fontSize: 11, color: t.textMain, fontWeight: "bold" }}>
+              🎨 Tema: {t.nombre} | Papel Tapiz: {tapizActual.nombre}
+            </Text>
+            <Text style={{ fontSize: 11, color: t.primary, fontWeight: "bold" }}>{mostrarMenuPersonalizacion ? "▲ Ocultar" : "▼ Personalizar"}</Text>
           </TouchableOpacity>
 
-          {mostrarMenuTemas && (
-            <View style={{ marginTop: 4, backgroundColor: t.cardBg, borderRadius: 6, borderWidth: 1, borderColor: t.border, padding: 6, gap: 4 }}>
-              {[
-                { key: "azul", label: "🔵 Azul" },
-                { key: "claro", label: "☀️ Claro" },
-                { key: "oscuro", label: "🌙 Oscuro" },
-                { key: "rosado", label: "🌸 Rosado" },
-                { key: "morado", label: "🟣 Morado" },
-                { key: "esmeralda", label: "🟢 Esmeralda" },
-                { key: "sunset", label: "🌅 Sunset" },
-                { key: "minimal", label: "⬛ Minimal" },
-              ].map((itemTema) => {
-                const activo = nombreTema === itemTema.key;
-                return (
-                  <TouchableOpacity
-                    key={itemTema.key}
-                    style={{ paddingVertical: 6, paddingHorizontal: 8, borderRadius: 4, backgroundColor: activo ? t.primary + "33" : "transparent" }}
-                    onPress={() => { setNombreTema(itemTema.key); setMostrarMenuTemas(false); }}
-                  >
-                    <Text style={{ fontSize: 11, color: activo ? t.primary : t.textMain, fontWeight: activo ? "bold" : "normal" }}>
-                      {itemTema.label} {activo ? "✓" : ""}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+          {mostrarMenuPersonalizacion && (
+            <View style={{ marginTop: 6, backgroundColor: t.cardBg, borderRadius: 6, borderWidth: 1, borderColor: t.border, padding: 8, gap: 8 }}>
+              <Text style={{ fontSize: 11, color: t.textSub, fontWeight: "bold" }}>Colores de Tema:</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+                {[
+                  { key: "azul", label: "🔵 Azul" },
+                  { key: "claro", label: "☀️ Claro" },
+                  { key: "oscuro", label: "🌙 Oscuro" },
+                  { key: "rosado", label: "🌸 Rosado" },
+                  { key: "morado", label: "🟣 Morado" },
+                  { key: "esmeralda", label: "🟢 Esmeralda" },
+                  { key: "sunset", label: "🌅 Sunset" },
+                  { key: "minimal", label: "⬛ Minimal" },
+                ].map((itemTema) => {
+                  const activo = nombreTema === itemTema.key;
+                  return (
+                    <TouchableOpacity
+                      key={itemTema.key}
+                      style={{ paddingVertical: 4, paddingHorizontal: 6, borderRadius: 4, backgroundColor: activo ? t.primary : t.bg, borderWidth: 1, borderColor: t.border }}
+                      onPress={() => setNombreTema(itemTema.key)}
+                    >
+                      <Text style={{ fontSize: 10, color: activo ? "#FFFFFF" : t.textMain, fontWeight: activo ? "bold" : "normal" }}>
+                        {itemTema.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={{ fontSize: 11, color: t.textSub, fontWeight: "bold", marginTop: 4 }}>Papel Tapiz / Fondo:</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+                {Object.keys(PAPELES_TAPIZ).map((keyTapiz) => {
+                  const activoTapiz = nombreTapiz === keyTapiz;
+                  const tapizObj = PAPELES_TAPIZ[keyTapiz];
+                  return (
+                    <TouchableOpacity
+                      key={keyTapiz}
+                      style={{ paddingVertical: 4, paddingHorizontal: 6, borderRadius: 4, backgroundColor: activoTapiz ? t.primary : t.bg, borderWidth: 1, borderColor: t.border }}
+                      onPress={() => setNombreTapiz(keyTapiz)}
+                    >
+                      <Text style={{ fontSize: 10, color: activoTapiz ? "#FFFFFF" : t.textMain, fontWeight: activoTapiz ? "bold" : "normal" }}>
+                        {tapizObj.nombre}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
           )}
         </View>
@@ -1092,7 +1145,6 @@ export default function App() {
                           <Text style={{ color: t.textMain, fontSize: 13, fontWeight: "bold" }}>{index + 1}. {cancion.titulo}</Text>
                         </View>
 
-                        {/* CONTROLES DE TONO, FLECHAS (ÚNICAS) Y ELIMINAR */}
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                           <Text style={{ color: t.textSub, fontSize: 12 }}>Tono:</Text>
                           <TextInput
@@ -1116,7 +1168,6 @@ export default function App() {
                             }}
                           />
 
-                          {/* Botón Subir ▲ */}
                           <TouchableOpacity 
                             style={[styles.smallButton, { backgroundColor: t.cardBg, borderColor: t.border }]} 
                             onPress={() => moverCancionArriba(index)}
@@ -1124,7 +1175,6 @@ export default function App() {
                             <Text style={[styles.smallButtonText, { color: t.primary }]}>▲</Text>
                           </TouchableOpacity>
 
-                          {/* Botón Bajar ▼ */}
                           <TouchableOpacity 
                             style={[styles.smallButton, { backgroundColor: t.cardBg, borderColor: t.border }]} 
                             onPress={() => moverCancionAbajo(index)}
@@ -1132,7 +1182,6 @@ export default function App() {
                             <Text style={[styles.smallButtonText, { color: t.primary }]}>▼</Text>
                           </TouchableOpacity>
 
-                          {/* Botón Eliminar X */}
                           <TouchableOpacity
                             style={{ backgroundColor: "#EF4444", width: 32, height: 32, borderRadius: 6, justifyContent: "center", alignItems: "center" }}
                             onPress={() => {

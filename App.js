@@ -103,18 +103,45 @@ const TEMAS = {
 };
 
 const PAPELES_TAPIZ = {
-  ninguno: { nombre: "🎨 Liso (Por defecto)", css: {} },
-  escenario: { 
-    nombre: "💡 Luces de Escenario", 
-    css: Platform.OS === "web" ? { backgroundImage: "radial-gradient(circle at 50% 10%, rgba(109,40,217,0.3) 0%, rgba(11,19,43,0) 70%)" } : {} 
+  ninguno: { 
+    nombre: "🎨 Liso", 
+    css: {} 
   },
-  acustico: { 
-    nombre: "🎙️ Estudio Acústico", 
-    css: Platform.OS === "web" ? { backgroundImage: "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)", backgroundSize: "16px 16px" } : {} 
+  doodles: { 
+    nombre: "🎨 Garabatos / WhatsApp", 
+    css: Platform.OS === "web" ? { 
+      backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86fd0f76-71f4-11e7-9a39-a414a2929a34.png')",
+      backgroundRepeat: "repeat",
+      backgroundSize: "360px",
+      backgroundAttachment: "fixed"
+    } : {} 
   },
-  madera: { 
-    nombre: "🪵 Textura Cálida", 
-    css: Platform.OS === "web" ? { backgroundImage: "linear-gradient(135deg, rgba(249,115,22,0.05) 0%, rgba(0,0,0,0.3) 100%)" } : {} 
+  patronMusical: { 
+    nombre: "🎵 Notas Musicales", 
+    css: Platform.OS === "web" ? { 
+      backgroundImage: "url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1200&auto=format&fit=crop')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundAttachment: "fixed"
+    } : {} 
+  },
+  lucesEscenario: { 
+    nombre: "💡 Luces de Evento", 
+    css: Platform.OS === "web" ? { 
+      backgroundImage: "url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundAttachment: "fixed"
+    } : {} 
+  },
+  maderaAcustica: { 
+    nombre: "🪵 Madera Estudio", 
+    css: Platform.OS === "web" ? { 
+      backgroundImage: "url('https://images.unsplash.com/photo-1546484475-7f7bd55792da?q=80&w=1200&auto=format&fit=crop')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundAttachment: "fixed"
+    } : {} 
   },
 };
 
@@ -125,7 +152,6 @@ const SEDES_DISPONIBLES = [
   { id: "occidente", nombre: "Sede Occidente" },
 ];
 
-// --- MOTOR DE TRANSPOSICIÓN MUSICAL INTELIGENTE ---
 const NOTAS_SEMI = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const NOTAS_BEMOL = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
 

@@ -202,6 +202,7 @@ export default function App() {
     }
   }, [sedeIdSeleccionada]);
 
+  // --- CARGA DE INTEGRANTES DESDE SUPABASE ---
   const [integrantes, setIntegrantes] = useState([]);
 
   const cargarIntegrantesSupabase = async () => {
@@ -265,6 +266,14 @@ export default function App() {
   const t = TEMAS[nombreTema];
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
+  const integrantesSeccionEquipo = integrantes.filter((m) => {
+    if (sedeIdSeleccionada === "general") {
+      return m.sedeId === "general";
+    } else {
+      return m.sedeId === sedeIdSeleccionada;
+    }
+  });
+
   const [repertorio, setRepertorio] = useState([
     {
       id: 1,
@@ -292,6 +301,7 @@ export default function App() {
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
   const [modoNotacion, setModoNotacion] = useState("Acordes");
 
+  const esAdmin = rolUsuario === "admin";
   const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
 
   const handleLogin = () => {
@@ -314,9 +324,37 @@ export default function App() {
       return;
     }
 
-    setUsuario(miembroEncontrado.nombre);
-    setRolUsuario(miembroEncontrado.rolAcceso || "miembro");
+    const rolAsignado = miembroEncontrado.rolAcceso || "miembro";
+    const nombreReal = miembroEncontrado.nombre;
+
+    setUsuario(nombreReal);
+    setRolUsuario(rolAsignado);
     setSesionIniciada(true);
+
+    if (Platform.OS === "web") {
+      try {
+        localStorage.setItem("soundteam_sesion_activa", "true");
+        localStorage.setItem("soundteam_sesion_usuario", nombreReal);
+        localStorage.setItem("soundteam_sesion_rol", rolAsignado);
+      } catch (e) {}
+    }
+  };
+
+  const handleLogout = () => {
+    setSesionIniciada(false);
+    setUsuario("");
+    setPinInput("");
+    setRolUsuario("miembro");
+    setPestana("inicio");
+    setCancionSeleccionadaDetalle(null);
+
+    if (Platform.OS === "web") {
+      try {
+        localStorage.removeItem("soundteam_sesion_activa");
+        localStorage.removeItem("soundteam_sesion_usuario");
+        localStorage.removeItem("soundteam_sesion_rol");
+      } catch (e) {}
+    }
   };
 
   if (!sesionIniciada) {
@@ -325,21 +363,57 @@ export default function App() {
         <View style={[styles.loginCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
           <Text style={[styles.loginTitle, { color: t.textMain }]}>SoundTeam</Text>
           <Text style={[styles.loginSubtitle, { color: t.textSub }]}>Inicio de Sesión</Text>
+          
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>🏛️ Selecciona tu Sede:</Text>
+          {Platform.OS === "web" ? (
+            <select
+              value={sedeIdSeleccionada}
+              onChange={(e) => setSedeIdSeleccionada(e.target.value)}
+              style={{
+                backgroundColor: t.bg,
+                color: t.textMain,
+                borderColor: t.border,
+                borderWidth: "1px",
+                borderRadius: "8px",
+                padding: "12px",
+                fontSize: "15px",
+                marginBottom: "14px",
+                width: "100%",
+                outline: "none",
+                cursor: "pointer",
+              }}
+            >
+              {SEDES_DISPONIBLES.map((s) => (
+                <option key={s.id} value={s.id} style={{ backgroundColor: t.cardBg, color: t.textMain }}>
+                  {s.nombre}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <View style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border }]}>
+              <Text style={{ color: t.textMain }}>{sedeActual.nombre}</Text>
+            </View>
+          )}
+
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>👤 Usuario o Apodo:</Text>
           <TextInput
             style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
-            placeholder="Usuario"
+            placeholder="Ej. Admin, AdminNorte, Lina..."
             placeholderTextColor={t.textSub}
             value={usuario}
             onChangeText={setUsuario}
           />
+
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>🔑 PIN de Acceso:</Text>
           <TextInput
             style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
-            placeholder="PIN"
+            placeholder="Ej. 1234"
             placeholderTextColor={t.textSub}
             secureTextEntry
             value={pinInput}
             onChangeText={setPinInput}
           />
+
           <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary }]} onPress={handleLogin}>
             <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
           </TouchableOpacity>
@@ -351,11 +425,50 @@ export default function App() {
   return (
     <View style={[styles.container, { backgroundColor: t.bg }]}>
       <View style={[styles.header, { backgroundColor: t.cardBg, borderBottomColor: t.border }]}>
-        <Text style={[styles.headerTitle, { color: t.textMain }]}>SoundTeam • {sedeActual.nombre}</Text>
+        <View style={styles.headerTopRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.headerTitle, { color: t.textMain }]}>SoundTeam • {sedeActual.nombre}</Text>
+            <Text style={[styles.headerSubtitle, { color: t.textSub }]} numberOfLines={1}>
+              👤 {usuario} • <Text style={{ color: t.primary, fontWeight: "bold" }}>ROL: {rolUsuario.toUpperCase()}</Text>
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <Text style={styles.logoutBtnText}>Salir</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
         <View style={styles.mainWrapper}>
+          {pestana === "inicio" && (
+            <View style={{ width: "100%" }}>
+              <View style={[styles.welcomeBanner, { backgroundColor: t.banner }]}>
+                <Text style={styles.welcomeTitle}>✨ Colosenses 3:23</Text>
+                <Text style={styles.welcomeBannerText}>
+                  "Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {pestana === "eventos" && (
+            <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+              <Text style={{ color: t.textMain, textAlign: "center" }}>Sección de Eventos</Text>
+            </View>
+          )}
+
+          {pestana === "equipo" && esAdminOLider && (
+            <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+              <Text style={[styles.cardTitle, { color: t.textMain }]}>👥 Miembros de {sedeActual.nombre} ({integrantesSeccionEquipo.length})</Text>
+              {integrantesSeccionEquipo.map((int) => (
+                <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
+                  <Text style={[styles.memberTitle, { color: t.textMain }]}>👤 {int.nombre}</Text>
+                  <Text style={{ color: t.primary, fontSize: 12 }}>🎵 Roles: {int.rolesMusicales?.join(", ") || "Ninguno"}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           {pestana === "repertorio" && (
             <>
               {cancionSeleccionadaDetalle !== null ? (
@@ -367,11 +480,10 @@ export default function App() {
                       setSemitonosTransposicion(0);
                     }}
                   >
-                    <Text style={{ color: t.textMain, fontWeight: "bold" }}>← {cancionSeleccionadaDetalle.titulo}</Text>
+                    <Text style={{ color: t.primary, fontWeight: "bold" }}>← Volver a Canciones</Text>
                   </TouchableOpacity>
 
-                  {/* Etiquetas */}
-                  <View style={{ flexDirection: "row", gap: 6, marginVertical: 8 }}>
+                  <View style={{ flexDirection: "row", gap: 6, marginVertical: 8, flexWrap: "wrap" }}>
                     <View style={styles.tagChipActive}>
                       <Text style={{ color: "#FFF", fontSize: 11 }}>Acordes escritos en {cancionSeleccionadaDetalle.tono}</Text>
                     </View>
@@ -382,46 +494,24 @@ export default function App() {
                     ))}
                   </View>
 
-                  {/* Banner de Revisión */}
                   {!cancionSeleccionadaDetalle.publicado && (
                     <View style={styles.revisionBanner}>
                       <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
                         Pendiente de revisión: esta canción aún no es visible para la banda.
                       </Text>
-                      <Text style={{ color: "#CBD5E1", fontSize: 11, marginTop: 4 }}>
-                        ¿En qué tono están escritos estos acordes?
-                      </Text>
-                      <View style={{ flexDirection: "row", gap: 6, marginVertical: 6 }}>
-                        <TouchableOpacity style={styles.toneBadgeActive}><Text style={{ color: "#FFF", fontWeight: "bold" }}>{cancionSeleccionadaDetalle.tono}</Text></TouchableOpacity>
-                        <TouchableOpacity style={styles.toneBadge}><Text style={{ color: "#FFF" }}>{cancionSeleccionadaDetalle.tonoDetectado}</Text></TouchableOpacity>
-                      </View>
                       <TouchableOpacity
                         style={styles.publishBtn}
                         onPress={() => {
                           setRepertorio(repertorio.map(c => c.id === cancionSeleccionadaDetalle.id ? { ...c, publicado: true } : c));
                           setCancionSeleccionadaDetalle({ ...cancionSeleccionadaDetalle, publicado: true });
-                          alert("Aprobado y publicado para la banda.");
+                          alert("✓ Canción aprobada y publicada.");
                         }}
                       >
-                        <Text style={{ color: "#FFF", fontWeight: "bold", textAlign: "center" }}>✓ Aprobar y publicar</Text>
+                        <Text style={{ color: "#FFF", fontWeight: "bold", textAlign: "center" }}>Aprobar y publicar</Text>
                       </TouchableOpacity>
                     </View>
                   )}
 
-                  {/* Panel de Análisis Armónico */}
-                  <View style={[styles.analysisCard, { borderColor: t.border }]}>
-                    <Text style={{ color: t.textMain, fontWeight: "bold", fontSize: 12 }}>🎵 ANÁLISIS ARMÓNICO</Text>
-                    <Text style={{ color: t.textSub, fontSize: 11, marginTop: 4 }}>
-                      Acordes escritos en (detectado): <Text style={{ color: t.primary, fontWeight: "bold" }}>{cancionSeleccionadaDetalle.tonoDetectado}</Text>
-                    </Text>
-                    {cancionSeleccionadaDetalle.tono !== cancionSeleccionadaDetalle.tonoDetectado && (
-                      <Text style={{ color: "#EF4444", fontSize: 11, marginTop: 2, fontWeight: "bold" }}>
-                        La fuente indicaba {cancionSeleccionadaDetalle.tono}, pero los acordes están en {cancionSeleccionadaDetalle.tonoDetectado}.
-                      </Text>
-                    )}
-                  </View>
-
-                  {/* Selector de Modo y Transposición */}
                   <View style={styles.controlsRow}>
                     <View style={styles.notationToggleGroup}>
                       {["Acordes", "Nashville", "Romanos"].map((modo) => (
@@ -448,7 +538,6 @@ export default function App() {
                     </View>
                   </View>
 
-                  {/* Letra y Acordes Renderizados */}
                   <View style={[styles.lyricsBox, { backgroundColor: t.bg, borderColor: t.border }]}>
                     <Text style={{ color: t.textMain, fontSize: 13, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace", lineHeight: 22 }}>
                       {transponerTextoLetraAvanzado(
@@ -485,7 +574,6 @@ export default function App() {
         </View>
       </ScrollView>
 
-      {/* Navegación Inferior Actualizada */}
       <View style={[styles.tabBar, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>
         <TouchableOpacity style={styles.tabItem} onPress={() => setPestana("inicio")}>
           <Text style={[styles.tabText, { color: pestana === "inicio" ? t.primary : t.textSub }]}>🏠 Inicio</Text>
@@ -510,27 +598,33 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, width: "100%", height: "100%", minHeight: "100vh" },
-  loginContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
-  loginCard: { width: "100%", maxWidth: 360, padding: 20, borderRadius: 12, borderWidth: 1 },
-  loginTitle: { fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 6 },
-  loginSubtitle: { fontSize: 12, textAlign: "center", marginBottom: 16 },
-  loginInput: { borderWidth: 1, padding: 10, borderRadius: 6, marginBottom: 10 },
-  loginButton: { padding: 12, borderRadius: 6, alignItems: "center" },
-  loginButtonText: { color: "#FFF", fontWeight: "bold" },
-  header: { padding: 12, borderBottomWidth: 1, width: "100%" },
-  headerTitle: { fontSize: 16, fontWeight: "bold" },
+  loginContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, width: "100%", minHeight: "100vh" },
+  loginCard: { width: "100%", maxWidth: 400, padding: 24, borderRadius: 12, borderWidth: 1 },
+  loginTitle: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 8 },
+  loginSubtitle: { fontSize: 13, textAlign: "center", marginBottom: 20 },
+  inputLabel: { fontSize: 11, marginBottom: 4, fontWeight: "500" },
+  loginInput: { borderWidth: 1, padding: 12, borderRadius: 8, marginBottom: 14, fontSize: 15 },
+  loginButton: { padding: 14, borderRadius: 8, alignItems: "center" },
+  loginButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 16 },
+  header: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 10, borderBottomWidth: 1, width: "100%" },
+  headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headerTitle: { fontSize: 18, fontWeight: "bold" },
+  headerSubtitle: { fontSize: 11, marginTop: 2 },
+  logoutBtn: { backgroundColor: "#EF4444", paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
+  logoutBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 11 },
   content: { flex: 1, padding: 12, width: "100%" },
   mainWrapper: { width: "100%", maxWidth: 650 },
-  card: { padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 14 },
-  cardTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 10 },
-  backBtn: { paddingVertical: 6 },
+  card: { padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 14, width: "100%" },
+  cardTitle: { fontSize: 15, fontWeight: "bold", marginBottom: 10 },
+  welcomeBanner: { padding: 16, borderRadius: 12, marginBottom: 14, width: "100%" },
+  welcomeTitle: { color: "#FFFFFF", fontSize: 17, fontWeight: "bold", marginBottom: 6 },
+  welcomeBannerText: { color: "#E2E8F0", fontSize: 14, fontStyle: "italic" },
+  backBtn: { paddingVertical: 6, marginBottom: 6 },
   tagChip: { backgroundColor: "#1E293B", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   tagChipActive: { backgroundColor: "#1E40AF", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   revisionBanner: { backgroundColor: "#0F172A", padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#1E3A8A", marginVertical: 8 },
   publishBtn: { backgroundColor: "#2563EB", padding: 8, borderRadius: 6, marginTop: 6 },
-  toneBadge: { backgroundColor: "#334155", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
   toneBadgeActive: { backgroundColor: "#2563EB", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
-  analysisCard: { borderLeftWidth: 3, borderLeftColor: "#3B82F6", padding: 8, backgroundColor: "#0F172A", marginVertical: 8, borderRadius: 4 },
   controlsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 10 },
   notationToggleGroup: { flexDirection: "row", backgroundColor: "#0F172A", borderRadius: 6, padding: 2 },
   toggleOption: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4 },
@@ -542,4 +636,6 @@ const styles = StyleSheet.create({
   tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1, width: "100%" },
   tabItem: { flex: 1, justifyContent: "center", alignItems: "center" },
   tabText: { fontSize: 11 },
+  memberCard: { padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
+  memberTitle: { fontSize: 14, fontWeight: "bold" },
 });

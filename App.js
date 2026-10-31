@@ -207,16 +207,12 @@ const transponerTextoLetra = (texto, semitonos) => {
 
 export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
-  const [esRegistroNuevo, setEsRegistroNuevo] = useState(false);
-  
-  // Estado para capturar la sede elegida al momento de registrarse un usuario nuevo
-  const [sedeRegistroNuevo, setSedeRegistroNuevo] = useState("general");
 
   // --- ESTRUCTURA DE INTEGRANTES ---
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v13");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v14");
         return guardados
           ? JSON.parse(guardados)
           : [
@@ -245,7 +241,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v13",
+          "soundteam_integrantes_sedes_v14",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -658,38 +654,6 @@ export default function App() {
     }
   };
 
-  // FUNCIÓN ACTUALIZADA: Ahora registra al usuario en la sede exacta que él mismo seleccionó en el formulario de registro
-  const handleRegistroNuevo = () => {
-    if (usuario.trim() === "" || pinInput.trim() === "") {
-      alert("⚠️ Completa tu nombre y PIN para registrarte.");
-      return;
-    }
-
-    const existe = integrantes.some(
-      (m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase()
-    );
-
-    if (existe) {
-      alert("⚠️ Este usuario ya existe. Inicia sesión.");
-      return;
-    }
-
-    const nuevoMiembro = {
-      id: Date.now(),
-      nombre: usuario.trim(),
-      pin: pinInput.trim(),
-      sedeId: sedeRegistroNuevo, // 👈 Guarda estrictamente la sede seleccionada en el registro
-      rolAcceso: "miembro",
-      rolesMusicales: ["🎤 Miembro"],
-    };
-
-    setIntegrantes([...integrantes, nuevoMiembro]);
-    setSedeIdSeleccionada(sedeRegistroNuevo); // Cambia la vista automáticamente a la sede donde se registró
-    setRolUsuario("miembro");
-    setSesionIniciada(true);
-    alert(`🎉 ¡Registro exitoso en ${SEDES_DISPONIBLES.find(s => s.id === sedeRegistroNuevo)?.nombre || "la sede"}!`);
-  };
-
   const handleLogout = () => {
     setSesionIniciada(false);
     setUsuario("");
@@ -1081,7 +1045,7 @@ export default function App() {
     alert("🔄 Rol liberado.");
   };
 
-  // --- LOGIN Y REGISTRO ---
+  // --- LOGIN EXCLUSIVO (SIN REGISTRO PÚBLICO) ---
   if (!sesionIniciada) {
     return (
       <View style={[styles.loginContainer, { backgroundColor: t.bg }]}>
@@ -1095,54 +1059,50 @@ export default function App() {
             SoundTeam
           </Text>
           <Text style={[styles.loginSubtitle, { color: t.textSub }]}>
-            {esRegistroNuevo ? "Registro de Usuario Nuevo" : "Inicio de Sesión"}
+            Inicio de Sesión
           </Text>
 
-          {!esRegistroNuevo && (
-            <>
-              <Text style={[styles.inputLabel, { color: t.textMain }]}>
-                🏛️ Selecciona tu Sede para Iniciar Sesión:
-              </Text>
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>
+            🏛️ Selecciona tu Sede:
+          </Text>
 
-              {Platform.OS === "web" ? (
-                <select
-                  value={sedeIdSeleccionada}
-                  onChange={(e) => setSedeIdSeleccionada(e.target.value)}
-                  style={{
-                    backgroundColor: t.bg,
-                    color: t.textMain,
-                    borderColor: t.border,
-                    borderWidth: "1px",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    fontSize: "15px",
-                    marginBottom: "14px",
-                    width: "100%",
-                    outline: "none",
-                    cursor: "pointer",
-                  }}
+          {Platform.OS === "web" ? (
+            <select
+              value={sedeIdSeleccionada}
+              onChange={(e) => setSedeIdSeleccionada(e.target.value)}
+              style={{
+                backgroundColor: t.bg,
+                color: t.textMain,
+                borderColor: t.border,
+                borderWidth: "1px",
+                borderRadius: "8px",
+                padding: "12px",
+                fontSize: "15px",
+                marginBottom: "14px",
+                width: "100%",
+                outline: "none",
+                cursor: "pointer",
+              }}
+            >
+              {SEDES_DISPONIBLES.map((s) => (
+                <option
+                  key={s.id}
+                  value={s.id}
+                  style={{ backgroundColor: t.cardBg, color: t.textMain }}
                 >
-                  {SEDES_DISPONIBLES.map((s) => (
-                    <option
-                      key={s.id}
-                      value={s.id}
-                      style={{ backgroundColor: t.cardBg, color: t.textMain }}
-                    >
-                      {s.nombre}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <View
-                  style={[
-                    styles.loginInput,
-                    { backgroundColor: t.bg, borderColor: t.border },
-                  ]}
-                >
-                  <Text style={{ color: t.textMain }}>{sedeActual.nombre}</Text>
-                </View>
-              )}
-            </>
+                  {s.nombre}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <View
+              style={[
+                styles.loginInput,
+                { backgroundColor: t.bg, borderColor: t.border },
+              ]}
+            >
+              <Text style={{ color: t.textMain }}>{sedeActual.nombre}</Text>
+            </View>
           )}
 
           <Text style={[styles.inputLabel, { color: t.textMain }]}>
@@ -1182,87 +1142,27 @@ export default function App() {
             onChangeText={setPinInput}
           />
 
-          {esRegistroNuevo ? (
-            <View style={{ marginTop: 2 }}>
-              <Text style={[styles.inputLabel, { color: t.textMain }]}>
-                🏛️ ¿A qué sede deseas pertenecer?:
-              </Text>
-
-              {Platform.OS === "web" ? (
-                <select
-                  value={sedeRegistroNuevo}
-                  onChange={(e) => setSedeRegistroNuevo(e.target.value)}
-                  style={{
-                    backgroundColor: t.bg,
-                    color: t.textMain,
-                    borderColor: t.border,
-                    borderWidth: "1px",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    fontSize: "15px",
-                    marginBottom: "14px",
-                    width: "100%",
-                    outline: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  {SEDES_DISPONIBLES.map((s) => (
-                    <option
-                      key={s.id}
-                      value={s.id}
-                      style={{ backgroundColor: t.cardBg, color: t.textMain }}
-                    >
-                      {s.nombre}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-
-              <TouchableOpacity
-                style={[
-                  styles.loginButton,
-                  { backgroundColor: "#22C55E", marginBottom: 10 },
-                ]}
-                onPress={handleRegistroNuevo}
-              >
-                <Text style={styles.loginButtonText}>Crear Cuenta y Entrar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setEsRegistroNuevo(false)}>
-                <Text
-                  style={{
-                    color: t.primary,
-                    textAlign: "center",
-                    fontSize: 12,
-                  }}
-                >
-                  ¿Ya estás registrado? Inicia Sesión
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={{ marginTop: 6 }}>
-              <TouchableOpacity
-                style={[
-                  styles.loginButton,
-                  { backgroundColor: t.primary, marginBottom: 10 },
-                ]}
-                onPress={handleLogin}
-              >
-                <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setEsRegistroNuevo(true)}>
-                <Text
-                  style={{
-                    color: t.primary,
-                    textAlign: "center",
-                    fontSize: 12,
-                  }}
-                >
-                  ¿Eres usuario nuevo? Regístrate
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <View style={{ marginTop: 6 }}>
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                { backgroundColor: t.primary, marginBottom: 10 },
+              ]}
+              onPress={handleLogin}
+            >
+              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+            </TouchableOpacity>
+            <Text
+              style={{
+                color: t.textSub,
+                textAlign: "center",
+                fontSize: 11,
+                marginTop: 6,
+              }}
+            >
+              ℹ️ Los nuevos usuarios deben ser creados por el Líder o Administrador desde la pestaña de equipo.
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -2833,7 +2733,7 @@ export default function App() {
                     { color: t.textMain, marginBottom: 0 },
                   ]}
                 >
-                  👥 Miembros del Equipo ({integrantesSeccionEquipo.length})
+                  👥 Miembros de {sedeActual.nombre} ({integrantesSeccionEquipo.length})
                 </Text>
 
                 <TouchableOpacity
@@ -2871,7 +2771,7 @@ export default function App() {
                   >
                     {idMiembroEditando !== null
                       ? "✏️ Modificar Miembro"
-                      : "➕ Nuevo Miembro"}
+                      : `➕ Nuevo Miembro en ${sedeActual.nombre}`}
                   </Text>
 
                   <Text style={[styles.inputLabel, { color: t.textMain }]}>
@@ -3048,7 +2948,7 @@ export default function App() {
                                 id: Date.now(),
                                 nombre: nombreNuevoMiembro.trim(),
                                 pin: pinNuevoMiembro.trim() || "1234",
-                                sedeId: sedeIdSeleccionada,
+                                sedeId: sedeIdSeleccionada, // 👈 Se asigna automáticamente a la sede actual en la que está el admin/líder
                                 rolAcceso: rolAccesoNuevo,
                                 rolesMusicales: rolesMusicalesNuevo,
                               },

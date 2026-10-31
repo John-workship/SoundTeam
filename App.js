@@ -3115,8 +3115,8 @@ export default function App() {
                     </View>
                   ) : (
                     <View>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                        <div style={{ display: "flex", gap: 6 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                        <View style={{ flexDirection: "row", gap: 6 }}>
                           {["Acordes", "Nashville"].map((tabNombre) => {
                             const activoTab = vistaCancionTab === tabNombre;
                             return (
@@ -3138,9 +3138,9 @@ export default function App() {
                               </TouchableOpacity>
                             );
                           })}
-                        </div>
+                        </View>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, backgroundColor: t.bg, borderColor: t.border, borderWidth: 1, padding: 4, borderRadius: 6 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: t.bg, borderColor: t.border, borderWidth: 1, padding: 4, borderRadius: 6 }}>
                           <TouchableOpacity
                             style={{ backgroundColor: t.cardBg, width: 28, height: 28, justifyContent: "center", alignItems: "center", borderRadius: 4 }}
                             onPress={() => setSemitonosTransposicion((prev) => prev - 1)}
@@ -3149,7 +3149,7 @@ export default function App() {
                           </TouchableOpacity>
                           <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold", paddingHorizontal: 4 }}>
                             {transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}{" "}
-                            <span style={{ fontSize: 9, color: t.textSub, fontWeight: "normal" }}>original: {cancionSeleccionadaDetalle.tono || "C"}</span>
+                            <Text style={{ fontSize: 9, color: t.textSub, fontWeight: "normal" }}>original: {cancionSeleccionadaDetalle.tono || "C"}</Text>
                           </Text>
                           <TouchableOpacity
                             style={{ backgroundColor: t.cardBg, width: 28, height: 28, justifyContent: "center", alignItems: "center", borderRadius: 4 }}
@@ -3157,8 +3157,8 @@ export default function App() {
                           >
                             <Text style={{ color: t.textMain, fontWeight: "bold", fontSize: 14 }}>+</Text>
                           </TouchableOpacity>
-                        </div>
-                      </div>
+                        </View>
+                      </View>
 
                       <View style={{ marginBottom: 14 }}>
                         <Text

@@ -208,12 +208,15 @@ const transponerTextoLetra = (texto, semitonos) => {
 export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [esRegistroNuevo, setEsRegistroNuevo] = useState(false);
+  
+  // Estado para capturar la sede elegida al momento de registrarse un usuario nuevo
+  const [sedeRegistroNuevo, setSedeRegistroNuevo] = useState("general");
 
   // --- ESTRUCTURA DE INTEGRANTES ---
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v12");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v13");
         return guardados
           ? JSON.parse(guardados)
           : [
@@ -242,7 +245,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v12",
+          "soundteam_integrantes_sedes_v13",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -623,9 +626,6 @@ export default function App() {
       return;
     }
 
-    // VALIDACIÓN ESTRICTA DE SEDE:
-    // 1. Busca si el usuario existe exactamente en la sede que seleccionó en el menú desplegable.
-    // 2. Si la sede seleccionada es "general", busca entre los usuarios de la sede general.
     const miembroEncontrado = integrantes.find(
       (m) =>
         m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() &&
@@ -658,6 +658,7 @@ export default function App() {
     }
   };
 
+  // FUNCIÓN ACTUALIZADA: Ahora registra al usuario en la sede exacta que él mismo seleccionó en el formulario de registro
   const handleRegistroNuevo = () => {
     if (usuario.trim() === "" || pinInput.trim() === "") {
       alert("⚠️ Completa tu nombre y PIN para registrarte.");
@@ -677,15 +678,16 @@ export default function App() {
       id: Date.now(),
       nombre: usuario.trim(),
       pin: pinInput.trim(),
-      sedeId: "general", // Se registran exclusivamente en la sede general
+      sedeId: sedeRegistroNuevo, // 👈 Guarda estrictamente la sede seleccionada en el registro
       rolAcceso: "miembro",
       rolesMusicales: ["🎤 Miembro"],
     };
 
     setIntegrantes([...integrantes, nuevoMiembro]);
+    setSedeIdSeleccionada(sedeRegistroNuevo); // Cambia la vista automáticamente a la sede donde se registró
     setRolUsuario("miembro");
     setSesionIniciada(true);
-    alert(`🎉 ¡Registro exitoso en Sede General!`);
+    alert(`🎉 ¡Registro exitoso en ${SEDES_DISPONIBLES.find(s => s.id === sedeRegistroNuevo)?.nombre || "la sede"}!`);
   };
 
   const handleLogout = () => {
@@ -1096,47 +1098,51 @@ export default function App() {
             {esRegistroNuevo ? "Registro de Usuario Nuevo" : "Inicio de Sesión"}
           </Text>
 
-          <Text style={[styles.inputLabel, { color: t.textMain }]}>
-            🏛️ Selecciona tu Sede:
-          </Text>
+          {!esRegistroNuevo && (
+            <>
+              <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                🏛️ Selecciona tu Sede para Iniciar Sesión:
+              </Text>
 
-          {Platform.OS === "web" ? (
-            <select
-              value={sedeIdSeleccionada}
-              onChange={(e) => setSedeIdSeleccionada(e.target.value)}
-              style={{
-                backgroundColor: t.bg,
-                color: t.textMain,
-                borderColor: t.border,
-                borderWidth: "1px",
-                borderRadius: "8px",
-                padding: "12px",
-                fontSize: "15px",
-                marginBottom: "14px",
-                width: "100%",
-                outline: "none",
-                cursor: "pointer",
-              }}
-            >
-              {SEDES_DISPONIBLES.map((s) => (
-                <option
-                  key={s.id}
-                  value={s.id}
-                  style={{ backgroundColor: t.cardBg, color: t.textMain }}
+              {Platform.OS === "web" ? (
+                <select
+                  value={sedeIdSeleccionada}
+                  onChange={(e) => setSedeIdSeleccionada(e.target.value)}
+                  style={{
+                    backgroundColor: t.bg,
+                    color: t.textMain,
+                    borderColor: t.border,
+                    borderWidth: "1px",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    fontSize: "15px",
+                    marginBottom: "14px",
+                    width: "100%",
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
                 >
-                  {s.nombre}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <View
-              style={[
-                styles.loginInput,
-                { backgroundColor: t.bg, borderColor: t.border },
-              ]}
-            >
-              <Text style={{ color: t.textMain }}>{sedeActual.nombre}</Text>
-            </View>
+                  {SEDES_DISPONIBLES.map((s) => (
+                    <option
+                      key={s.id}
+                      value={s.id}
+                      style={{ backgroundColor: t.cardBg, color: t.textMain }}
+                    >
+                      {s.nombre}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <View
+                  style={[
+                    styles.loginInput,
+                    { backgroundColor: t.bg, borderColor: t.border },
+                  ]}
+                >
+                  <Text style={{ color: t.textMain }}>{sedeActual.nombre}</Text>
+                </View>
+              )}
+            </>
           )}
 
           <Text style={[styles.inputLabel, { color: t.textMain }]}>
@@ -1177,7 +1183,41 @@ export default function App() {
           />
 
           {esRegistroNuevo ? (
-            <View style={{ marginTop: 6 }}>
+            <View style={{ marginTop: 2 }}>
+              <Text style={[styles.inputLabel, { color: t.textMain }]}>
+                🏛️ ¿A qué sede deseas pertenecer?:
+              </Text>
+
+              {Platform.OS === "web" ? (
+                <select
+                  value={sedeRegistroNuevo}
+                  onChange={(e) => setSedeRegistroNuevo(e.target.value)}
+                  style={{
+                    backgroundColor: t.bg,
+                    color: t.textMain,
+                    borderColor: t.border,
+                    borderWidth: "1px",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    fontSize: "15px",
+                    marginBottom: "14px",
+                    width: "100%",
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {SEDES_DISPONIBLES.map((s) => (
+                    <option
+                      key={s.id}
+                      value={s.id}
+                      style={{ backgroundColor: t.cardBg, color: t.textMain }}
+                    >
+                      {s.nombre}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+
               <TouchableOpacity
                 style={[
                   styles.loginButton,
@@ -3008,12 +3048,12 @@ export default function App() {
                                 id: Date.now(),
                                 nombre: nombreNuevoMiembro.trim(),
                                 pin: pinNuevoMiembro.trim() || "1234",
-                                sedeId: "general",
+                                sedeId: sedeIdSeleccionada,
                                 rolAcceso: rolAccesoNuevo,
                                 rolesMusicales: rolesMusicalesNuevo,
                               },
                             ]);
-                            alert("✅ Miembro agregado con éxito en Sede General.");
+                            alert(`✅ Miembro agregado con éxito en ${sedeActual.nombre}.`);
                           }
                           setModalMiembroVisible(false);
                         } else {

@@ -212,7 +212,7 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v15");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v16");
         return guardados
           ? JSON.parse(guardados)
           : [
@@ -238,7 +238,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v15",
+          "soundteam_integrantes_sedes_v16",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -483,7 +483,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  // --- CHATS EN TIEMPO REAL (CORREGIDO PARA CUALQUIER PERFIL Y SEDE) ---
+  // --- CHATS EN TIEMPO REAL (USA 'sede_id' PARA EVITAR EL ERROR DE SUPABASE) ---
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -496,7 +496,7 @@ export default function App() {
       .from("mensajes")
       .select("*")
       .eq("canal", canalChatActivo)
-      .eq("sedeId", sedeIdSeleccionada)
+      .eq("sede_id", sedeIdSeleccionada)
       .order("created_at", { ascending: true });
 
     if (data && !error) {
@@ -643,20 +643,20 @@ export default function App() {
         await cargarMensajesSupabase();
         alert("✏️ Mensaje corregido con éxito.");
       } else {
-        // CUALQUIER USUARIO PUEDE ENVIAR MENSAJES
+        // CUALQUIER USUARIO PUEDE ENVIAR MENSAJES USANDO 'sede_id'
         const mensaje = {
           autor: usuario,
           texto: nuevoMensajeTexto.trim(),
           hora: horaActual,
           canal: canalChatActivo,
-          sedeId: sedeIdSeleccionada,
+          sede_id: sedeIdSeleccionada,
           editado: false,
         };
 
         setNuevoMensajeTexto("");
         const { error } = await supabase.from("mensajes").insert([mensaje]);
         if (error) {
-          alert(`⚠️ No se pudo enviar el mensaje: ${error.message}. (Asegúrate de que la tabla 'mensajes' tenga la columna 'sedeId').`);
+          alert(`⚠️ No se pudo enviar el mensaje: ${error.message}.`);
         }
         await cargarMensajesSupabase();
       }
@@ -678,7 +678,7 @@ export default function App() {
         .from("mensajes")
         .delete()
         .eq("canal", canalChatActivo)
-        .eq("sedeId", sedeIdSeleccionada);
+        .eq("sede_id", sedeIdSeleccionada);
 
       if (!error) {
         setMensajesChat([]);
@@ -3363,7 +3363,7 @@ const styles = StyleSheet.create({
   tabItem: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 2 },
   tabText: { fontSize: 10, textAlign: "center" },
   memberCard: { padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
-  memberHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  memberHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignContent: "center", alignItems: "center", marginBottom: 4 },
   memberTitle: { fontSize: 14, fontWeight: "bold" },
   setlistItemRow: { flexDirection: "row", alignItems: "center", padding: 8, borderRadius: 6, borderWidth: 1, marginBottom: 4 },
   libSongRow: { flexDirection: "row", alignItems: "center", paddingVertical: 6, borderBottomWidth: 1 },
@@ -3372,5 +3372,5 @@ const styles = StyleSheet.create({
   whatsappBtn: { backgroundColor: "#22C55E", padding: 12, borderRadius: 8, alignItems: "center" },
   postulateBtn: { backgroundColor: "#F97316", padding: 12, borderRadius: 8, alignItems: "center" },
   actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
-  postulateRowOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
+  postulateRoleOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
 });

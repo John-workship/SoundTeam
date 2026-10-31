@@ -212,17 +212,14 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v14");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v15");
         return guardados
           ? JSON.parse(guardados)
           : [
-              // Administradores específicos de cada sede
               { id: 101, nombre: "Admin", pin: "1234", sedeId: "general", rolAcceso: "admin", rolesMusicales: ["👑 Director General"] },
               { id: 102, nombre: "AdminNorte", pin: "1234", sedeId: "norte", rolAcceso: "admin", rolesMusicales: ["👑 Director Norte"] },
               { id: 103, nombre: "AdminSur", pin: "1234", sedeId: "sur", rolAcceso: "admin", rolesMusicales: ["👑 Director Sur"] },
               { id: 104, nombre: "AdminOccidente", pin: "1234", sedeId: "occidente", rolAcceso: "admin", rolesMusicales: ["👑 Director Occidente"] },
-
-              // Miembros comunes pertenecientes exclusivamente a la Sede General
               { id: 1, nombre: "Líder", pin: "1234", sedeId: "general", rolAcceso: "lider", rolesMusicales: ["⭐ Líder de Grupo"] },
               { id: 2, nombre: "Lina", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎤 Coros"] },
               { id: 3, nombre: "Arley", pin: "1234", sedeId: "general", rolAcceso: "miembro", rolesMusicales: ["🎹 Piano"] },
@@ -241,7 +238,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v14",
+          "soundteam_integrantes_sedes_v15",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -310,9 +307,6 @@ export default function App() {
   const t = TEMAS[nombreTema];
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
-  // FILTRO ESTRICTO: 
-  // - Si la sede seleccionada es "general", muestra los miembros generales + el admin general.
-  // - Si es otra sede (norte, sur, occidente), muestra ÚNICAMENTE el administrador correspondiente a esa sede.
   const integrantesSeccionEquipo = integrantes.filter((m) => {
     if (sedeIdSeleccionada === "general") {
       return m.sedeId === "general";
@@ -322,18 +316,8 @@ export default function App() {
   });
 
   const nombresMeses = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre",
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
   ];
 
   const fechaActualObj = new Date();
@@ -374,32 +358,10 @@ export default function App() {
         return guardados
           ? JSON.parse(guardados)
           : [
-              {
-                id: 1,
-                nombre: "Atardecer Violeta",
-                colores: [
-                  "#064680",
-                  "#31245A",
-                  "#AC6DBF",
-                  "#2A7CA3",
-                  "#588BC2",
-                ],
-              },
-              {
-                id: 2,
-                nombre: "Tonos Arena",
-                colores: ["#C29B78", "#A17651", "#5C4033", "#222222"],
-              },
-              {
-                id: 3,
-                nombre: "Blanco Sacro",
-                colores: ["#748185", "#93afb3", "#456467"],
-              },
-              {
-                id: 4,
-                nombre: "Rosa Alba",
-                colores: ["#E29578", "#FFDDD2", "#83C5BE", "#006D77"],
-              },
+              { id: 1, nombre: "Atardecer Violeta", colores: ["#064680", "#31245A", "#AC6DBF", "#2A7CA3", "#588BC2"] },
+              { id: 2, nombre: "Tonos Arena", colores: ["#C29B78", "#A17651", "#5C4033", "#222222"] },
+              { id: 3, nombre: "Blanco Sacro", colores: ["#748185", "#93afb3", "#456467"] },
+              { id: 4, nombre: "Rosa Alba", colores: ["#E29578", "#FFDDD2", "#83C5BE", "#006D77"] },
             ];
       } catch (e) {
         return [];
@@ -419,18 +381,8 @@ export default function App() {
     }
   }, [paletasCulto]);
 
-  // --- SERVICIOS CON SUPABASE Y RESPALDO LOCAL ---
-  const [servicios, setServicios] = useState(() => {
-    if (Platform.OS === "web") {
-      try {
-        const guardados = localStorage.getItem("soundteam_servicios_v3");
-        return guardados ? JSON.parse(guardados) : [];
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  });
+  // --- SERVICIOS CON SUPABASE ---
+  const [servicios, setServicios] = useState([]);
 
   const cargarServiciosSupabase = async () => {
     const { data, error } = await supabase.from("servicios").select("*");
@@ -456,33 +408,17 @@ export default function App() {
 
   useEffect(() => {
     cargarServiciosSupabase();
-
     const canalSub = supabase
       .channel("servicios-cambios")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "servicios" },
-        () => {
-          cargarServiciosSupabase();
-        }
+        () => { cargarServiciosSupabase(); }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(canalSub);
-    };
+    return () => { supabase.removeChannel(canalSub); };
   }, []);
-
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      try {
-        localStorage.setItem(
-          "soundteam_servicios_v3",
-          JSON.stringify(servicios)
-        );
-      } catch (e) {}
-    }
-  }, [servicios]);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
@@ -491,8 +427,7 @@ export default function App() {
 
   const [nombreEvento, setNombreEvento] = useState("");
   const [observaciones, setObservaciones] = useState("");
-  const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] =
-    useState(null);
+  const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
 
   const [setlistActivo, setSetlistActivo] = useState([]);
   const [indiceParaMover, setIndiceParaMover] = useState(null);
@@ -518,26 +453,7 @@ export default function App() {
                 artista: "Verbo y Vida",
                 tono: "F",
                 etiquetas: ["Adoración", "Entrega"],
-                letra:
-                  "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada\n[C/E] Y que sin tu [Bb/D] amor no vi[F/C]viré [A/C#]\n[Dm7] Y que sin tu [Dm9/C] amor no vi[G/B]viré\n[Bb/F] Estoy confu[F/E]ndida a tal ma[Gm/D]nera [C]\n[Bb] Quisiera ahora mismo te pudiera ver",
-              },
-              {
-                id: 2,
-                titulo: "Creo en ti",
-                artista: "Espíritu y Verdad",
-                tono: "C",
-                etiquetas: ["Alabanza"],
-                letra:
-                  "[VERSO]\n[C] Creo en ti, [G] Señor\n[Am] Con todo el cora[F]zón\n\n[CORO]\n[C] Eres digno de adora[G]ción\n[Am] Mi salvador y rey [F] eterno",
-              },
-              {
-                id: 3,
-                titulo: "Digno",
-                artista: "Elevation Worship",
-                tono: "E",
-                etiquetas: ["Adoración"],
-                letra:
-                  "[VERSO]\n[E] Digno eres Señor\n[B] De recibir la gloria\n[A] La honra y el poder",
+                letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
               },
             ];
       } catch (e) {
@@ -558,10 +474,8 @@ export default function App() {
     }
   }, [repertorio]);
 
-  const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] =
-    useState(null);
+  const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
-
   const [modoEdicionCancion, setModoEdicionCancion] = useState(false);
   const [nuevoTituloCancion, setNuevoTituloCancion] = useState("");
   const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
@@ -569,7 +483,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  // --- CHATS FILTRADOS POR SEDE Y CANAL ---
+  // --- CHATS EN TIEMPO REAL (CORREGIDO PARA CUALQUIER PERFIL Y SEDE) ---
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -700,6 +614,7 @@ export default function App() {
 
   const puedeControlarRepertorio = esAdminOLider || tocaInstrumento;
 
+  // --- ENVÍO Y CORRECCIÓN DE MENSAJES PARA CUALQUIER PERFIL ---
   const enviarOActualizarMensajeChat = async () => {
     if (nuevoMensajeTexto.trim() !== "") {
       const horaActual = new Date().toLocaleTimeString([], {
@@ -708,6 +623,7 @@ export default function App() {
       });
 
       if (idMensajeEditando !== null) {
+        // CUALQUIER USUARIO PUEDE CORREGIR/EDITAR SU PROPIO MENSAJE (Ortografía)
         const textoModificado = nuevoMensajeTexto.trim();
         const idNumerico = Number(idMensajeEditando);
 
@@ -717,26 +633,17 @@ export default function App() {
           .eq("id", idNumerico);
 
         if (error) {
-          alert(`⚠️ No se pudo actualizar el mensaje: ${error.message}`);
+          alert(`⚠️ No se pudo corregir el mensaje: ${error.message}`);
           return;
         }
-
-        const mensajeAuditoria = {
-          autor: "🛡️ [SISTEMA ADMIN]",
-          texto: `${usuario} editó un mensaje.\n• Antes: "${textoOriginalEditando}"\n• Ahora: "${textoModificado}"`,
-          hora: horaActual,
-          canal: canalChatActivo,
-          sedeId: sedeIdSeleccionada,
-          editado: false,
-        };
-
-        await supabase.from("mensajes").insert([mensajeAuditoria]);
 
         setIdMensajeEditando(null);
         setTextoOriginalEditando("");
         setNuevoMensajeTexto("");
         await cargarMensajesSupabase();
+        alert("✏️ Mensaje corregido con éxito.");
       } else {
+        // CUALQUIER USUARIO PUEDE ENVIAR MENSAJES
         const mensaje = {
           autor: usuario,
           texto: nuevoMensajeTexto.trim(),
@@ -749,7 +656,7 @@ export default function App() {
         setNuevoMensajeTexto("");
         const { error } = await supabase.from("mensajes").insert([mensaje]);
         if (error) {
-          alert(`⚠️ No se pudo enviar el mensaje: ${error.message}`);
+          alert(`⚠️ No se pudo enviar el mensaje: ${error.message}. (Asegúrate de que la tabla 'mensajes' tenga la columna 'sedeId').`);
         }
         await cargarMensajesSupabase();
       }
@@ -813,8 +720,7 @@ export default function App() {
           titulo: nuevoTituloCancion,
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
-          etiquetas:
-            etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
+          etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
           letra: nuevaLetraCancion || "",
         };
         setRepertorio([...repertorio, nuevaCancion]);
@@ -907,9 +813,7 @@ export default function App() {
       texto += `Sin canciones asignadas.\n`;
     }
 
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
-      texto
-    )}`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
     Linking.openURL(url).catch(() => {
       alert("No se pudo abrir WhatsApp.");
     });
@@ -917,20 +821,15 @@ export default function App() {
 
   const confirmarPostulacionRol = async (rol) => {
     if (idServicioPostulando === null) return;
-    const servicioObjetivo = servicios.find(
-      (s) => s.id === idServicioPostulando
-    );
+    const servicioObjetivo = servicios.find((s) => s.id === idServicioPostulando);
     if (!servicioObjetivo) return;
 
     let nuevaVozP = servicioObjetivo.voces?.principal || "Sin asignar";
     let nuevosCoros = servicioObjetivo.voces?.coros
-      ? servicioObjetivo.voces.coros
-          .split(", ")
-          .filter((c) => c !== "Sin asignar" && c !== "")
+      ? servicioObjetivo.voces.coros.split(", ").filter((c) => c !== "Sin asignar" && c !== "")
       : [];
     let nuevoPiano = servicioObjetivo.instrumentos?.piano || "Sin asignar";
-    let nuevaGuitarra =
-      servicioObjetivo.instrumentos?.guitarra || "Sin asignar";
+    let nuevaGuitarra = servicioObjetivo.instrumentos?.guitarra || "Sin asignar";
     let nuevoBajo = servicioObjetivo.instrumentos?.bajo || "Sin asignar";
     let nuevaBateria = servicioObjetivo.instrumentos?.bateria || "Sin asignar";
 
@@ -949,40 +848,22 @@ export default function App() {
     }
 
     if (rol === "vozPrincipal") {
-      if (nuevaVozP !== "Sin asignar") {
-        alert("⚠️ Voz Principal ocupada.");
-        return;
-      }
+      if (nuevaVozP !== "Sin asignar") { alert("⚠️ Voz Principal ocupada."); return; }
       nuevaVozP = usuario;
     } else if (rol === "coros") {
-      if (nuevosCoros.length >= 3) {
-        alert("⚠️ Coros al límite (3 personas).");
-        return;
-      }
+      if (nuevosCoros.length >= 3) { alert("⚠️ Coros al límite (3 personas)."); return; }
       nuevosCoros.push(usuario);
     } else if (rol === "piano") {
-      if (nuevoPiano !== "Sin asignar") {
-        alert("⚠️ Piano ocupado.");
-        return;
-      }
+      if (nuevoPiano !== "Sin asignar") { alert("⚠️ Piano ocupado."); return; }
       nuevoPiano = usuario;
     } else if (rol === "guitarra") {
-      if (nuevaGuitarra !== "Sin asignar") {
-        alert("⚠️ Guitarra ocupada.");
-        return;
-      }
+      if (nuevaGuitarra !== "Sin asignar") { alert("⚠️ Guitarra ocupada."); return; }
       nuevaGuitarra = usuario;
     } else if (rol === "bajo") {
-      if (nuevoBajo !== "Sin asignar") {
-        alert("⚠️ Bajo ocupado.");
-        return;
-      }
+      if (nuevoBajo !== "Sin asignar") { alert("⚠️ Bajo ocupado."); return; }
       nuevoBajo = usuario;
     } else if (rol === "bateria") {
-      if (nuevaBateria !== "Sin asignar") {
-        alert("⚠️ Batería ocupada.");
-        return;
-      }
+      if (nuevaBateria !== "Sin asignar") { alert("⚠️ Batería ocupada."); return; }
       nuevaBateria = usuario;
     }
 
@@ -1045,7 +926,7 @@ export default function App() {
     alert("🔄 Rol liberado.");
   };
 
-  // --- LOGIN EXCLUSIVO (SIN REGISTRO PÚBLICO) ---
+  // --- LOGIN ---
   if (!sesionIniciada) {
     return (
       <View style={[styles.loginContainer, { backgroundColor: t.bg }]}>
@@ -1272,9 +1153,7 @@ export default function App() {
                       paddingVertical: 6,
                       paddingHorizontal: 8,
                       borderRadius: 4,
-                      backgroundColor: activo
-                        ? t.primary + "33"
-                        : "transparent",
+                      backgroundColor: activo ? t.primary + "33" : "transparent",
                     }}
                     onPress={() => {
                       setNombreTema(itemTema.key);
@@ -1335,7 +1214,7 @@ export default function App() {
                       { color: t.textMain, marginBottom: 0 },
                     ]}
                   >
-                    💬 Chat Privado de {sedeActual.nombre}
+                    💬 Chat de {sedeActual.nombre}
                   </Text>
 
                   {esAdminOLider && (
@@ -1431,25 +1310,16 @@ export default function App() {
                     ) : (
                       mensajesChat.map((m, i) => {
                         const esMio = m.autor === usuario;
-                        const esAuditoriaSistema =
-                          m.autor.includes("SISTEMA ADMIN");
-
                         return (
                           <View
                             key={m.id || i}
                             style={{
                               marginBottom: 8,
-                              backgroundColor: esAuditoriaSistema
-                                ? "#F59E0B22"
-                                : esMio
-                                ? t.primary + "22"
-                                : t.cardBg,
+                              backgroundColor: esMio ? t.primary + "22" : t.cardBg,
                               padding: 8,
                               borderRadius: 6,
                               borderWidth: 1,
-                              borderColor: esAuditoriaSistema
-                                ? "#F59E0B"
-                                : t.border,
+                              borderColor: t.border,
                             }}
                           >
                             <View
@@ -1461,14 +1331,12 @@ export default function App() {
                             >
                               <Text
                                 style={{
-                                  color: esAuditoriaSistema
-                                    ? "#F59E0B"
-                                    : t.primary,
+                                  color: t.primary,
                                   fontWeight: "bold",
                                   fontSize: 11,
                                 }}
                               >
-                                {m.autor} {m.editado ? "(editado)" : ""}
+                                {m.autor} {m.editado ? "(corregido)" : ""}
                               </Text>
                               <View
                                 style={{
@@ -1480,7 +1348,8 @@ export default function App() {
                                 <Text style={{ color: t.textSub, fontSize: 9 }}>
                                   {m.hora}
                                 </Text>
-                                {esMio && !esAuditoriaSistema && (
+                                {/* CUALQUIER USUARIO PUEDE CORREGIR/EDITAR SUS PROPIOS MENSAJES */}
+                                {esMio && (
                                   <TouchableOpacity
                                     onPress={() => {
                                       setIdMensajeEditando(m.id);
@@ -1495,7 +1364,7 @@ export default function App() {
                                         fontWeight: "bold",
                                       }}
                                     >
-                                      ✏️ Editar
+                                      ✏️ Corregir
                                     </Text>
                                   </TouchableOpacity>
                                 )}
@@ -1525,9 +1394,7 @@ export default function App() {
                       alignItems: "center",
                       gap: 6,
                     }}
-                    onPress={() =>
-                      setMostrarSelectorEmojis(!mostrarSelectorEmojis)
-                    }
+                    onPress={() => setMostrarSelectorEmojis(!mostrarSelectorEmojis)}
                   >
                     <Text
                       style={{
@@ -1536,9 +1403,7 @@ export default function App() {
                         fontWeight: "bold",
                       }}
                     >
-                      {mostrarSelectorEmojis
-                        ? "🔽 Ocultar Emojis"
-                        : "😀 Emojis (Desplegar)"}
+                      {mostrarSelectorEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
                     </Text>
                   </TouchableOpacity>
 
@@ -1556,25 +1421,7 @@ export default function App() {
                         borderColor: t.border,
                       }}
                     >
-                      {[
-                        "😀",
-                        "😢",
-                        "❤️",
-                        "🏃‍♂️",
-                        "🔥",
-                        "🙏",
-                        "🎸",
-                        "🎹",
-                        "🥁",
-                        "🙌",
-                        "✨",
-                        "⭐",
-                        "💡",
-                        "✅",
-                        "❌",
-                        "💬",
-                        "🎵",
-                      ].map((emoji) => (
+                      {["😀", "😢", "❤️", "🔥", "🙏", "🎸", "🎹", "🥁", "🙌", "✨", "⭐", "✅", "❌", "💬", "🎵"].map((emoji) => (
                         <TouchableOpacity
                           key={emoji}
                           style={{
@@ -1610,7 +1457,7 @@ export default function App() {
                     }}
                   >
                     <Text style={{ color: t.textMain, fontSize: 11 }}>
-                      ✏️ Estás editando un mensaje:
+                      ✏️ Corrigiendo tu mensaje (Ortografía):
                     </Text>
                     <TouchableOpacity
                       onPress={() => {
@@ -1626,7 +1473,7 @@ export default function App() {
                           fontWeight: "bold",
                         }}
                       >
-                        Cancelar edición
+                        Cancelar
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1648,7 +1495,7 @@ export default function App() {
                     ]}
                     placeholder={
                       idMensajeEditando !== null
-                        ? "Edita tu mensaje aquí..."
+                        ? "Corrige tu mensaje aquí..."
                         : `Escribir en el chat de ${sedeActual.nombre}...`
                     }
                     placeholderTextColor={t.textSub}
@@ -1659,8 +1506,7 @@ export default function App() {
                     style={[
                       styles.loginButton,
                       {
-                        backgroundColor:
-                          idMensajeEditando !== null ? "#22C55E" : t.primary,
+                        backgroundColor: idMensajeEditando !== null ? "#22C55E" : t.primary,
                         justifyContent: "center",
                         paddingVertical: 8,
                         paddingHorizontal: 14,
@@ -1669,7 +1515,7 @@ export default function App() {
                     onPress={enviarOActualizarMensajeChat}
                   >
                     <Text style={[styles.loginButtonText, { fontSize: 12 }]}>
-                      {idMensajeEditando !== null ? "Guardar" : "Enviar"}
+                      {idMensajeEditando !== null ? "Actualizar" : "Enviar"}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1992,8 +1838,7 @@ export default function App() {
                         Setlist Activo ({setlistActivo.length}):
                       </Text>
                       {setlistActivo.map((item, idx) => {
-                        const estaSeleccionadoParaMover =
-                          indiceParaMover === idx;
+                        const estaSeleccionadoParaMover = indiceParaMover === idx;
                         return (
                           <View
                             key={idx}
@@ -2018,8 +1863,7 @@ export default function App() {
                                 } else {
                                   const nuevoSetlist = [...setlistActivo];
                                   const temp = nuevoSetlist[indiceParaMover];
-                                  nuevoSetlist[indiceParaMover] =
-                                    nuevoSetlist[idx];
+                                  nuevoSetlist[indiceParaMover] = nuevoSetlist[idx];
                                   nuevoSetlist[idx] = temp;
                                   setSetlistActivo(nuevoSetlist);
                                   setIndiceParaMover(null);
@@ -2067,37 +1911,6 @@ export default function App() {
                                   setSetlistActivo(actualizado);
                                 }}
                               />
-                              <TouchableOpacity
-                                style={{
-                                  backgroundColor: t.primary,
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 4,
-                                  borderRadius: 4,
-                                }}
-                                onPress={() => {
-                                  if (indiceParaMover === null) {
-                                    setIndiceParaMover(idx);
-                                  } else {
-                                    const nuevoSetlist = [...setlistActivo];
-                                    const temp = nuevoSetlist[indiceParaMover];
-                                    nuevoSetlist[indiceParaMover] =
-                                      nuevoSetlist[idx];
-                                    nuevoSetlist[idx] = temp;
-                                    setSetlistActivo(nuevoSetlist);
-                                    setIndiceParaMover(null);
-                                  }
-                                }}
-                              >
-                                <Text
-                                  style={{
-                                    color: "#FFF",
-                                    fontSize: 10,
-                                    fontWeight: "bold",
-                                  }}
-                                >
-                                  {estaSeleccionadoParaMover ? "✓" : "Mover"}
-                                </Text>
-                              </TouchableOpacity>
                               <TouchableOpacity
                                 style={{
                                   backgroundColor: "#EF4444",
@@ -2948,7 +2761,7 @@ export default function App() {
                                 id: Date.now(),
                                 nombre: nombreNuevoMiembro.trim(),
                                 pin: pinNuevoMiembro.trim() || "1234",
-                                sedeId: sedeIdSeleccionada, // 👈 Se asigna automáticamente a la sede actual en la que está el admin/líder
+                                sedeId: sedeIdSeleccionada,
                                 rolAcceso: rolAccesoNuevo,
                                 rolesMusicales: rolesMusicalesNuevo,
                               },
@@ -3133,21 +2946,11 @@ export default function App() {
                           }}
                           onPress={() => {
                             setModoEdicionCancion(true);
-                            setNuevoTituloCancion(
-                              cancionSeleccionadaDetalle.titulo
-                            );
-                            setNuevoArtistaCancion(
-                              cancionSeleccionadaDetalle.artista
-                            );
-                            setNuevoTonoCancion(
-                              cancionSeleccionadaDetalle.tono
-                            );
-                            setNuevaLetraCancion(
-                              cancionSeleccionadaDetalle.letra || ""
-                            );
-                            setEtiquetasActuales(
-                              cancionSeleccionadaDetalle.etiquetas || []
-                            );
+                            setNuevoTituloCancion(cancionSeleccionadaDetalle.titulo);
+                            setNuevoArtistaCancion(cancionSeleccionadaDetalle.artista);
+                            setNuevoTonoCancion(cancionSeleccionadaDetalle.tono);
+                            setNuevaLetraCancion(cancionSeleccionadaDetalle.letra || "");
+                            setEtiquetasActuales(cancionSeleccionadaDetalle.etiquetas || []);
                           }}
                         >
                           <Text
@@ -3168,9 +2971,7 @@ export default function App() {
                             borderRadius: 6,
                           }}
                           onPress={() =>
-                            eliminarCancionRepertorio(
-                              cancionSeleccionadaDetalle.id
-                            )
+                            eliminarCancionRepertorio(cancionSeleccionadaDetalle.id)
                           }
                         >
                           <Text
@@ -3198,57 +2999,37 @@ export default function App() {
                         ✏️ Editar Canción
                       </Text>
 
-                      <Text style={[styles.inputLabel, { color: t.textMain }]}>
-                        Título
-                      </Text>
+                      <Text style={[styles.inputLabel, { color: t.textMain }]}>Título</Text>
                       <TextInput
                         style={[
                           styles.loginInput,
-                          {
-                            backgroundColor: t.bg,
-                            borderColor: t.border,
-                            color: t.textMain,
-                          },
+                          { backgroundColor: t.bg, borderColor: t.border, color: t.textMain },
                         ]}
                         value={nuevoTituloCancion}
                         onChangeText={setNuevoTituloCancion}
                       />
 
-                      <Text style={[styles.inputLabel, { color: t.textMain }]}>
-                        Artista o autor
-                      </Text>
+                      <Text style={[styles.inputLabel, { color: t.textMain }]}>Artista o autor</Text>
                       <TextInput
                         style={[
                           styles.loginInput,
-                          {
-                            backgroundColor: t.bg,
-                            borderColor: t.border,
-                            color: t.textMain,
-                          },
+                          { backgroundColor: t.bg, borderColor: t.border, color: t.textMain },
                         ]}
                         value={nuevoArtistaCancion}
                         onChangeText={setNuevoArtistaCancion}
                       />
 
-                      <Text style={[styles.inputLabel, { color: t.textMain }]}>
-                        Tonalidad original
-                      </Text>
+                      <Text style={[styles.inputLabel, { color: t.textMain }]}>Tonalidad original</Text>
                       <TextInput
                         style={[
                           styles.loginInput,
-                          {
-                            backgroundColor: t.bg,
-                            borderColor: t.border,
-                            color: t.textMain,
-                          },
+                          { backgroundColor: t.bg, borderColor: t.border, color: t.textMain },
                         ]}
                         value={nuevoTonoCancion}
                         onChangeText={setNuevoTonoCancion}
                       />
 
-                      <Text style={[styles.inputLabel, { color: t.textMain }]}>
-                        Letra con acordes [G]
-                      </Text>
+                      <Text style={[styles.inputLabel, { color: t.textMain }]}>Letra con acordes [G]</Text>
                       <TextInput
                         style={[
                           styles.loginInput,
@@ -3265,32 +3046,20 @@ export default function App() {
                         multiline
                       />
 
-                      <View
-                        style={{ flexDirection: "row", gap: 8, marginTop: 10 }}
-                      >
+                      <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
                         <TouchableOpacity
                           style={[
                             styles.loginButton,
-                            {
-                              flex: 1,
-                              backgroundColor: t.primary,
-                              padding: 12,
-                            },
+                            { flex: 1, backgroundColor: t.primary, padding: 12 },
                           ]}
                           onPress={guardarOActualizarCancion}
                         >
-                          <Text style={styles.loginButtonText}>
-                            Guardar Cambios
-                          </Text>
+                          <Text style={styles.loginButtonText}>Guardar Cambios</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[
                             styles.loginButton,
-                            {
-                              flex: 1,
-                              backgroundColor: "#EF4444",
-                              padding: 12,
-                            },
+                            { flex: 1, backgroundColor: "#EF4444", padding: 12 },
                           ]}
                           onPress={() => setModoEdicionCancion(false)}
                         >
@@ -3320,63 +3089,6 @@ export default function App() {
                         >
                           {cancionSeleccionadaDetalle.artista}
                         </Text>
-
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            gap: 6,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <View
-                            style={{
-                              backgroundColor: t.primary + "33",
-                              paddingHorizontal: 8,
-                              paddingVertical: 3,
-                              borderRadius: 4,
-                              borderWidth: 1,
-                              borderColor: t.primary,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                color: t.primary,
-                                fontWeight: "bold",
-                                fontSize: 11,
-                              }}
-                            >
-                              Tonalidad:{" "}
-                              {transponerNotaUnica(
-                                cancionSeleccionadaDetalle.tono || "C",
-                                semitonosTransposicion
-                              )}{" "}
-                              {semitonosTransposicion !== 0
-                                ? `(orig: ${cancionSeleccionadaDetalle.tono})`
-                                : ""}
-                            </Text>
-                          </View>
-                          {cancionSeleccionadaDetalle.etiquetas?.map(
-                            (eti, idx) => (
-                              <View
-                                key={idx}
-                                style={{
-                                  backgroundColor: t.bg,
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 3,
-                                  borderRadius: 4,
-                                  borderWidth: 1,
-                                  borderColor: t.border,
-                                }}
-                              >
-                                <Text
-                                  style={{ color: t.textSub, fontSize: 11 }}
-                                >
-                                  {eti}
-                                </Text>
-                              </View>
-                            )
-                          )}
-                        </View>
                       </View>
 
                       <View
@@ -3388,132 +3100,16 @@ export default function App() {
                           borderColor: t.border,
                         }}
                       >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: 12,
-                            borderBottomWidth: 1,
-                            borderBottomColor: t.border,
-                            paddingBottom: 8,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color: t.primary,
-                              fontSize: 12,
-                              fontWeight: "bold",
-                            }}
-                          >
-                            📜 LETRA Y ACORDES
-                          </Text>
-
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              backgroundColor: t.cardBg,
-                              borderRadius: 6,
-                              borderWidth: 1,
-                              borderColor: t.border,
-                              overflow: "hidden",
-                            }}
-                          >
-                            <TouchableOpacity
-                              style={{
-                                paddingHorizontal: 10,
-                                paddingVertical: 5,
-                                backgroundColor: t.bg,
-                                borderRightWidth: 1,
-                                borderRightColor: t.border,
-                              }}
-                              onPress={() =>
-                                setSemitonosTransposicion(
-                                  semitonosTransposicion - 1
-                                )
-                              }
-                            >
-                              <Text
-                                style={{
-                                  color: t.textMain,
-                                  fontWeight: "bold",
-                                  fontSize: 14,
-                                }}
-                              >
-                                -
-                              </Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                              style={{
-                                paddingHorizontal: 12,
-                                paddingVertical: 5,
-                              }}
-                              onPress={() => setSemitonosTransposicion(0)}
-                            >
-                              <Text
-                                style={{
-                                  color: t.primary,
-                                  fontWeight: "bold",
-                                  fontSize: 12,
-                                }}
-                              >
-                                {transponerNotaUnica(
-                                  cancionSeleccionadaDetalle.tono || "C",
-                                  semitonosTransposicion
-                                )}{" "}
-                                <Text style={{ color: t.textSub, fontSize: 9 }}>
-                                  {semitonosTransposicion === 0
-                                    ? "original"
-                                    : `${
-                                        semitonosTransposicion > 0
-                                          ? "+" + semitonosTransposicion
-                                          : semitonosTransposicion
-                                      }`}
-                                </Text>
-                              </Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                              style={{
-                                paddingHorizontal: 10,
-                                paddingVertical: 5,
-                                backgroundColor: t.bg,
-                                borderLeftWidth: 1,
-                                borderLeftColor: t.border,
-                              }}
-                              onPress={() =>
-                                setSemitonosTransposicion(
-                                  semitonosTransposicion + 1
-                                )
-                              }
-                            >
-                              <Text
-                                style={{
-                                  color: t.textMain,
-                                  fontWeight: "bold",
-                                  fontSize: 14,
-                                }}
-                              >
-                                +
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-
                         <Text
                           style={{
                             color: t.textMain,
                             fontSize: 14,
                             lineHeight: 22,
-                            fontFamily:
-                              Platform.OS === "ios" ? "Courier" : "monospace",
+                            fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
                           }}
                         >
                           {transponerTextoLetra(
-                            cancionSeleccionadaDetalle.letra ||
-                              "Sin letra registrada.",
+                            cancionSeleccionadaDetalle.letra || "Sin letra registrada.",
                             semitonosTransposicion
                           )}
                         </Text>
@@ -3543,12 +3139,7 @@ export default function App() {
                         <TextInput
                           style={[
                             styles.loginInput,
-                            {
-                              backgroundColor: t.bg,
-                              borderColor: t.border,
-                              color: t.textMain,
-                              marginBottom: 0,
-                            },
+                            { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 },
                           ]}
                           placeholder="Título de la canción"
                           placeholderTextColor={t.textSub}
@@ -3558,12 +3149,7 @@ export default function App() {
                         <TextInput
                           style={[
                             styles.loginInput,
-                            {
-                              backgroundColor: t.bg,
-                              borderColor: t.border,
-                              color: t.textMain,
-                              marginBottom: 0,
-                            },
+                            { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 },
                           ]}
                           placeholder="Artista o autor"
                           placeholderTextColor={t.textSub}
@@ -3573,12 +3159,7 @@ export default function App() {
                         <TextInput
                           style={[
                             styles.loginInput,
-                            {
-                              backgroundColor: t.bg,
-                              borderColor: t.border,
-                              color: t.textMain,
-                              marginBottom: 0,
-                            },
+                            { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 },
                           ]}
                           placeholder="Tonalidad (Ej. C, G, Dm)"
                           placeholderTextColor={t.textSub}
@@ -3588,14 +3169,7 @@ export default function App() {
                         <TextInput
                           style={[
                             styles.loginInput,
-                            {
-                              backgroundColor: t.bg,
-                              borderColor: t.border,
-                              color: t.textMain,
-                              height: 70,
-                              textAlignVertical: "top",
-                              marginBottom: 0,
-                            },
+                            { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 70, textAlignVertical: "top", marginBottom: 0 },
                           ]}
                           placeholder="Letra con acordes entre corchetes [C]..."
                           placeholderTextColor={t.textSub}
@@ -3604,15 +3178,10 @@ export default function App() {
                           multiline
                         />
                         <TouchableOpacity
-                          style={[
-                            styles.loginButton,
-                            { backgroundColor: t.primary, padding: 10 },
-                          ]}
+                          style={[styles.loginButton, { backgroundColor: t.primary, padding: 10 }]}
                           onPress={guardarOActualizarCancion}
                         >
-                          <Text style={styles.loginButtonText}>
-                            Guardar en Repertorio
-                          </Text>
+                          <Text style={styles.loginButtonText}>Guardar en Repertorio</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -3638,10 +3207,7 @@ export default function App() {
                         key={c.id}
                         style={[
                           styles.repertorioItemRowPro,
-                          {
-                            borderBottomColor: t.border,
-                            backgroundColor: t.bg,
-                          },
+                          { borderBottomColor: t.border, backgroundColor: t.bg },
                         ]}
                         onPress={() => {
                           setCancionSeleccionadaDetalle(c);
@@ -3744,253 +3310,67 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-    minHeight: "100vh",
-  },
-  loginContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-    width: "100%",
-    minHeight: "100vh",
-  },
-  loginCard: {
-    width: "100%",
-    maxWidth: 400,
-    padding: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  loginTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
-  },
+  container: { flex: 1, width: "100%", height: "100%", minHeight: "100vh" },
+  loginContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, width: "100%", minHeight: "100vh" },
+  loginCard: { width: "100%", maxWidth: 400, padding: 24, borderRadius: 12, borderWidth: 1 },
+  loginTitle: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 8 },
   loginSubtitle: { fontSize: 13, textAlign: "center", marginBottom: 20 },
-  loginInput: {
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 14,
-    fontSize: 15,
-  },
+  loginInput: { borderWidth: 1, padding: 12, borderRadius: 8, marginBottom: 14, fontSize: 15 },
   loginButton: { padding: 14, borderRadius: 8, alignItems: "center" },
   loginButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 16 },
-  header: {
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    width: "100%",
-  },
-  headerTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
+  header: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 10, borderBottomWidth: 1, width: "100%" },
+  headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
   headerSubtitle: { fontSize: 11, marginTop: 2 },
   headerActions: { flexDirection: "row", gap: 6 },
-  logoutBtn: {
-    backgroundColor: "#EF4444",
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
+  logoutBtn: { backgroundColor: "#EF4444", paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
   logoutBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 11 },
   content: { flex: 1, padding: 12, width: "100%" },
   mainWrapper: { width: "100%", maxWidth: 650 },
-  card: {
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 14,
-    width: "100%",
-  },
+  card: { padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 14, width: "100%" },
   cardTitle: { fontSize: 15, fontWeight: "bold", marginBottom: 10 },
-  welcomeBanner: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 14,
-    width: "100%",
-  },
-  welcomeTitle: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
+  welcomeBanner: { padding: 16, borderRadius: 12, marginBottom: 14, width: "100%" },
+  welcomeTitle: { color: "#FFFFFF", fontSize: 17, fontWeight: "bold", marginBottom: 6 },
   welcomeBannerText: { color: "#E2E8F0", fontSize: 14, fontStyle: "italic" },
   inputLabel: { fontSize: 11, marginBottom: 4, fontWeight: "500" },
   monthsRow: { flexDirection: "row", gap: 6, marginBottom: 10, width: "100%" },
-  monthTab: {
-    flex: 1,
-    paddingVertical: 6,
-    alignItems: "center",
-    borderRadius: 8,
-    borderWidth: 1,
-  },
+  monthTab: { flex: 1, paddingVertical: 6, alignItems: "center", borderRadius: 8, borderWidth: 1 },
   monthText: { fontSize: 11 },
   monthTextActive: { color: "#FFFFFF", fontWeight: "bold" },
-  calendarCard: {
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 14,
-    width: "100%",
-    alignItems: "center",
-  },
-  calendarHeaderTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  weekHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: "100%",
-    marginBottom: 6,
-  },
-  weekHeaderText: {
-    fontSize: 11,
-    fontWeight: "bold",
-    width: "13%",
-    textAlign: "center",
-  },
-  daysGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    justifyContent: "flex-start",
-    width: "100%",
-  },
-  dayCell: {
-    width: "13%",
-    aspectRatio: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 6,
-    borderWidth: 1,
-    marginBottom: 4,
-    position: "relative",
-  },
+  calendarCard: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 14, width: "100%", alignItems: "center" },
+  calendarHeaderTitle: { fontSize: 14, fontWeight: "bold", textAlign: "center", marginBottom: 8 },
+  weekHeaderRow: { flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 6 },
+  weekHeaderText: { fontSize: 11, fontWeight: "bold", width: "13%", textAlign: "center" },
+  daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, justifyContent: "flex-start", width: "100%" },
+  dayCell: { width: "13%", aspectRatio: 1, justifyContent: "center", alignItems: "center", borderRadius: 6, borderWidth: 1, marginBottom: 4, position: "relative" },
   dayCellEmpty: { width: "13%", aspectRatio: 1, marginBottom: 4 },
   dayText: { fontSize: 13, fontWeight: "bold" },
   dayTextSelected: { color: "#FFFFFF", fontWeight: "bold" },
-  serviceSectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-    width: "100%",
-  },
+  serviceSectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, width: "100%" },
   serviceSectionTitle: { fontSize: 13, fontWeight: "bold", flex: 1 },
   programBtn: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
   programBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
-  eventCardHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
+  eventCardHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   eventMainTitle: { fontSize: 15, fontWeight: "bold" },
-  editServiceBtn: {
-    backgroundColor: "#3B82F6",
-    paddingVertical: 3,
-    paddingHorizontal: 6,
-    borderRadius: 4,
-  },
-  deleteServiceBtn: {
-    backgroundColor: "#EF4444",
-    paddingVertical: 3,
-    paddingHorizontal: 6,
-    borderRadius: 4,
-  },
+  editServiceBtn: { backgroundColor: "#3B82F6", paddingVertical: 3, paddingHorizontal: 6, borderRadius: 4 },
+  deleteServiceBtn: { backgroundColor: "#EF4444", paddingVertical: 3, paddingHorizontal: 6, borderRadius: 4 },
   columnsContainer: { flexDirection: "row", gap: 8, marginTop: 10 },
   columnBox: { flex: 1, padding: 8, borderRadius: 8, borderWidth: 1 },
   columnHeaderTitle: { fontSize: 12, fontWeight: "bold", marginBottom: 6 },
-  roleRowClean: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  repertorioItemRowPro: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 6,
-  },
-  tabBar: {
-    flexDirection: "row",
-    height: 55,
-    borderTopWidth: 1,
-    width: "100%",
-  },
-  tabItem: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 2,
-  },
+  roleRowClean: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
+  tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1, width: "100%" },
+  tabItem: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 2 },
   tabText: { fontSize: 10, textAlign: "center" },
   memberCard: { padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
-  memberHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
+  memberHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   memberTitle: { fontSize: 14, fontWeight: "bold" },
-  setlistItemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginBottom: 4,
-  },
-  libSongRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-  },
+  setlistItemRow: { flexDirection: "row", alignItems: "center", padding: 8, borderRadius: 6, borderWidth: 1, marginBottom: 4 },
+  libSongRow: { flexDirection: "row", alignItems: "center", paddingVertical: 6, borderBottomWidth: 1 },
   addSongBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 },
-  chipRole: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  whatsappBtn: {
-    backgroundColor: "#22C55E",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  postulateBtn: {
-    backgroundColor: "#F97316",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
+  chipRole: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 16, borderWidth: 1 },
+  whatsappBtn: { backgroundColor: "#22C55E", padding: 12, borderRadius: 8, alignItems: "center" },
+  postulateBtn: { backgroundColor: "#F97316", padding: 12, borderRadius: 8, alignItems: "center" },
   actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
-  postulateRoleOption: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 8,
-    alignItems: "center",
-  },
+  postulateRowOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
 });

@@ -213,7 +213,7 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v11");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v12");
         return guardados
           ? JSON.parse(guardados)
           : [
@@ -242,7 +242,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v11",
+          "soundteam_integrantes_sedes_v12",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -623,14 +623,17 @@ export default function App() {
       return;
     }
 
+    // VALIDACIÓN ESTRICTA DE SEDE:
+    // 1. Busca si el usuario existe exactamente en la sede que seleccionó en el menú desplegable.
+    // 2. Si la sede seleccionada es "general", busca entre los usuarios de la sede general.
     const miembroEncontrado = integrantes.find(
       (m) =>
         m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase() &&
-        (m.sedeId === sedeIdSeleccionada || m.sedeId === "general")
+        m.sedeId === sedeIdSeleccionada
     );
 
     if (!miembroEncontrado) {
-      alert(`⚠️ El usuario "${usuario}" no existe en esta sede.`);
+      alert(`⚠️ El usuario "${usuario}" no está registrado o no tiene acceso a la ${sedeActual.nombre}.`);
       return;
     }
 
@@ -674,7 +677,7 @@ export default function App() {
       id: Date.now(),
       nombre: usuario.trim(),
       pin: pinInput.trim(),
-      sedeId: "general",
+      sedeId: "general", // Se registran exclusivamente en la sede general
       rolAcceso: "miembro",
       rolesMusicales: ["🎤 Miembro"],
     };

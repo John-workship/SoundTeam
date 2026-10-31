@@ -443,7 +443,6 @@ export default function App() {
 
   const [setlistActivo, setSetlistActivo] = useState([]);
 
-  // Funciones para mover canciones arriba o abajo en el setlist activo
   const moverCancionSetlist = (index, direccion) => {
     const nuevoSetlist = [...setlistActivo];
     const nuevoIndex = direccion === "arriba" ? index - 1 : index + 1;
@@ -3118,7 +3117,7 @@ export default function App() {
                     <View>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                         <div style={{ display: "flex", gap: 6 }}>
-                          {["Acordes", "Nashville", "Romanos"].map((tabNombre) => {
+                          {["Acordes", "Nashville"].map((tabNombre) => {
                             const activoTab = vistaCancionTab === tabNombre;
                             return (
                               <TouchableOpacity
@@ -3349,7 +3348,7 @@ export default function App() {
               )}
             </>
           )}
-        </View>
+        </div>
       </ScrollView>
 
       <View

@@ -107,28 +107,28 @@ const PAPELES_TAPIZ = {
     nombre: "🎨 Liso", 
     css: {} 
   },
-  ipuc: { 
-    nombre: "⛪ IPUC", 
+  doodles: { 
+    nombre: "🎨 Garabatos / WhatsApp", 
     css: Platform.OS === "web" ? { 
-      backgroundImage: `url('https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1200&auto=format&fit=crop')`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
+      backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86fd0f76-71f4-11e7-9a39-a414a2929a34.png')",
+      backgroundRepeat: "repeat",
+      backgroundSize: "360px",
       backgroundAttachment: "fixed"
     } : {} 
   },
   patronMusical: { 
     nombre: "🎵 Notas Musicales", 
     css: Platform.OS === "web" ? { 
-      backgroundImage: `url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1200&auto=format&fit=crop')`,
+      backgroundImage: "url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1200&auto=format&fit=crop')",
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundAttachment: "fixed"
     } : {} 
   },
-  eventos: { 
-    nombre: "📷 Eventos", 
+  lucesEscenario: { 
+    nombre: "💡 Luces de Evento", 
     css: Platform.OS === "web" ? { 
-      backgroundImage: `url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop')`,
+      backgroundImage: "url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop')",
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundAttachment: "fixed"
@@ -137,7 +137,7 @@ const PAPELES_TAPIZ = {
   maderaAcustica: { 
     nombre: "🪵 Madera Estudio", 
     css: Platform.OS === "web" ? { 
-      backgroundImage: `url('https://images.unsplash.com/photo-1546484475-7f7bd55792da?q=80&w=1200&auto=format&fit=crop')`,
+      backgroundImage: "url('https://images.unsplash.com/photo-1546484475-7f7bd55792da?q=80&w=1200&auto=format&fit=crop')",
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundAttachment: "fixed"

@@ -164,49 +164,6 @@ const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
   return transponerNotaUnica(acordeCompuesto, semitonos);
 };
 
-const convertirAcordeANashville = (acordeCompuesto, tonoBase) => {
-  if (!acordeCompuesto || !tonoBase) return acordeCompuesto;
-  let raizTono = tonoBase.trim().substring(0, 2);
-  if (raizTono.length === 2 && (raizTono[1] !== "#" && raizTono[1] !== "b")) {
-    raizTono = raizTono.substring(0, 1);
-  }
-  if (NOTAS_BEMOL[raizTono]) raizTono = NOTAS_BEMOL[raizTono];
-  let idxTono = NOTAS_SEMI.indexOf(raizTono);
-  if (idxTono === -1) return acordeCompuesto;
-
-  const convertirUna = (nota) => {
-    let base = nota.trim();
-    let resto = "", raiz = "";
-    if (base.length >= 2 && (base[1] === "#" || base[1] === "b")) {
-      raiz = base.substring(0, 2);
-      resto = base.substring(2);
-    } else {
-      raiz = base.substring(0, 1);
-      resto = base.substring(1);
-    }
-    if (NOTAS_BEMOL[raiz]) raiz = NOTAS_BEMOL[raiz];
-    let idxNota = NOTAS_SEMI.indexOf(raiz);
-    if (idxNota === -1) return nota;
-
-    let diff = (idxNota - idxTono) % 12;
-    if (diff < 0) diff += 12;
-    return (MAPA_NASHVILLE[diff] || "") + resto;
-  };
-
-  if (acordeCompuesto.includes("/")) {
-    const partes = acordeCompuesto.split("/");
-    return convertirUna(partes[0]) + "/" + convertirUna(partes[1]);
-  }
-  return convertirUna(acordeCompuesto);
-};
-
-const convertirTextoNashville = (texto, tonoBase) => {
-  if (!texto || !tonoBase) return texto;
-  return texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
-    return "[" + convertirAcordeANashville(p1, tonoBase) + "]";
-  });
-};
-
 const transponerTextoLetra = (texto, semitonos) => {
   if (semitonos === 0 || !texto) return texto;
   let textoTranspuesto = texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
@@ -406,10 +363,12 @@ export default function App() {
   const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
   const [setlistActivo, setSetlistActivo] = useState([]);
 
-  // Estados para el MODO EN VIVO
+  // Estados para el MODO EN VIVO y METRÓNOMO BPM
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
   const [setlistEnVivoActual, setSetlistEnVivoActual] = useState([]);
+  const [metronomoActivo, setMetronomoActivo] = useState(false);
+  const [pulsoActivo, setPulsoActivo] = useState(false);
 
   const moverCancionArriba = (index) => {
     if (index <= 0) return;
@@ -446,6 +405,7 @@ export default function App() {
             titulo: "A dónde iré",
             artista: "Verbo y Vida",
             tono: "F",
+            bpm: "120",
             etiquetas: ["Adoración", "Entrega"],
             letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
           },
@@ -468,8 +428,29 @@ export default function App() {
   const [nuevoTituloCancion, setNuevoTituloCancion] = useState("");
   const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
   const [nuevoTonoCancion, setNuevoTonoCancion] = useState("");
+  const [nuevoBpmCancion, setNuevoBpmCancion] = useState("120");
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
+
+  // Efecto para el Metrónomo Visual en Vivo basado en BPM
+  useEffect(() => {
+    let intervalo = null;
+    if (modoEnVivoActivo && metronomoActivo && setlistEnVivoActual.length > 0) {
+      const cancionActual = setlistEnVivoActual[indiceCancionEnVivo];
+      const objetoRepo = repertorio.find(r => r.titulo.toLowerCase() === cancionActual?.titulo.toLowerCase());
+      const bpmNum = parseInt(objetoRepo?.bpm || cancionActual?.bpm || "120", 10) || 120;
+      const msPorBeat = (60 / bpmNum) * 1000;
+
+      intervalo = setInterval(() => {
+        setPulsoActivo(prev => !prev);
+      }, msPorBeat / 2);
+    } else {
+      setPulsoActivo(false);
+    }
+    return () => {
+      if (intervalo) clearInterval(intervalo);
+    };
+  }, [modoEnVivoActivo, metronomoActivo, indiceCancionEnVivo, setlistEnVivoActual, repertorio]);
 
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
@@ -538,6 +519,7 @@ export default function App() {
     setPestana("inicio");
     setCancionSeleccionadaDetalle(null);
     setModoEnVivoActivo(false);
+    setMetronomoActivo(false);
     if (Platform.OS === "web") {
       try {
         localStorage.removeItem("soundteam_sesion_activa");
@@ -611,6 +593,7 @@ export default function App() {
           titulo: nuevoTituloCancion,
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
+          bpm: nuevoBpmCancion || "120",
           etiquetas: etiquetasActuales,
           letra: nuevaLetraCancion || "",
         };
@@ -625,6 +608,7 @@ export default function App() {
           titulo: nuevoTituloCancion,
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
+          bpm: nuevoBpmCancion || "120",
           etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
           letra: nuevaLetraCancion || "",
         };
@@ -635,6 +619,7 @@ export default function App() {
       setNuevoTituloCancion("");
       setNuevoArtistaCancion("");
       setNuevoTonoCancion("");
+      setNuevoBpmCancion("120");
       setNuevaLetraCancion("");
       setEtiquetasActuales([]);
     } else { alert("⚠️ Completa el título de la canción."); }
@@ -686,7 +671,7 @@ export default function App() {
   const enviarPorWhatsApp = (servicio) => {
     let texto = `🎵 *Setlist - ${servicio.titulo}* (${diaSeleccionado} de ${mesSeleccionadoObj.nombre} ${mesSeleccionadoObj.year})\n\n`;
     if (servicio.setlist && servicio.setlist.length > 0) {
-      servicio.setlist.forEach((s, i) => { texto += `${i + 1}. ${s.titulo} (Tono: ${s.tono})\n`; });
+      servicio.setlist.forEach((s, i) => { texto += `${i + 1}. ${s.titulo} (Tono: ${s.tono} | ${s.bpm || "120"} BPM)\n`; });
     } else { texto += `Sin canciones asignadas.\n`; }
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
     Linking.openURL(url).catch(() => { alert("No se pudo abrir WhatsApp."); });
@@ -815,18 +800,19 @@ export default function App() {
     );
   }
 
-  // PANTALLA MODO EN VIVO (ESTILO TELEPROMPTER / ESCENARIO)
+  // PANTALLA MODO EN VIVO CON METRÓNOMO BPM Y PULSO VISUAL
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo];
     const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo.toLowerCase());
     const letraMostrar = objetoRepertorioEnVivo ? objetoRepertorioEnVivo.letra : "[INTRO]\nLetra no disponible en biblioteca.";
+    const bpmActual = objetoRepertorioEnVivo?.bpm || cancionActualEnVivo?.bpm || "120";
 
     return (
       <View style={[styles.container, { backgroundColor: "#0B0F19", padding: 16 }]}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 10 }}>
           <TouchableOpacity 
             style={{ backgroundColor: "#1E293B", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 }}
-            onPress={() => setModoEnVivoActivo(false)}
+            onPress={() => { setModoEnVivoActivo(false); setMetronomoActivo(false); }}
           >
             <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>✕ Salir del Modo en Vivo</Text>
           </TouchableOpacity>
@@ -837,13 +823,31 @@ export default function App() {
 
         <ScrollView contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
           <View style={{ width: "100%", maxWidth: 700 }}>
-            <View style={{ backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderWidth: 1, borderColor: "#334155" }}>
-              <View>
-                <Text style={{ color: "#38BDF8", fontSize: 12, fontWeight: "bold", marginBottom: 2 }}>EN ESCENARIO AHORA:</Text>
-                <Text style={{ color: "#FFF", fontSize: 24, fontWeight: "bold" }}>{cancionActualEnVivo?.titulo}</Text>
+            {/* Tarjeta de Control en Escenario y Metrónomo BPM */}
+            <View style={{ backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#334155" }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#38BDF8", fontSize: 12, fontWeight: "bold", marginBottom: 2 }}>EN ESCENARIO AHORA:</Text>
+                  <Text style={{ color: "#FFF", fontSize: 24, fontWeight: "bold" }} numberOfLines={1}>{cancionActualEnVivo?.titulo}</Text>
+                </View>
+                <View style={{ backgroundColor: "#3B82F6", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, alignItems: "center" }}>
+                  <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "bold" }}>Tono: {cancionActualEnVivo?.tono}</Text>
+                </View>
               </View>
-              <View style={{ backgroundColor: "#3B82F6", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}>
-                <Text style={{ color: "#FFF", fontSize: 18, fontWeight: "bold" }}>Tono: {cancionActualEnVivo?.tono}</Text>
+
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: pulsoActivo ? "#22C55E" : "#64748B" }} />
+                  <Text style={{ color: "#FFF", fontSize: 15, fontWeight: "bold" }}>⚡ {bpmActual} BPM</Text>
+                </View>
+                <TouchableOpacity
+                  style={{ backgroundColor: metronomoActivo ? "#EF4444" : "#22C55E", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 }}
+                  onPress={() => setMetronomoActivo(!metronomoActivo)}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
+                    {metronomoActivo ? "⏹️ Detener Click" : "▶️ Iniciar Click"}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -1080,14 +1084,14 @@ export default function App() {
                       alignItems: "center",
                       gap: 6,
                     }}
-                    onPress={() => setMostrarSelectorEmojis(!mostrarSelectorEmojis)}
+                    onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
                   >
                     <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>
-                      {mostrarSelectorEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
+                      {mostrarMenuPersonalizacion ? "🔽 Ocultar Emojis" : "😀 Emojis"}
                     </Text>
                   </TouchableOpacity>
 
-                  {mostrarSelectorEmojis && (
+                  {mostrarMenuPersonalizacion && (
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6, backgroundColor: t.bg, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: t.border }}>
                       {["😀", "😢", "❤️", "🔥", "🙏", "🎸", "🎹", "🥁", "🙌", "✨", "⭐", "✅", "❌", "💬", "🎵"].map((emoji) => (
                         <TouchableOpacity
@@ -1267,25 +1271,46 @@ export default function App() {
                           <Text style={{ color: t.textMain, fontSize: 13, fontWeight: "bold" }}>{index + 1}. {cancion.titulo}</Text>
                         </View>
 
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <Text style={{ color: t.textSub, fontSize: 12 }}>Tono:</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                          <Text style={{ color: t.textSub, fontSize: 11 }}>T:</Text>
                           <TextInput
                             style={{
                               backgroundColor: t.cardBg,
                               color: t.textMain,
                               borderWidth: 1,
                               borderColor: t.border,
-                              borderRadius: 6,
-                              width: 36,
-                              height: 32,
+                              borderRadius: 4,
+                              width: 32,
+                              height: 30,
                               textAlign: "center",
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: "bold",
                             }}
                             value={cancion.tono}
                             onChangeText={(nuevoTono) => {
                               const actualizado = [...setlistActivo];
                               actualizado[index].tono = nuevoTono;
+                              setSetlistActivo(actualizado);
+                            }}
+                          />
+                          <Text style={{ color: t.textSub, fontSize: 11, marginLeft: 4 }}>BPM:</Text>
+                          <TextInput
+                            style={{
+                              backgroundColor: t.cardBg,
+                              color: t.textMain,
+                              borderWidth: 1,
+                              borderColor: t.border,
+                              borderRadius: 4,
+                              width: 38,
+                              height: 30,
+                              textAlign: "center",
+                              fontSize: 11,
+                              fontWeight: "bold",
+                            }}
+                            value={cancion.bpm || "120"}
+                            onChangeText={(nuevoBpm) => {
+                              const actualizado = [...setlistActivo];
+                              actualizado[index].bpm = nuevoBpm;
                               setSetlistActivo(actualizado);
                             }}
                           />
@@ -1305,13 +1330,13 @@ export default function App() {
                           </TouchableOpacity>
 
                           <TouchableOpacity
-                            style={{ backgroundColor: "#EF4444", width: 32, height: 32, borderRadius: 6, justifyContent: "center", alignItems: "center" }}
+                            style={{ backgroundColor: "#EF4444", width: 30, height: 30, borderRadius: 6, justifyContent: "center", alignItems: "center" }}
                             onPress={() => {
                               const filtrado = setlistActivo.filter((_, i) => i !== index);
                               setSetlistActivo(filtrado);
                             }}
                           >
-                            <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "bold" }}>X</Text>
+                            <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "bold" }}>X</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -1321,10 +1346,10 @@ export default function App() {
                   <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginTop: 10 }]}>Biblioteca de canciones (Toca para agregar):</Text>
                   {repertorio.map((cancion) => (
                     <View key={cancion.id} style={[styles.libSongRow, { borderBottomColor: t.border }]}>
-                      <Text style={{ color: t.textMain, fontSize: 13, flex: 1 }}>{cancion.titulo} <Text style={{ color: t.textSub }}>({cancion.tono})</Text></Text>
+                      <Text style={{ color: t.textMain, fontSize: 13, flex: 1 }}>{cancion.titulo} <Text style={{ color: t.textSub }}>({cancion.tono} • {cancion.bpm || "120"} BPM)</Text></Text>
                       <TouchableOpacity
                         style={[styles.addSongBtn, { backgroundColor: t.primary }]}
-                        onPress={() => { setSetlistActivo([...setlistActivo, { titulo: cancion.titulo, tono: cancion.tono }]); }}
+                        onPress={() => { setSetlistActivo([...setlistActivo, { titulo: cancion.titulo, tono: cancion.tono, bpm: cancion.bpm || "120" }]); }}
                       >
                         <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}>+ Agregar</Text>
                       </TouchableOpacity>
@@ -1475,7 +1500,9 @@ export default function App() {
                       {serv.setlist && serv.setlist.length > 0 ? (
                         serv.setlist.map((s, i) => (
                           <View key={i} style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border, marginBottom: 6, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                            <Text style={{ color: t.textMain, fontSize: 13, fontWeight: "bold" }}>{i + 1}. {s.titulo} <Text style={{ color: t.textSub, fontWeight: "normal" }}>(Tono: {s.tono})</Text></Text>
+                            <Text style={{ color: t.textMain, fontSize: 13, fontWeight: "bold" }}>
+                              {i + 1}. {s.titulo} <Text style={{ color: t.textSub, fontWeight: "normal" }}>(Tono: {s.tono} | {s.bpm || "120"} BPM)</Text>
+                            </Text>
                           </View>
                         ))
                       ) : (
@@ -1490,6 +1517,7 @@ export default function App() {
                             setSetlistEnVivoActual(serv.setlist);
                             setIndiceCancionEnVivo(0);
                             setModoEnVivoActivo(true);
+                            setMetronomoActivo(false);
                           }}
                         >
                           <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 15 }}>▶️ Modo en vivo</Text>
@@ -1797,6 +1825,7 @@ export default function App() {
                             setNuevoTituloCancion(cancionSeleccionadaDetalle.titulo);
                             setNuevoArtistaCancion(cancionSeleccionadaDetalle.artista);
                             setNuevoTonoCancion(cancionSeleccionadaDetalle.tono);
+                            setNuevoBpmCancion(cancionSeleccionadaDetalle.bpm || "120");
                             setNuevaLetraCancion(cancionSeleccionadaDetalle.letra || "");
                             setEtiquetasActuales(cancionSeleccionadaDetalle.etiquetas || []);
                           }}
@@ -1828,12 +1857,25 @@ export default function App() {
                         value={nuevoArtistaCancion}
                         onChangeText={setNuevoArtistaCancion}
                       />
-                      <Text style={[styles.inputLabel, { color: t.textMain }]}>Tonalidad original</Text>
-                      <TextInput
-                        style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
-                        value={nuevoTonoCancion}
-                        onChangeText={setNuevoTonoCancion}
-                      />
+                      <View style={{ flexDirection: "row", gap: 10 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.inputLabel, { color: t.textMain }]}>Tonalidad</Text>
+                          <TextInput
+                            style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
+                            value={nuevoTonoCancion}
+                            onChangeText={setNuevoTonoCancion}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.inputLabel, { color: t.textMain }]}>BPM (Pulso)</Text>
+                          <TextInput
+                            style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
+                            value={nuevoBpmCancion}
+                            onChangeText={setNuevoBpmCancion}
+                            keyboardType="numeric"
+                          />
+                        </View>
+                      </View>
                       <Text style={[styles.inputLabel, { color: t.textMain }]}>Letra con acordes [G]</Text>
                       <TextInput
                         style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 160, textAlignVertical: "top" }]}
@@ -1854,7 +1896,9 @@ export default function App() {
                     <View>
                       <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontSize: 22, fontWeight: "bold", color: t.textMain, marginBottom: 2 }}>{cancionSeleccionadaDetalle.titulo}</Text>
-                        <Text style={{ color: t.textSub, fontSize: 13 }}>{cancionSeleccionadaDetalle.artista} • Tonalidad: <Text style={{ color: t.primary, fontWeight: "bold" }}>{transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}</Text></Text>
+                        <Text style={{ color: t.textSub, fontSize: 13 }}>
+                          {cancionSeleccionadaDetalle.artista} • Tonalidad: <Text style={{ color: t.primary, fontWeight: "bold" }}>{transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}</Text> • ⚡ {cancionSeleccionadaDetalle.bpm || "120"} BPM
+                        </Text>
                       </View>
 
                       <View style={{ flexDirection: "row", gap: 6, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: t.border, paddingBottom: 8 }}>
@@ -1881,22 +1925,9 @@ export default function App() {
                         })}
                       </View>
 
-                      <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border, marginBottom: 12 }}>
-                        <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginBottom: 4 }}>📊 ANÁLISIS ARMÓNICO (DETECTADO)</Text>
-                        <Text style={{ color: t.textSub, fontSize: 11 }}>
-                          Tonalidad base: {transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)} | Estructura optimizada para la banda en vivo.
-                        </Text>
-                      </View>
-
                       <View style={{ backgroundColor: t.bg, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
                         <Text style={{ color: t.textMain, fontSize: 14, lineHeight: 22, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" }}>
-                          {modoVisualizacionRepertorio === "Nashville"
-                            ? convertirTextoNashville(
-                                transponerTextoLetra(cancionSeleccionadaDetalle.letra || "Sin letra registrada.", semitonosTransposicion),
-                                transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)
-                              )
-                            : transponerTextoLetra(cancionSeleccionadaDetalle.letra || "Sin letra registrada.", semitonosTransposicion)
-                          }
+                          {transponerTextoLetra(cancionSeleccionadaDetalle.letra || "Sin letra registrada.", semitonosTransposicion)}
                         </Text>
                       </View>
                     </View>
@@ -1922,13 +1953,23 @@ export default function App() {
                           value={nuevoArtistaCancion}
                           onChangeText={setNuevoArtistaCancion}
                         />
-                        <TextInput
-                          style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
-                          placeholder="Tonalidad (Ej. C, G, Dm)"
-                          placeholderTextColor={t.textSub}
-                          value={nuevoTonoCancion}
-                          onChangeText={setNuevoTonoCancion}
-                        />
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          <TextInput
+                            style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                            placeholder="Tono (Ej. C, G)"
+                            placeholderTextColor={t.textSub}
+                            value={nuevoTonoCancion}
+                            onChangeText={setNuevoTonoCancion}
+                          />
+                          <TextInput
+                            style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                            placeholder="BPM (Ej. 120)"
+                            placeholderTextColor={t.textSub}
+                            value={nuevoBpmCancion}
+                            onChangeText={setNuevoBpmCancion}
+                            keyboardType="numeric"
+                          />
+                        </View>
                         <TextInput
                           style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 70, textAlignVertical: "top", marginBottom: 0 }]}
                           placeholder="Letra con acordes entre corchetes [C]..."
@@ -1954,7 +1995,7 @@ export default function App() {
                       >
                         <View style={{ flex: 1, paddingVertical: 4 }}>
                           <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "bold", marginBottom: 2 }}>{c.titulo}</Text>
-                          <Text style={{ color: t.textSub, fontSize: 12 }}>{c.artista || "Sin artista"}</Text>
+                          <Text style={{ color: t.textSub, fontSize: 12 }}>{c.artista || "Sin artista"} • ⚡ {c.bpm || "120"} BPM</Text>
                         </View>
                         <View style={{ backgroundColor: t.primary, width: 34, height: 34, borderRadius: 6, justifyContent: "center", alignItems: "center" }}>
                           <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 13 }}>{c.tono || "C"}</Text>
@@ -2058,6 +2099,6 @@ const styles = StyleSheet.create({
   postulateBtn: { backgroundColor: "#F97316", padding: 12, borderRadius: 8, alignItems: "center" },
   actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
   postulateRoleOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
-  smallButton: { width: 32, height: 32, borderRadius: 6, borderWidth: 1, justifyContent: "center", alignItems: "center" },
-  smallButtonText: { fontSize: 12, fontWeight: "bold" },
+  smallButton: { width: 30, height: 30, borderRadius: 6, borderWidth: 1, justifyContent: "center", alignItems: "center" },
+  smallButtonText: { fontSize: 11, fontWeight: "bold" },
 });

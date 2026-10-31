@@ -132,10 +132,6 @@ const SEDES_DISPONIBLES = [
 const NOTAS_SEMI = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const NOTAS_BEMOL = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
 
-const MAPA_NASHVILLE = {
-  0: "1", 1: "b2", 2: "2", 3: "b3", 4: "3", 5: "4", 6: "#4", 7: "5", 8: "b6", 9: "6", 10: "b7", 11: "7",
-};
-
 const transponerNotaUnica = (acorde, semitonos) => {
   if (!acorde) return "";
   let base = acorde.trim();
@@ -363,12 +359,13 @@ export default function App() {
   const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
   const [setlistActivo, setSetlistActivo] = useState([]);
 
-  // Estados para el MODO EN VIVO y METRÓNOMO BPM
+  // Estados para MODO EN VIVO con avance automático y metrónomo BPM dinámico
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
   const [setlistEnVivoActual, setSetlistEnVivoActual] = useState([]);
   const [metronomoActivo, setMetronomoActivo] = useState(false);
   const [pulsoActivo, setPulsoActivo] = useState(false);
+  const [avanceAutomaticoActivo, setAvanceAutomaticoActivo] = useState(false);
 
   const moverCancionArriba = (index) => {
     if (index <= 0) return;
@@ -432,7 +429,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  // Efecto para el Metrónomo Visual en Vivo basado en BPM
+  // Efecto para el Metrónomo Visual y Ajuste Instantáneo de BPM al cambiar de canción
   useEffect(() => {
     let intervalo = null;
     if (modoEnVivoActivo && metronomoActivo && setlistEnVivoActual.length > 0) {
@@ -451,6 +448,30 @@ export default function App() {
       if (intervalo) clearInterval(intervalo);
     };
   }, [modoEnVivoActivo, metronomoActivo, indiceCancionEnVivo, setlistEnVivoActual, repertorio]);
+
+  // Efecto para el Avance Automático entre canciones basado en estimación del BPM / tiempo
+  useEffect(() => {
+    let timerAvance = null;
+    if (modoEnVivoActivo && avanceAutomaticoActivo && setlistEnVivoActual.length > 0) {
+      const cancionActual = setlistEnVivoActual[indiceCancionEnVivo];
+      const objetoRepo = repertorio.find(r => r.titulo.toLowerCase() === cancionActual?.titulo.toLowerCase());
+      const bpmNum = parseInt(objetoRepo?.bpm || cancionActual?.bpm || "120", 10) || 120;
+      
+      // Estimación estándar de 4 minutos por canción adaptada al pulso (o temporizador configurable)
+      const tiempoEstimadoMs = (240000 * 120) / bpmNum; 
+
+      timerAvance = setTimeout(() => {
+        if (indiceCancionEnVivo < setlistEnVivoActual.length - 1) {
+          setIndiceCancionEnVivo(prev => prev + 1);
+        } else {
+          setAvanceAutomaticoActivo(false);
+        }
+      }, tiempoEstimadoMs);
+    }
+    return () => {
+      if (timerAvance) clearTimeout(timerAvance);
+    };
+  }, [modoEnVivoActivo, avanceAutomaticoActivo, indiceCancionEnVivo, setlistEnVivoActual, repertorio]);
 
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
@@ -520,6 +541,7 @@ export default function App() {
     setCancionSeleccionadaDetalle(null);
     setModoEnVivoActivo(false);
     setMetronomoActivo(false);
+    setAvanceAutomaticoActivo(false);
     if (Platform.OS === "web") {
       try {
         localStorage.removeItem("soundteam_sesion_activa");
@@ -800,7 +822,7 @@ export default function App() {
     );
   }
 
-  // PANTALLA MODO EN VIVO CON METRÓNOMO BPM Y PULSO VISUAL
+  // PANTALLA MODO EN VIVO CON AVANCE AUTOMÁTICO Y BPM DINÁMICO
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo];
     const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo.toLowerCase());
@@ -812,7 +834,8 @@ export default function App() {
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 10 }}>
           <TouchableOpacity 
             style={{ backgroundColor: "#1E293B", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 }}
-            onPress={() => { setModoEnVivoActivo(false); setMetronomoActivo(false); }}
+            data-testid="salir-modo-en-vivo"
+            onPress={() => { setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
           >
             <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>✕ Salir del Modo en Vivo</Text>
           </TouchableOpacity>
@@ -823,7 +846,7 @@ export default function App() {
 
         <ScrollView contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
           <View style={{ width: "100%", maxWidth: 700 }}>
-            {/* Tarjeta de Control en Escenario y Metrónomo BPM */}
+            {/* Panel Superior Escenario / Metrónomo / Avance Automático */}
             <View style={{ backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#334155" }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <View style={{ flex: 1 }}>
@@ -835,19 +858,31 @@ export default function App() {
                 </View>
               </View>
 
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 10 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 10, flexWrap: "wrap", gap: 8 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: pulsoActivo ? "#22C55E" : "#64748B" }} />
-                  <Text style={{ color: "#FFF", fontSize: 15, fontWeight: "bold" }}>⚡ {bpmActual} BPM</Text>
+                  <Text style={{ color: "#FFF", fontSize: 15, fontWeight: "bold" }}>⚡ {bpmActual} BPM (Ajustado)</Text>
                 </View>
-                <TouchableOpacity
-                  style={{ backgroundColor: metronomoActivo ? "#EF4444" : "#22C55E", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 }}
-                  onPress={() => setMetronomoActivo(!metronomoActivo)}
-                >
-                  <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
-                    {metronomoActivo ? "⏹️ Detener Click" : "▶️ Iniciar Click"}
-                  </Text>
-                </TouchableOpacity>
+
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    style={{ backgroundColor: metronomoActivo ? "#EF4444" : "#22C55E", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 }}
+                    onPress={() => setMetronomoActivo(!metronomoActivo)}
+                  >
+                    <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
+                      {metronomoActivo ? "⏹️ Detener Click" : "▶️ Iniciar Click"}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{ backgroundColor: avanceAutomaticoActivo ? "#F97316" : "#334155", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 }}
+                    onPress={() => setAvanceAutomaticoActivo(!avanceAutomaticoActivo)}
+                  >
+                    <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
+                      {avanceAutomaticoActivo ? "⏱️ Auto: ON" : "⏱️ Auto: OFF"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -1084,14 +1119,14 @@ export default function App() {
                       alignItems: "center",
                       gap: 6,
                     }}
-                    onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
+                    onPress={() => setMostrarSelectorEmojis(!mostrarSelectorEmojis)}
                   >
                     <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>
-                      {mostrarMenuPersonalizacion ? "🔽 Ocultar Emojis" : "😀 Emojis"}
+                      {mostrarSelectorEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
                     </Text>
                   </TouchableOpacity>
 
-                  {mostrarMenuPersonalizacion && (
+                  {mostrarSelectorEmojis && (
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6, backgroundColor: t.bg, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: t.border }}>
                       {["😀", "😢", "❤️", "🔥", "🙏", "🎸", "🎹", "🥁", "🙌", "✨", "⭐", "✅", "❌", "💬", "🎵"].map((emoji) => (
                         <TouchableOpacity
@@ -1518,6 +1553,7 @@ export default function App() {
                             setIndiceCancionEnVivo(0);
                             setModoEnVivoActivo(true);
                             setMetronomoActivo(false);
+                            setAvanceAutomaticoActivo(false);
                           }}
                         >
                           <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 15 }}>▶️ Modo en vivo</Text>

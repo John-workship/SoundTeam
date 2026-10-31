@@ -2748,26 +2748,50 @@ export default function App() {
                       ]}
                       onPress={async () => {
                         if (nombreNuevoMiembro.trim() !== "") {
-                          const nuevoId = Date.now();
-                          const nuevoIntegranteObj = {
-                            id: nuevoId,
-                            nombre: nombreNuevoMiembro.trim(),
-                            pin: pinNuevoMiembro.trim() || "1234",
-                            sede_id: sedeIdSeleccionada,
-                            rol_acceso: rolAccesoNuevo,
-                            roles_musicales: rolesMusicalesNuevo,
-                          };
+                          if (idMiembroEditando !== null) {
+                            const actualizado = {
+                              nombre: nombreNuevoMiembro.trim(),
+                              pin: pinNuevoMiembro.trim() || "1234",
+                              sede_id: sedeIdSeleccionada,
+                              rol_acceso: rolAccesoNuevo,
+                              roles_musicales: rolesMusicalesNuevo,
+                            };
 
-                          const { error } = await supabase
-                            .from("integrantes")
-                            .insert([nuevoIntegranteObj]);
+                            const { error } = await supabase
+                              .from("integrantes")
+                              .update(actualizado)
+                              .eq("id", idMiembroEditando);
 
-                          if (!error) {
-                            alert(`✅ Miembro agregado con éxito en ${sedeActual.nombre}.`);
-                            await cargarIntegrantesSupabase();
-                            setModalMiembroVisible(false);
+                            if (!error) {
+                              alert("✅ Miembro actualizado correctamente.");
+                              await cargarIntegrantesSupabase();
+                              setModalMiembroVisible(false);
+                              setIdMiembroEditando(null);
+                            } else {
+                              alert(`⚠️ Error al actualizar: ${error.message}`);
+                            }
                           } else {
-                            alert(`⚠️ Error al guardar en Supabase: ${error.message}`);
+                            const nuevoId = Date.now();
+                            const nuevoIntegranteObj = {
+                              id: nuevoId,
+                              nombre: nombreNuevoMiembro.trim(),
+                              pin: pinNuevoMiembro.trim() || "1234",
+                              sede_id: sedeIdSeleccionada,
+                              rol_acceso: rolAccesoNuevo,
+                              roles_musicales: rolesMusicalesNuevo,
+                            };
+
+                            const { error } = await supabase
+                              .from("integrantes")
+                              .insert([nuevoIntegranteObj]);
+
+                            if (!error) {
+                              alert(`✅ Miembro agregado con éxito en ${sedeActual.nombre}.`);
+                              await cargarIntegrantesSupabase();
+                              setModalMiembroVisible(false);
+                            } else {
+                              alert(`⚠️ Error al guardar en Supabase: ${error.message}`);
+                            }
                           }
                         } else {
                           alert("⚠️ Ingresa el nombre del integrante.");
@@ -2784,7 +2808,10 @@ export default function App() {
                         styles.loginButton,
                         { flex: 1, backgroundColor: "#EF4444", padding: 10 },
                       ]}
-                      onPress={() => setModalMiembroVisible(false)}
+                      onPress={() => {
+                        setModalMiembroVisible(false);
+                        setIdMiembroEditando(null);
+                      }}
                     >
                       <Text style={[styles.loginButtonText, { fontSize: 13 }]}>
                         Cancelar
@@ -2814,6 +2841,33 @@ export default function App() {
 
                       {puedeModificarEste && (
                         <View style={{ flexDirection: "row", gap: 6 }}>
+                          <TouchableOpacity
+                            style={{
+                              backgroundColor: "#3B82F6",
+                              paddingHorizontal: 6,
+                              paddingVertical: 3,
+                              borderRadius: 4,
+                            }}
+                            onPress={() => {
+                              setIdMiembroEditando(int.id);
+                              setNombreNuevoMiembro(int.nombre);
+                              setPinNuevoMiembro(int.pin || "1234");
+                              setRolAccesoNuevo(int.rolAcceso || "miembro");
+                              setRolesMusicalesNuevo(int.rolesMusicales || []);
+                              setModalMiembroVisible(true);
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: "#FFFFFF",
+                                fontSize: 10,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              ✏️ Modificar
+                            </Text>
+                          </TouchableOpacity>
+
                           <TouchableOpacity
                             style={{
                               backgroundColor: "#EF4444",

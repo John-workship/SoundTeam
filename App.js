@@ -212,7 +212,7 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v16");
+        const guardados = localStorage.getItem("soundteam_integrantes_sedes_v17");
         return guardados
           ? JSON.parse(guardados)
           : [
@@ -238,7 +238,7 @@ export default function App() {
     if (Platform.OS === "web") {
       try {
         localStorage.setItem(
-          "soundteam_integrantes_sedes_v16",
+          "soundteam_integrantes_sedes_v17",
           JSON.stringify(integrantes)
         );
       } catch (e) {}
@@ -483,7 +483,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  // --- CHATS EN TIEMPO REAL (USA 'sede_id' PARA EVITAR EL ERROR DE SUPABASE) ---
+  // --- CHATS EN TIEMPO REAL (LIBRE DE COLUMNA 'sede_id' PARA EVITAR ERRORES) ---
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -496,7 +496,6 @@ export default function App() {
       .from("mensajes")
       .select("*")
       .eq("canal", canalChatActivo)
-      .eq("sede_id", sedeIdSeleccionada)
       .order("created_at", { ascending: true });
 
     if (data && !error) {
@@ -510,7 +509,7 @@ export default function App() {
     cargarMensajesSupabase();
 
     const canalSub = supabase
-      .channel(`chat-realtime-${sedeIdSeleccionada}-${canalChatActivo}`)
+      .channel(`chat-realtime-${canalChatActivo}`)
       .on(
         "postgres_changes",
         {
@@ -528,7 +527,7 @@ export default function App() {
     return () => {
       supabase.removeChannel(canalSub);
     };
-  }, [canalChatActivo, sedeIdSeleccionada]);
+  }, [canalChatActivo]);
 
   const handleLogin = () => {
     if (usuario.trim() === "" || pinInput.trim() === "") {
@@ -643,13 +642,12 @@ export default function App() {
         await cargarMensajesSupabase();
         alert("✏️ Mensaje corregido con éxito.");
       } else {
-        // CUALQUIER USUARIO PUEDE ENVIAR MENSAJES USANDO 'sede_id'
+        // CUALQUIER USUARIO PUEDE ENVIAR MENSAJES
         const mensaje = {
           autor: usuario,
           texto: nuevoMensajeTexto.trim(),
           hora: horaActual,
           canal: canalChatActivo,
-          sede_id: sedeIdSeleccionada,
           editado: false,
         };
 
@@ -671,18 +669,17 @@ export default function App() {
 
     if (
       confirm(
-        `¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} para esta sede (${sedeActual.nombre})?`
+        `¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()}?`
       )
     ) {
       const { error } = await supabase
         .from("mensajes")
         .delete()
-        .eq("canal", canalChatActivo)
-        .eq("sede_id", sedeIdSeleccionada);
+        .eq("canal", canalChatActivo);
 
       if (!error) {
         setMensajesChat([]);
-        alert("🧹 Chat de la sede limpiado con éxito.");
+        alert("🧹 Chat limpiado con éxito.");
       } else {
         alert("⚠️ No se pudo limpiar el chat.");
       }
@@ -1214,7 +1211,7 @@ export default function App() {
                       { color: t.textMain, marginBottom: 0 },
                     ]}
                   >
-                    💬 Chat de {sedeActual.nombre}
+                    💬 Chat General
                   </Text>
 
                   {esAdminOLider && (
@@ -1305,7 +1302,7 @@ export default function App() {
                           fontSize: 12,
                         }}
                       >
-                        No hay mensajes en este chat para {sedeActual.nombre}. ¡Sé el primero en escribir!
+                        No hay mensajes en este chat. ¡Sé el primero en escribir!
                       </Text>
                     ) : (
                       mensajesChat.map((m, i) => {
@@ -1496,7 +1493,7 @@ export default function App() {
                     placeholder={
                       idMensajeEditando !== null
                         ? "Corrige tu mensaje aquí..."
-                        : `Escribir en el chat de ${sedeActual.nombre}...`
+                        : "Escribir en el chat..."
                     }
                     placeholderTextColor={t.textSub}
                     value={nuevoMensajeTexto}

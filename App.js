@@ -198,7 +198,6 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState([]);
 
   const cargarIntegrantesSupabase = async () => {
-    // Se filtran los integrantes pertenecientes únicamente a la sede seleccionada o generales
     const { data, error } = await supabase.from("integrantes").select("*");
     if (data && !error && data.length > 0) {
       const formateados = data.map((m) => ({
@@ -324,7 +323,6 @@ export default function App() {
 
   const [servicios, setServicios] = useState([]);
 
-  // INDEPENDIZACIÓN DE SEDES: Cargar ÚNICAMENTE servicios pertenecientes a la sede activa
   const cargarServiciosSupabase = async () => {
     const { data, error } = await supabase
       .from("servicios")
@@ -357,6 +355,47 @@ export default function App() {
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
   }, [sedeIdSeleccionada]);
+
+  // REPERTORIO DESDE SUPABASE (Sincronizado PC y Celular)
+  const [repertorio, setRepertorio] = useState([]);
+
+  const cargarRepertorioSupabase = async () => {
+    const { data, error } = await supabase.from("repertorio").select("*");
+    if (data && !error && data.length > 0) {
+      const formateados = data.map((c) => ({
+        id: c.id,
+        titulo: c.titulo,
+        artista: c.artista || "Sin artista",
+        tono: c.tono || "C",
+        bpm: c.bpm || "120",
+        etiquetas: c.etiquetas || ["Adoración"],
+        letra: c.letra || "",
+      }));
+      setRepertorio(formateados);
+    } else {
+      // Repertorio inicial por defecto si está vacío
+      setRepertorio([
+        {
+          id: 1,
+          titulo: "A dónde iré",
+          artista: "Verbo y Vida",
+          tono: "F",
+          bpm: "120",
+          etiquetas: ["Adoración", "Entrega"],
+          letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
+        },
+      ]);
+    }
+  };
+
+  useEffect(() => {
+    cargarRepertorioSupabase();
+    const canalSub = supabase
+      .channel("repertorio-cambios")
+      .on("postgres_changes", { event: "*", schema: "public", table: "repertorio" }, () => { cargarRepertorioSupabase(); })
+      .subscribe();
+    return () => { supabase.removeChannel(canalSub); };
+  }, []);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
@@ -400,32 +439,6 @@ export default function App() {
   const [pinNuevoMiembro, setPinNuevoMiembro] = useState("1234");
   const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
-
-  const [repertorio, setRepertorio] = useState(() => {
-    if (Platform.OS === "web") {
-      try {
-        const guardados = localStorage.getItem("soundteam_repertorio_pro");
-        return guardados ? JSON.parse(guardados) : [
-          {
-            id: 1,
-            titulo: "A dónde iré",
-            artista: "Verbo y Vida",
-            tono: "F",
-            bpm: "120",
-            etiquetas: ["Adoración", "Entrega"],
-            letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
-          },
-        ];
-      } catch (e) { return []; }
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      try { localStorage.setItem("soundteam_repertorio_pro", JSON.stringify(repertorio)); } catch (e) {}
-    }
-  }, [repertorio]);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
@@ -560,6 +573,7 @@ export default function App() {
 
   const recargarDatosApp = async () => {
     await cargarServiciosSupabase();
+    await cargarRepertorioSupabase();
     await cargarMensajesSupabase();
     await cargarIntegrantesSupabase();
     alert("🔄 ¡Datos actualizados correctamente!");
@@ -613,12 +627,11 @@ export default function App() {
     }
   };
 
-  const guardarOActualizarCancion = () => {
+  const guardarOActualizarCancion = async () => {
     if (!puedeControlarRepertorio) { alert("⚠️ No tienes permisos suficientes para modificar el repertorio."); return; }
     if (nuevoTituloCancion.trim() !== "") {
       if (cancionSeleccionadaDetalle !== null && modoEdicionCancion) {
         const cancionActualizada = {
-          ...cancionSeleccionadaDetalle,
           titulo: nuevoTituloCancion,
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
@@ -626,13 +639,17 @@ export default function App() {
           etiquetas: etiquetasActuales,
           letra: nuevaLetraCancion || "",
         };
-        setRepertorio(repertorio.map((c) => c.id === cancionActualizada.id ? cancionActualizada : c));
-        setCancionSeleccionadaDetalle(cancionActualizada);
-        setModoEdicionCancion(false);
-        setSemitonosTransposicion(0);
-        alert("🎵 Canción actualizada.");
+        const { error } = await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
+        if (!error) {
+          setModoEdicionCancion(false);
+          setSemitonosTransposicion(0);
+          await cargarRepertorioSupabase();
+          alert("🎵 Canción actualizada en la nube.");
+        } else {
+          alert(`⚠️ Error al actualizar canción: ${error.message}`);
+        }
       } else {
-        const nuevaCancion = {
+        const nuevaCancionObj = {
           id: Date.now(),
           titulo: nuevoTituloCancion,
           artista: nuevoArtistaCancion || "Sin artista",
@@ -641,9 +658,14 @@ export default function App() {
           etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
           letra: nuevaLetraCancion || "",
         };
-        setRepertorio([...repertorio, nuevaCancion]);
-        setModoEdicionCancion(false);
-        alert("🎵 Canción guardada.");
+        const { error } = await supabase.from("repertorio").insert([nuevaCancionObj]);
+        if (!error) {
+          setModoEdicionCancion(false);
+          await cargarRepertorioSupabase();
+          alert("🎵 Canción guardada en la nube y sincronizada.");
+        } else {
+          alert(`⚠️ Error al guardar canción: ${error.message}`);
+        }
       }
       setNuevoTituloCancion("");
       setNuevoArtistaCancion("");
@@ -654,11 +676,17 @@ export default function App() {
     } else { alert("⚠️ Completa el título de la canción."); }
   };
 
-  const eliminarCancionRepertorio = (id) => {
+  const eliminarCancionRepertorio = async (id) => {
     if (!puedeControlarRepertorio) { alert("⚠️ Sin permisos para borrar canciones."); return; }
     if (confirm("¿Deseas eliminar esta canción del repertorio?")) {
-      setRepertorio(repertorio.filter((c) => c.id !== id));
-      setCancionSeleccionadaDetalle(null);
+      const { error } = await supabase.from("repertorio").delete().eq("id", id);
+      if (!error) {
+        await cargarRepertorioSupabase();
+        setCancionSeleccionadaDetalle(null);
+        alert("🗑️ Canción eliminada.");
+      } else {
+        alert(`⚠️ No se pudo eliminar: ${error.message}`);
+      }
     }
   };
 
@@ -711,7 +739,6 @@ export default function App() {
     const servicioObjetivo = servicios.find((s) => s.id === idServicioPostulando);
     if (!servicioObjetivo) return;
 
-    // VALIDACIÓN DE SEGURIDAD DE SEDE
     if (servicioObjetivo.sedeId !== sedeIdSeleccionada) {
       alert("⚠️ No puedes postularte ni modificar eventos pertenecientes a otra sede.");
       setModalPostularVisible(false);
@@ -750,7 +777,6 @@ export default function App() {
     const servicioObjetivo = servicios.find((s) => s.id === idServicio);
     if (!servicioObjetivo) return;
 
-    // VALIDACIÓN DE SEGURIDAD Y AISLAMIENTO DE SEDE
     if (servicioObjetivo.sedeId !== sedeIdSeleccionada) {
       alert(`⚠️ Acción denegada: Este evento pertenece a otra sede. Solo puedes gestionar servicios de ${sedeActual.nombre}.`);
       return;
@@ -1137,14 +1163,14 @@ export default function App() {
                       alignItems: "center",
                       gap: 6,
                     }}
-                    onPress={() => setMostrarSelectorEmojis(!mostrarSelectorEmojis)}
+                    onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
                   >
                     <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>
-                      {mostrarSelectorEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
+                      {mostrarMenuPersonalizacion ? "🔽 Ocultar Emojis" : "😀 Emojis"}
                     </Text>
                   </TouchableOpacity>
 
-                  {mostrarSelectorEmojis && (
+                  {mostrarMenuPersonalizacion && (
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6, backgroundColor: t.bg, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: t.border }}>
                       {["😀", "😢", "❤️", "🔥", "🙏", "🎸", "🎹", "🥁", "🙌", "✨", "⭐", "✅", "❌", "💬", "🎵"].map((emoji) => (
                         <TouchableOpacity
@@ -1438,26 +1464,20 @@ export default function App() {
                               id: nuevoId,
                               fecha: fechaActualClave,
                               titulo: nombreEvento,
-                              sedeId: sedeIdSeleccionada,
-                              observaciones: observaciones || "Sin observaciones",
-                              setlist: setlistActivo,
-                              paletaSeleccionada: paletaFinal,
-                              voces: { principal: "Sin asignar", coros: "Sin asignar" },
-                              instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-                            };
-                            setServicios([...servicios, nuevoServicioObj]);
-                            await supabase.from("servicios").insert([{
-                              id: nuevoId,
-                              fecha: fechaActualClave,
-                              titulo: nombreEvento,
                               sede_id: sedeIdSeleccionada,
                               observaciones: observaciones || "Sin observaciones",
                               setlist: setlistActivo,
                               paleta_seleccionada: paletaFinal,
                               voces: { principal: "Sin asignar", coros: "Sin asignar" },
                               instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-                            }]);
-                            alert(`✅ Nuevo servicio programado en ${sedeActual.nombre}.`);
+                            };
+                            const { error } = await supabase.from("servicios").insert([nuevoServicioObj]);
+                            if (!error) {
+                              await cargarServiciosSupabase();
+                              alert(`✅ Nuevo servicio programado en ${sedeActual.nombre}.`);
+                            } else {
+                              alert(`⚠️ Error al guardar servicio: ${error.message}`);
+                            }
                           }
                           setModalProgramarVisible(false);
                           setIdServicioEditando(null);

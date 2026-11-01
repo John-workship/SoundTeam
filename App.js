@@ -198,13 +198,14 @@ export default function App() {
   const [integrantes, setIntegrantes] = useState([]);
 
   const cargarIntegrantesSupabase = async () => {
+    // Se filtran los integrantes pertenecientes únicamente a la sede seleccionada o generales
     const { data, error } = await supabase.from("integrantes").select("*");
     if (data && !error && data.length > 0) {
       const formateados = data.map((m) => ({
         id: m.id,
         nombre: m.nombre,
         pin: m.pin,
-        sedeId: m.sede_id,
+        sedeId: m.sede_id || "general",
         rolAcceso: m.rol_acceso,
         rolesMusicales: m.roles_musicales || [],
       }));
@@ -323,13 +324,19 @@ export default function App() {
 
   const [servicios, setServicios] = useState([]);
 
+  // INDEPENDIZACIÓN DE SEDES: Cargar ÚNICAMENTE servicios pertenecientes a la sede activa
   const cargarServiciosSupabase = async () => {
-    const { data, error } = await supabase.from("servicios").select("*");
+    const { data, error } = await supabase
+      .from("servicios")
+      .select("*")
+      .eq("sede_id", sedeIdSeleccionada);
+
     if (data && !error) {
       const formateados = data.map((s) => ({
         id: s.id,
         fecha: s.fecha,
         titulo: s.titulo,
+        sedeId: s.sede_id || sedeIdSeleccionada,
         observaciones: s.observaciones || "Sin observaciones",
         setlist: s.setlist || [],
         paletaSeleccionada: s.paleta_seleccionada || null,
@@ -337,17 +344,19 @@ export default function App() {
         instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
       }));
       setServicios(formateados);
+    } else {
+      setServicios([]);
     }
   };
 
   useEffect(() => {
     cargarServiciosSupabase();
     const canalSub = supabase
-      .channel("servicios-cambios")
-      .on("postgres_changes", { event: "*", schema: "public", table: "servicios" }, () => { cargarServiciosSupabase(); })
+      .channel(`servicios-cambios-${sedeIdSeleccionada}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "servicios", filter: `sede_id=eq.${sedeIdSeleccionada}` }, () => { cargarServiciosSupabase(); })
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
-  }, []);
+  }, [sedeIdSeleccionada]);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
@@ -359,7 +368,7 @@ export default function App() {
   const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
   const [setlistActivo, setSetlistActivo] = useState([]);
 
-  // Estados para MODO EN VIVO con avance automático y metrónomo BPM dinámico
+  // MODO EN VIVO y BPM
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
   const [setlistEnVivoActual, setSetlistEnVivoActual] = useState([]);
@@ -429,7 +438,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  // Efecto para el Metrónomo Visual y Ajuste Instantáneo de BPM al cambiar de canción
+  // Metrónomo Visual en Vivo
   useEffect(() => {
     let intervalo = null;
     if (modoEnVivoActivo && metronomoActivo && setlistEnVivoActual.length > 0) {
@@ -449,15 +458,13 @@ export default function App() {
     };
   }, [modoEnVivoActivo, metronomoActivo, indiceCancionEnVivo, setlistEnVivoActual, repertorio]);
 
-  // Efecto para el Avance Automático entre canciones basado en estimación del BPM / tiempo
+  // Avance Automático entre canciones
   useEffect(() => {
     let timerAvance = null;
     if (modoEnVivoActivo && avanceAutomaticoActivo && setlistEnVivoActual.length > 0) {
       const cancionActual = setlistEnVivoActual[indiceCancionEnVivo];
       const objetoRepo = repertorio.find(r => r.titulo.toLowerCase() === cancionActual?.titulo.toLowerCase());
       const bpmNum = parseInt(objetoRepo?.bpm || cancionActual?.bpm || "120", 10) || 120;
-      
-      // Estimación estándar de 4 minutos por canción adaptada al pulso (o temporizador configurable)
       const tiempoEstimadoMs = (240000 * 120) / bpmNum; 
 
       timerAvance = setTimeout(() => {
@@ -704,6 +711,13 @@ export default function App() {
     const servicioObjetivo = servicios.find((s) => s.id === idServicioPostulando);
     if (!servicioObjetivo) return;
 
+    // VALIDACIÓN DE SEGURIDAD DE SEDE
+    if (servicioObjetivo.sedeId !== sedeIdSeleccionada) {
+      alert("⚠️ No puedes postularte ni modificar eventos pertenecientes a otra sede.");
+      setModalPostularVisible(false);
+      return;
+    }
+
     let nuevaVozP = servicioObjetivo.voces?.principal || "Sin asignar";
     let nuevosCoros = servicioObjetivo.voces?.coros ? servicioObjetivo.voces.coros.split(", ").filter((c) => c !== "Sin asignar" && c !== "") : [];
     let nuevoPiano = servicioObjetivo.instrumentos?.piano || "Sin asignar";
@@ -726,15 +740,21 @@ export default function App() {
 
     const actualizados = servicios.map((s) => s.id === idServicioPostulando ? { ...s, voces: nVoces, instrumentos: nInst } : s);
     setServicios(actualizados);
-    await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicioPostulando);
+    await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicioPostulando).eq("sede_id", sedeIdSeleccionada);
     setModalPostularVisible(false);
-    alert(`🚀 Postulación realizada.`);
+    alert(`🚀 Postulación realizada en la ${sedeActual.nombre}.`);
   };
 
   const liberarRol = async (idServicio, categoria) => {
     if (!esAdminOLider) { alert("⚠️ No tienes permisos para liberar esta postulación."); return; }
     const servicioObjetivo = servicios.find((s) => s.id === idServicio);
     if (!servicioObjetivo) return;
+
+    // VALIDACIÓN DE SEGURIDAD Y AISLAMIENTO DE SEDE
+    if (servicioObjetivo.sedeId !== sedeIdSeleccionada) {
+      alert(`⚠️ Acción denegada: Este evento pertenece a otra sede. Solo puedes gestionar servicios de ${sedeActual.nombre}.`);
+      return;
+    }
 
     let nVoces = { ...servicioObjetivo.voces };
     let nInst = { ...servicioObjetivo.instrumentos };
@@ -748,7 +768,7 @@ export default function App() {
 
     const actualizados = servicios.map((s) => s.id === idServicio ? { ...s, voces: nVoces, instrumentos: nInst } : s);
     setServicios(actualizados);
-    await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicio);
+    await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicio).eq("sede_id", sedeIdSeleccionada);
     alert("🔄 Rol liberado.");
   };
 
@@ -822,7 +842,7 @@ export default function App() {
     );
   }
 
-  // PANTALLA MODO EN VIVO CON AVANCE AUTOMÁTICO Y BPM DINÁMICO
+  // PANTALLA MODO EN VIVO
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo];
     const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo.toLowerCase());
@@ -834,7 +854,6 @@ export default function App() {
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 10 }}>
           <TouchableOpacity 
             style={{ backgroundColor: "#1E293B", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 }}
-            data-testid="salir-modo-en-vivo"
             onPress={() => { setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
           >
             <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>✕ Salir del Modo en Vivo</Text>
@@ -846,11 +865,10 @@ export default function App() {
 
         <ScrollView contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
           <View style={{ width: "100%", maxWidth: 700 }}>
-            {/* Panel Superior Escenario / Metrónomo / Avance Automático */}
             <View style={{ backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#334155" }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: "#38BDF8", fontSize: 12, fontWeight: "bold", marginBottom: 2 }}>EN ESCENARIO AHORA:</Text>
+                  <Text style={{ color: "#38BDF8", fontSize: 12, fontWeight: "bold", marginBottom: 2 }}>EN ESCENARIO AHORA ({sedeActual.nombre.toUpperCase()}):</Text>
                   <Text style={{ color: "#FFF", fontSize: 24, fontWeight: "bold" }} numberOfLines={1}>{cancionActualEnVivo?.titulo}</Text>
                 </View>
                 <View style={{ backgroundColor: "#3B82F6", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, alignItems: "center" }}>
@@ -861,7 +879,7 @@ export default function App() {
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 10, flexWrap: "wrap", gap: 8 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: pulsoActivo ? "#22C55E" : "#64748B" }} />
-                  <Text style={{ color: "#FFF", fontSize: 15, fontWeight: "bold" }}>⚡ {bpmActual} BPM (Ajustado)</Text>
+                  <Text style={{ color: "#FFF", fontSize: 15, fontWeight: "bold" }}>⚡ {bpmActual} BPM</Text>
                 </View>
 
                 <View style={{ flexDirection: "row", gap: 8 }}>
@@ -1190,7 +1208,7 @@ export default function App() {
 
               <View style={[styles.calendarCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                 <Text style={[styles.calendarHeaderTitle, { color: t.textMain }]}>
-                  {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}
+                  {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year} ({sedeActual.nombre})
                 </Text>
 
                 <View style={styles.weekHeaderRow}>
@@ -1221,7 +1239,7 @@ export default function App() {
 
               <View style={styles.serviceSectionHeader}>
                 <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>
-                  Servicios del Día {diaSeleccionado} de {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year} ({serviciosDelDia.length})
+                  Servicios en {sedeActual.nombre} el Día {diaSeleccionado} de {mesSeleccionadoObj.nombre} ({serviciosDelDia.length})
                 </Text>
 
                 {esAdminOLider && (
@@ -1244,7 +1262,7 @@ export default function App() {
               {modalProgramarVisible && (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.primary, borderWidth: 2 }]}>
                   <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 17, marginBottom: 12 }]}>
-                    {idServicioEditando !== null ? "✏️ Modificar Servicio" : "➕ Nuevo Servicio"} ({mesSeleccionadoObj.nombre} {diaSeleccionado})
+                    {idServicioEditando !== null ? "✏️ Modificar Servicio" : `➕ Nuevo Servicio (${sedeActual.nombre})`}
                   </Text>
 
                   <Text style={[styles.inputLabel, { color: t.textMain }]}>Nombre del evento / servicio</Text>
@@ -1412,7 +1430,7 @@ export default function App() {
                               observaciones: observaciones || "Sin observaciones",
                               setlist: setlistActivo,
                               paleta_seleccionada: paletaFinal,
-                            }).eq("id", idServicioEditando);
+                            }).eq("id", idServicioEditando).eq("sede_id", sedeIdSeleccionada);
                             alert("✅ Servicio actualizado con éxito.");
                           } else {
                             const nuevoId = Date.now();
@@ -1420,6 +1438,7 @@ export default function App() {
                               id: nuevoId,
                               fecha: fechaActualClave,
                               titulo: nombreEvento,
+                              sedeId: sedeIdSeleccionada,
                               observaciones: observaciones || "Sin observaciones",
                               setlist: setlistActivo,
                               paletaSeleccionada: paletaFinal,
@@ -1431,13 +1450,14 @@ export default function App() {
                               id: nuevoId,
                               fecha: fechaActualClave,
                               titulo: nombreEvento,
+                              sede_id: sedeIdSeleccionada,
                               observaciones: observaciones || "Sin observaciones",
                               setlist: setlistActivo,
                               paleta_seleccionada: paletaFinal,
                               voces: { principal: "Sin asignar", coros: "Sin asignar" },
                               instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
                             }]);
-                            alert("✅ Nuevo servicio programado con éxito.");
+                            alert(`✅ Nuevo servicio programado en ${sedeActual.nombre}.`);
                           }
                           setModalProgramarVisible(false);
                           setIdServicioEditando(null);
@@ -1458,7 +1478,7 @@ export default function App() {
 
               {modalPostularVisible && (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.selectedDay, borderWidth: 2 }]}>
-                  <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 17, marginBottom: 6 }]}>✨ Selecciona tu Rol para Postularte</Text>
+                  <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 17, marginBottom: 6 }]}>✨ Selecciona tu Rol para Postularte ({sedeActual.nombre})</Text>
                   <Text style={{ color: t.textSub, fontSize: 12, marginBottom: 14 }}>Elige en qué posición deseas servir en este servicio:</Text>
 
                   {[
@@ -1512,7 +1532,7 @@ export default function App() {
                               style={styles.deleteServiceBtn}
                               onPress={async () => {
                                 setServicios(servicios.filter((s) => s.id !== serv.id));
-                                await supabase.from("servicios").delete().eq("id", serv.id);
+                                await supabase.from("servicios").delete().eq("id", serv.id).eq("sede_id", sedeIdSeleccionada);
                               }}
                             >
                               <Text style={{ fontSize: 11, color: "#FFFFFF", fontWeight: "bold" }}>🗑️ Eliminar</Text>
@@ -1621,7 +1641,7 @@ export default function App() {
                 })
               ) : (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día.</Text>
+                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día en la {sedeActual.nombre}.</Text>
                 </View>
               )}
             </>

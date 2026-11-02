@@ -457,7 +457,6 @@ export default function App() {
       const objetoRepo = repertorio.find(r => r.titulo.toLowerCase() === cancionActual?.titulo.toLowerCase());
       const bpmNum = parseInt(objetoRepo?.bpm || cancionActual?.bpm || "120", 10) || 120;
       
-      // Estimación estándar de 4 minutos por canción adaptada al pulso (o temporizador configurable)
       const tiempoEstimadoMs = (240000 * 120) / bpmNum; 
 
       timerAvance = setTimeout(() => {
@@ -846,7 +845,6 @@ export default function App() {
 
         <ScrollView contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
           <View style={{ width: "100%", maxWidth: 700 }}>
-            {/* Panel Superior Escenario / Metrónomo / Avance Automático */}
             <View style={{ backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#334155" }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <View style={{ flex: 1 }}>
@@ -1119,7 +1117,7 @@ export default function App() {
                       alignItems: "center",
                       gap: 6,
                     }}
-                    onPress={() => setMostrarSelectorEmojis(!mostrarSelectorEmojis)}
+                    onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
                   >
                     <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>
                       {mostrarSelectorEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}

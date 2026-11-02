@@ -321,15 +321,10 @@ export default function App() {
     }
   }, [paletasCulto]);
 
-  // SERVICIOS FILTRADOS POR SEDE DESDE SUPABASE
   const [servicios, setServicios] = useState([]);
 
   const cargarServiciosSupabase = async () => {
-    const { data, error } = await supabase
-      .from("servicios")
-      .select("*")
-      .eq("sede_id", sedeIdSeleccionada);
-
+    const { data, error } = await supabase.from("servicios").select("*");
     if (data && !error) {
       const formateados = data.map((s) => ({
         id: s.id,
@@ -340,22 +335,19 @@ export default function App() {
         paletaSeleccionada: s.paleta_seleccionada || null,
         voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
         instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-        sedeId: s.sede_id,
       }));
       setServicios(formateados);
-    } else {
-      setServicios([]);
     }
   };
 
   useEffect(() => {
     cargarServiciosSupabase();
     const canalSub = supabase
-      .channel(`servicios-cambios-${sedeIdSeleccionada}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "servicios", filter: `sede_id=eq.${sedeIdSeleccionada}` }, () => { cargarServiciosSupabase(); })
+      .channel("servicios-cambios")
+      .on("postgres_changes", { event: "*", schema: "public", table: "servicios" }, () => { cargarServiciosSupabase(); })
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
-  }, [sedeIdSeleccionada]);
+  }, []);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
@@ -367,6 +359,7 @@ export default function App() {
   const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
   const [setlistActivo, setSetlistActivo] = useState([]);
 
+  // Estados para MODO EN VIVO con avance automático y metrónomo BPM dinámico
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
   const [setlistEnVivoActual, setSetlistEnVivoActual] = useState([]);
@@ -399,12 +392,21 @@ export default function App() {
   const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
-  // REPERTORIO INDEPENDIENTE POR CADA SEDE (ALMACENAMIENTO LOCAL SEGURO)
   const [repertorio, setRepertorio] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem(`soundteam_repertorio_${sedeIdSeleccionada}`);
-        return guardados ? JSON.parse(guardados) : [];
+        const guardados = localStorage.getItem("soundteam_repertorio_pro");
+        return guardados ? JSON.parse(guardados) : [
+          {
+            id: 1,
+            titulo: "A dónde iré",
+            artista: "Verbo y Vida",
+            tono: "F",
+            bpm: "120",
+            etiquetas: ["Adoración", "Entrega"],
+            letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
+          },
+        ];
       } catch (e) { return []; }
     }
     return [];
@@ -412,21 +414,9 @@ export default function App() {
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      try {
-        const guardados = localStorage.getItem(`soundteam_repertorio_${sedeIdSeleccionada}`);
-        setRepertorio(guardados ? JSON.parse(guardados) : []);
-      } catch (e) { setRepertorio([]); }
+      try { localStorage.setItem("soundteam_repertorio_pro", JSON.stringify(repertorio)); } catch (e) {}
     }
-  }, [sedeIdSeleccionada]);
-
-  const guardarRepertorioLocal = (nuevoRepertorio) => {
-    setRepertorio(nuevoRepertorio);
-    if (Platform.OS === "web") {
-      try {
-        localStorage.setItem(`soundteam_repertorio_${sedeIdSeleccionada}`, JSON.stringify(nuevoRepertorio));
-      } catch (e) {}
-    }
-  };
+  }, [repertorio]);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
@@ -439,6 +429,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
+  // Efecto para el Metrónomo Visual y Ajuste Instantáneo de BPM al cambiar de canción
   useEffect(() => {
     let intervalo = null;
     if (modoEnVivoActivo && metronomoActivo && setlistEnVivoActual.length > 0) {
@@ -458,12 +449,15 @@ export default function App() {
     };
   }, [modoEnVivoActivo, metronomoActivo, indiceCancionEnVivo, setlistEnVivoActual, repertorio]);
 
+  // Efecto para el Avance Automático entre canciones basado en estimación del BPM / tiempo
   useEffect(() => {
     let timerAvance = null;
     if (modoEnVivoActivo && avanceAutomaticoActivo && setlistEnVivoActual.length > 0) {
       const cancionActual = setlistEnVivoActual[indiceCancionEnVivo];
       const objetoRepo = repertorio.find(r => r.titulo.toLowerCase() === cancionActual?.titulo.toLowerCase());
       const bpmNum = parseInt(objetoRepo?.bpm || cancionActual?.bpm || "120", 10) || 120;
+      
+      // Estimación estándar de 4 minutos por canción adaptada al pulso (o temporizador configurable)
       const tiempoEstimadoMs = (240000 * 120) / bpmNum; 
 
       timerAvance = setTimeout(() => {
@@ -625,12 +619,11 @@ export default function App() {
           etiquetas: etiquetasActuales,
           letra: nuevaLetraCancion || "",
         };
-        const nuevoRep = repertorio.map((c) => c.id === cancionActualizada.id ? cancionActualizada : c);
-        guardarRepertorioLocal(nuevoRep);
+        setRepertorio(repertorio.map((c) => c.id === cancionActualizada.id ? cancionActualizada : c));
         setCancionSeleccionadaDetalle(cancionActualizada);
         setModoEdicionCancion(false);
         setSemitonosTransposicion(0);
-        alert("🎵 Canción actualizada en " + sedeActual.nombre + ".");
+        alert("🎵 Canción actualizada.");
       } else {
         const nuevaCancion = {
           id: Date.now(),
@@ -641,9 +634,9 @@ export default function App() {
           etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
           letra: nuevaLetraCancion || "",
         };
-        guardarRepertorioLocal([...repertorio, nuevaCancion]);
+        setRepertorio([...repertorio, nuevaCancion]);
         setModoEdicionCancion(false);
-        alert("🎵 Canción guardada en " + sedeActual.nombre + ".");
+        alert("🎵 Canción guardada.");
       }
       setNuevoTituloCancion("");
       setNuevoArtistaCancion("");
@@ -656,11 +649,9 @@ export default function App() {
 
   const eliminarCancionRepertorio = (id) => {
     if (!puedeControlarRepertorio) { alert("⚠️ Sin permisos para borrar canciones."); return; }
-    if (confirm("¿Deseas eliminar esta canción del repertorio de esta sede?")) {
-      const nuevoRep = repertorio.filter((c) => c.id !== id);
-      guardarRepertorioLocal(nuevoRep);
+    if (confirm("¿Deseas eliminar esta canción del repertorio?")) {
+      setRepertorio(repertorio.filter((c) => c.id !== id));
       setCancionSeleccionadaDetalle(null);
-      alert("🗑️ Canción eliminada.");
     }
   };
 
@@ -831,6 +822,7 @@ export default function App() {
     );
   }
 
+  // PANTALLA MODO EN VIVO CON AVANCE AUTOMÁTICO Y BPM DINÁMICO
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo];
     const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo.toLowerCase());
@@ -854,6 +846,7 @@ export default function App() {
 
         <ScrollView contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
           <View style={{ width: "100%", maxWidth: 700 }}>
+            {/* Panel Superior Escenario / Metrónomo / Avance Automático */}
             <View style={{ backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#334155" }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <View style={{ flex: 1 }}>
@@ -1228,7 +1221,7 @@ export default function App() {
 
               <View style={styles.serviceSectionHeader}>
                 <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>
-                  Servicios de {sedeActual.nombre} - Día {diaSeleccionado} de {mesSeleccionadoObj.nombre} ({serviciosDelDia.length})
+                  Servicios del Día {diaSeleccionado} de {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year} ({serviciosDelDia.length})
                 </Text>
 
                 {esAdminOLider && (
@@ -1251,7 +1244,7 @@ export default function App() {
               {modalProgramarVisible && (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.primary, borderWidth: 2 }]}>
                   <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 17, marginBottom: 12 }]}>
-                    {idServicioEditando !== null ? "✏️ Modificar Servicio" : "➕ Nuevo Servicio"} en {sedeActual.nombre}
+                    {idServicioEditando !== null ? "✏️ Modificar Servicio" : "➕ Nuevo Servicio"} ({mesSeleccionadoObj.nombre} {diaSeleccionado})
                   </Text>
 
                   <Text style={[styles.inputLabel, { color: t.textMain }]}>Nombre del evento / servicio</Text>
@@ -1385,7 +1378,7 @@ export default function App() {
                     ))
                   )}
 
-                  <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginTop: 10 }]}>Repertorio de {sedeActual.nombre} (Toca para agregar):</Text>
+                  <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginTop: 10 }]}>Biblioteca de canciones (Toca para agregar):</Text>
                   {repertorio.map((cancion) => (
                     <View key={cancion.id} style={[styles.libSongRow, { borderBottomColor: t.border }]}>
                       <Text style={{ color: t.textMain, fontSize: 13, flex: 1 }}>{cancion.titulo} <Text style={{ color: t.textSub }}>({cancion.tono} • {cancion.bpm || "120"} BPM)</Text></Text>
@@ -1432,7 +1425,6 @@ export default function App() {
                               paletaSeleccionada: paletaFinal,
                               voces: { principal: "Sin asignar", coros: "Sin asignar" },
                               instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-                              sede_id: sedeIdSeleccionada,
                             };
                             setServicios([...servicios, nuevoServicioObj]);
                             await supabase.from("servicios").insert([{
@@ -1444,9 +1436,8 @@ export default function App() {
                               paleta_seleccionada: paletaFinal,
                               voces: { principal: "Sin asignar", coros: "Sin asignar" },
                               instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-                              sede_id: sedeIdSeleccionada,
                             }]);
-                            alert(`✅ Nuevo servicio programado en ${sedeActual.nombre}.`);
+                            alert("✅ Nuevo servicio programado con éxito.");
                           }
                           setModalProgramarVisible(false);
                           setIdServicioEditando(null);
@@ -1553,6 +1544,7 @@ export default function App() {
                         <Text style={{ color: t.textSub, fontSize: 12, marginLeft: 8, fontStyle: "italic" }}>Sin canciones agregadas al setlist.</Text>
                       )}
 
+                      {/* BOTÓN MODO EN VIVO */}
                       {serv.setlist && serv.setlist.length > 0 && (
                         <TouchableOpacity
                           style={{ backgroundColor: "#2563EB", padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8, marginBottom: 10 }}
@@ -1629,7 +1621,7 @@ export default function App() {
                 })
               ) : (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día en {sedeActual.nombre}.</Text>
+                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día.</Text>
                 </View>
               )}
             </>
@@ -1981,7 +1973,7 @@ export default function App() {
                 <>
                   {puedeControlarRepertorio && (
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 10 }]}>➕ Agregar Nueva Canción en {sedeActual.nombre}</Text>
+                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 10 }]}>➕ Agregar Nueva Canción</Text>
                       <View style={{ gap: 8 }}>
                         <TextInput
                           style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
@@ -2023,14 +2015,14 @@ export default function App() {
                           multiline
                         />
                         <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, padding: 10 }]} onPress={guardarOActualizarCancion}>
-                          <Text style={styles.loginButtonText}>Guardar en Repertorio de Sede</Text>
+                          <Text style={styles.loginButtonText}>Guardar en Repertorio</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   )}
 
                   <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
+                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio ({repertorio.length})</Text>
                     {repertorio.map((c) => (
                       <TouchableOpacity
                         key={c.id}

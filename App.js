@@ -321,7 +321,6 @@ export default function App() {
     }
   }, [paletasCulto]);
 
-  // SERVICIOS FILTRADOS ESTRICTAMENTE POR SEDE
   const [servicios, setServicios] = useState([]);
 
   const cargarServiciosSupabase = async () => {
@@ -399,7 +398,6 @@ export default function App() {
   const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
-  // REPERTORIO INDEPENDIENTE POR CADA SEDE
   const [repertorio, setRepertorio] = useState(() => {
     if (Platform.OS === "web") {
       try {
@@ -494,7 +492,6 @@ export default function App() {
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
   const [idMensajeEditando, setIdMensajeEditando] = useState(null);
   const [textoOriginalEditando, setTextoOriginalEditando] = useState("");
-  const [mostrarSelectorEmojis, setMostrarSelectorEmojis] = useState(false);
 
   const cargarMensajesSupabase = async () => {
     const { data, error } = await supabase
@@ -567,11 +564,15 @@ export default function App() {
     }
   };
 
+  // FUNCIÓN CON RECARGA COMPLETA ANTI-CACHÉ PARA CELULARES Y PWA
   const recargarDatosApp = async () => {
     await cargarServiciosSupabase();
     await cargarMensajesSupabase();
     await cargarIntegrantesSupabase();
-    alert("🔄 ¡Datos actualizados correctamente!");
+    
+    if (Platform.OS === "web") {
+      window.location.reload(true);
+    }
   };
 
   const esAdmin = rolUsuario === "admin";
@@ -1120,42 +1121,6 @@ export default function App() {
                       })
                     )}
                   </ScrollView>
-                </View>
-
-                <View style={{ marginBottom: 8 }}>
-                  <TouchableOpacity
-                    style={{
-                      backgroundColor: t.bg,
-                      borderWidth: 1,
-                      borderColor: t.border,
-                      paddingVertical: 6,
-                      paddingHorizontal: 10,
-                      borderRadius: 6,
-                      alignSelf: "flex-start",
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                    onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
-                  >
-                    <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>
-                      {mostrarMenuPersonalizacion ? "🔽 Ocultar Emojis" : "😀 Emojis"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {mostrarMenuPersonalizacion && (
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6, backgroundColor: t.bg, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: t.border }}>
-                      {["😀", "😢", "❤️", "🔥", "🙏", "🎸", "🎹", "🥁", "🙌", "✨", "⭐", "✅", "❌", "💬", "🎵"].map((emoji) => (
-                        <TouchableOpacity
-                          key={emoji}
-                          style={{ backgroundColor: t.cardBg, borderWidth: 1, borderColor: t.border, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}
-                          onPress={() => { setNuevoMensajeTexto((prev) => prev + emoji); setMostrarMenuPersonalizacion(false); }}
-                        >
-                          <Text style={{ fontSize: 16 }}>{emoji}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
                 </View>
 
                 {idMensajeEditando !== null && (

@@ -398,43 +398,40 @@ export default function App() {
   const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
-  const [repertorio, setRepertorio] = useState(() => {
-    if (Platform.OS === "web") {
-      try {
-        const guardados = localStorage.getItem(`soundteam_repertorio_${sedeIdSeleccionada}`);
-        return guardados ? JSON.parse(guardados) : [
-          {
-            id: 1,
-            titulo: "A dónde iré",
-            artista: "Verbo y Vida",
-            tono: "F",
-            bpm: "120",
-            etiquetas: ["Adoración", "Entrega"],
-            letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
-          },
-        ];
-      } catch (e) { return []; }
-    }
-    return [];
-  });
+  // REPERTORIO SINCRONIZADO DESDE SUPABASE POR SEDE
+  const [repertorio, setRepertorio] = useState([]);
 
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      try {
-        const guardados = localStorage.getItem(`soundteam_repertorio_${sedeIdSeleccionada}`);
-        setRepertorio(guardados ? JSON.parse(guardados) : []);
-      } catch (e) { setRepertorio([]); }
-    }
-  }, [sedeIdSeleccionada]);
+  const cargarRepertorioSupabase = async () => {
+    const { data, error } = await supabase
+      .from("repertorio")
+      .select("*")
+      .eq("sede_id", sedeIdSeleccionada);
 
-  const guardarRepertorioLocal = (nuevoRepertorio) => {
-    setRepertorio(nuevoRepertorio);
-    if (Platform.OS === "web") {
-      try {
-        localStorage.setItem(`soundteam_repertorio_${sedeIdSeleccionada}`, JSON.stringify(nuevoRepertorio));
-      } catch (e) {}
+    if (data && !error) {
+      const formateados = data.map((c) => ({
+        id: c.id,
+        titulo: c.titulo,
+        artista: c.artista || "Sin artista",
+        tono: c.tono || "C",
+        bpm: c.bpm || "120",
+        etiquetas: c.etiquetas || [],
+        letra: c.letra || "",
+        sedeId: c.sede_id,
+      }));
+      setRepertorio(formateados);
+    } else {
+      setRepertorio([]);
     }
   };
+
+  useEffect(() => {
+    cargarRepertorioSupabase();
+    const canalSub = supabase
+      .channel(`repertorio-cambios-${sedeIdSeleccionada}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "repertorio", filter: `sede_id=eq.${sedeIdSeleccionada}` }, () => { cargarRepertorioSupabase(); })
+      .subscribe();
+    return () => { supabase.removeChannel(canalSub); };
+  }, [sedeIdSeleccionada]);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
@@ -564,9 +561,9 @@ export default function App() {
     }
   };
 
-  // FUNCIÓN CON RECARGA COMPLETA ANTI-CACHÉ PARA CELULARES Y PWA
   const recargarDatosApp = async () => {
     await cargarServiciosSupabase();
+    await cargarRepertorioSupabase();
     await cargarMensajesSupabase();
     await cargarIntegrantesSupabase();
     
@@ -623,36 +620,39 @@ export default function App() {
     }
   };
 
-  const guardarOActualizarCancion = () => {
+  const guardarOActualizarCancion = async () => {
     if (!puedeControlarRepertorio) { alert("⚠️ No tienes permisos suficientes para modificar el repertorio."); return; }
     if (nuevoTituloCancion.trim() !== "") {
       if (cancionSeleccionadaDetalle !== null && modoEdicionCancion) {
         const cancionActualizada = {
-          ...cancionSeleccionadaDetalle,
           titulo: nuevoTituloCancion,
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
           etiquetas: etiquetasActuales,
           letra: nuevaLetraCancion || "",
+          sede_id: sedeIdSeleccionada,
         };
-        const nuevoRep = repertorio.map((c) => c.id === cancionActualizada.id ? cancionActualizada : c);
-        guardarRepertorioLocal(nuevoRep);
-        setCancionSeleccionadaDetalle(cancionActualizada);
+        await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
+        await cargarRepertorioSupabase();
         setModoEdicionCancion(false);
         setSemitonosTransposicion(0);
+        setCancionSeleccionadaDetalle(null);
         alert("🎵 Canción actualizada en " + sedeActual.nombre + ".");
       } else {
+        const nuevoId = Date.now();
         const nuevaCancion = {
-          id: Date.now(),
+          id: nuevoId,
           titulo: nuevoTituloCancion,
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
           etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
           letra: nuevaLetraCancion || "",
+          sede_id: sedeIdSeleccionada,
         };
-        guardarRepertorioLocal([...repertorio, nuevaCancion]);
+        await supabase.from("repertorio").insert([nuevaCancion]);
+        await cargarRepertorioSupabase();
         setModoEdicionCancion(false);
         alert("🎵 Canción guardada en " + sedeActual.nombre + ".");
       }
@@ -665,11 +665,11 @@ export default function App() {
     } else { alert("⚠️ Completa el título de la canción."); }
   };
 
-  const eliminarCancionRepertorio = (id) => {
+  const eliminarCancionRepertorio = async (id) => {
     if (!puedeControlarRepertorio) { alert("⚠️ Sin permisos para borrar canciones."); return; }
     if (confirm("¿Deseas eliminar esta canción del repertorio de esta sede?")) {
-      const nuevoRep = repertorio.filter((c) => c.id !== id);
-      guardarRepertorioLocal(nuevoRep);
+      await supabase.from("repertorio").delete().eq("id", id);
+      await cargarRepertorioSupabase();
       setCancionSeleccionadaDetalle(null);
       alert("🗑️ Canción eliminada.");
     }

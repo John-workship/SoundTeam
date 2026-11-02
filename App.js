@@ -102,6 +102,26 @@ const TEMAS = {
   },
 };
 
+const PAPELES_TAPIZ = {
+  ninguno: { nombre: "🎨 Liso", css: {} },
+  ipuc: { 
+    nombre: "⛪ IPUC", 
+    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
+  },
+  patronMusical: { 
+    nombre: "🎵 Notas Musicales", 
+    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
+  },
+  eventos: { 
+    nombre: "📷 Eventos", 
+    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
+  },
+  maderaAcustica: { 
+    nombre: "🪵 Madera Estudio", 
+    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1546484475-7f7bd55792da?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
+  },
+};
+
 const SEDES_DISPONIBLES = [
   { id: "general", nombre: "Sede General" },
   { id: "norte", nombre: "Sede Norte" },
@@ -140,37 +160,24 @@ const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
   return transponerNotaUnica(acordeCompuesto, semitonos);
 };
 
-// Función auxiliar para detectar si un fragmento de texto es un acorde válido
-const esAcordeValido = (str) => {
-  const limpia = str.trim().replace(/[^A-G#bm0-9/]/g, "");
-  return /^[A-G](#|b)?(m|maj|min|dim|aug|sus|[0-9])*(\/[A-G](#|b)?)?$/.test(limpia) && limpia.length > 0;
-};
-
-// FUNCIÓN DEFINITIVA Y ROBUSTA: Transpone cada línea completa de principio a fin sin detenerse
 const transponerTextoLetra = (texto, semitonos) => {
   if (semitonos === 0 || !texto) return texto;
-
-  const lineas = texto.split("\n");
-  const lineasProcesadas = lineas.map((linea) => {
-    const trimmed = linea.trim();
-    // Si la línea es una etiqueta entre corchetes (ej. [Estribillo]) o paréntesis, se respeta intacta
-    if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith("(") && trimmed.endsWith(")"))) {
-      return linea;
-    }
-
-    // Dividimos la línea manteniendo los espacios para no perder la alineación de los acordes
-    // Buscamos tokens separados por espacios y transponemos los que sean acordes válidos
-    const partes = linea.split(/(\s+)/);
-    const partesProcesadas = partes.map((parte) => {
-      if (esAcordeValido(parte)) {
-        return transponerAcordeCompuesto(parte, semitonos);
-      }
-      return parte;
-    });
-
-    return partesProcesadas.join("");
+  let textoTranspuesto = texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
+    return "[" + transponerAcordeCompuesto(p1, semitonos) + "]";
   });
-
+  const lineas = textoTranspuesto.split("\n");
+  const lineasProcesadas = lineas.map((linea) => {
+    if (linea.trim().startsWith("[") && linea.trim().endsWith("]")) return linea;
+    const palabras = linea.trim().split(/\s+/);
+    const esLineaDeAcordes = palabras.length > 0 && palabras.every((p) => {
+      const limpia = p.replace(/[^A-G#bm0-9/]/g, "");
+      return /^[A-G](#|b)?(m|maj|min|dim|aug|sus|[0-9])*(\/[A-G](#|b)?)?$/.test(limpia);
+    });
+    if (esLineaDeAcordes) {
+      return palabras.map((p) => transponerAcordeCompuesto(p, semitonos)).join("   ");
+    }
+    return linea;
+  });
   return lineasProcesadas.join("\n");
 };
 
@@ -244,6 +251,13 @@ export default function App() {
     return "azul";
   });
 
+  const [nombreTapiz, setNombreTapiz] = useState(() => {
+    if (Platform.OS === "web") {
+      try { return localStorage.getItem("soundteam_tapiz_app") || "ninguno"; } catch (e) { return "ninguno"; }
+    }
+    return "ninguno";
+  });
+
   const [mostrarMenuPersonalizacion, setMostrarMenuPersonalizacion] = useState(false);
 
   useEffect(() => {
@@ -252,7 +266,14 @@ export default function App() {
     }
   }, [nombreTema]);
 
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      try { localStorage.setItem("soundteam_tapiz_app", nombreTapiz); } catch (e) {}
+    }
+  }, [nombreTapiz]);
+
   const t = TEMAS[nombreTema];
+  const tapizActual = PAPELES_TAPIZ[nombreTapiz] || PAPELES_TAPIZ.ninguno;
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
   const integrantesSeccionEquipo = integrantes.filter((m) => {
@@ -303,11 +324,7 @@ export default function App() {
   const [servicios, setServicios] = useState([]);
 
   const cargarServiciosSupabase = async () => {
-    const { data, error } = await supabase
-      .from("servicios")
-      .select("*")
-      .eq("sede_id", sedeIdSeleccionada);
-
+    const { data, error } = await supabase.from("servicios").select("*");
     if (data && !error) {
       const formateados = data.map((s) => ({
         id: s.id,
@@ -318,22 +335,19 @@ export default function App() {
         paletaSeleccionada: s.paleta_seleccionada || null,
         voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
         instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-        sedeId: s.sede_id,
       }));
       setServicios(formateados);
-    } else {
-      setServicios([]);
     }
   };
 
   useEffect(() => {
     cargarServiciosSupabase();
     const canalSub = supabase
-      .channel(`servicios-cambios-${sedeIdSeleccionada}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "servicios", filter: `sede_id=eq.${sedeIdSeleccionada}` }, () => { cargarServiciosSupabase(); })
+      .channel("servicios-cambios")
+      .on("postgres_changes", { event: "*", schema: "public", table: "servicios" }, () => { cargarServiciosSupabase(); })
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
-  }, [sedeIdSeleccionada]);
+  }, []);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
@@ -345,6 +359,7 @@ export default function App() {
   const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
   const [setlistActivo, setSetlistActivo] = useState([]);
 
+  // Estados para MODO EN VIVO con avance automático y metrónomo BPM dinámico
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
   const [setlistEnVivoActual, setSetlistEnVivoActual] = useState([]);
@@ -380,8 +395,18 @@ export default function App() {
   const [repertorio, setRepertorio] = useState(() => {
     if (Platform.OS === "web") {
       try {
-        const guardados = localStorage.getItem(`soundteam_repertorio_${sedeIdSeleccionada}`);
-        return guardados ? JSON.parse(guardados) : [];
+        const guardados = localStorage.getItem("soundteam_repertorio_pro");
+        return guardados ? JSON.parse(guardados) : [
+          {
+            id: 1,
+            titulo: "A dónde iré",
+            artista: "Verbo y Vida",
+            tono: "F",
+            bpm: "120",
+            etiquetas: ["Adoración", "Entrega"],
+            letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
+          },
+        ];
       } catch (e) { return []; }
     }
     return [];
@@ -389,20 +414,9 @@ export default function App() {
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      try {
-        const guardados = localStorage.getItem(`soundteam_repertorio_${sedeIdSeleccionada}`);
-        setRepertorio(guardados ? JSON.parse(guardados) : []);
-      } catch (e) {}
+      try { localStorage.setItem("soundteam_repertorio_pro", JSON.stringify(repertorio)); } catch (e) {}
     }
-  }, [sedeIdSeleccionada]);
-
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      try {
-        localStorage.setItem(`soundteam_repertorio_${sedeIdSeleccionada}`, JSON.stringify(repertorio));
-      } catch (e) {}
-    }
-  }, [repertorio, sedeIdSeleccionada]);
+  }, [repertorio]);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
@@ -415,6 +429,7 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
+  // Efecto para el Metrónomo Visual y Ajuste Instantáneo de BPM al cambiar de canción
   useEffect(() => {
     let intervalo = null;
     if (modoEnVivoActivo && metronomoActivo && setlistEnVivoActual.length > 0) {
@@ -434,12 +449,15 @@ export default function App() {
     };
   }, [modoEnVivoActivo, metronomoActivo, indiceCancionEnVivo, setlistEnVivoActual, repertorio]);
 
+  // Efecto para el Avance Automático entre canciones basado en estimación del BPM / tiempo
   useEffect(() => {
     let timerAvance = null;
     if (modoEnVivoActivo && avanceAutomaticoActivo && setlistEnVivoActual.length > 0) {
       const cancionActual = setlistEnVivoActual[indiceCancionEnVivo];
       const objetoRepo = repertorio.find(r => r.titulo.toLowerCase() === cancionActual?.titulo.toLowerCase());
       const bpmNum = parseInt(objetoRepo?.bpm || cancionActual?.bpm || "120", 10) || 120;
+      
+      // Estimación estándar de 4 minutos por canción adaptada al pulso (o temporizador configurable)
       const tiempoEstimadoMs = (240000 * 120) / bpmNum; 
 
       timerAvance = setTimeout(() => {
@@ -605,7 +623,7 @@ export default function App() {
         setCancionSeleccionadaDetalle(cancionActualizada);
         setModoEdicionCancion(false);
         setSemitonosTransposicion(0);
-        alert("🎵 Canción actualizada en " + sedeActual.nombre + ".");
+        alert("🎵 Canción actualizada.");
       } else {
         const nuevaCancion = {
           id: Date.now(),
@@ -618,7 +636,7 @@ export default function App() {
         };
         setRepertorio([...repertorio, nuevaCancion]);
         setModoEdicionCancion(false);
-        alert("🎵 Canción guardada en " + sedeActual.nombre + ".");
+        alert("🎵 Canción guardada.");
       }
       setNuevoTituloCancion("");
       setNuevoArtistaCancion("");
@@ -631,10 +649,9 @@ export default function App() {
 
   const eliminarCancionRepertorio = (id) => {
     if (!puedeControlarRepertorio) { alert("⚠️ Sin permisos para borrar canciones."); return; }
-    if (confirm("¿Deseas eliminar esta canción del repertorio de esta sede?")) {
+    if (confirm("¿Deseas eliminar esta canción del repertorio?")) {
       setRepertorio(repertorio.filter((c) => c.id !== id));
       setCancionSeleccionadaDetalle(null);
-      alert("🗑️ Canción eliminada.");
     }
   };
 
@@ -694,62 +711,15 @@ export default function App() {
     let nuevoBajo = servicioObjetivo.instrumentos?.bajo || "Sin asignar";
     let nuevaBateria = servicioObjetivo.instrumentos?.bateria || "Sin asignar";
 
-    const yaEstaPostulado = 
-      nuevaVozP === usuario || 
-      nuevosCoros.includes(usuario) || 
-      nuevoPiano === usuario || 
-      nuevaGuitarra === usuario || 
-      nuevoBajo === usuario || 
-      nuevaBateria === usuario;
+    const yaEstaPostulado = nuevaVozP === usuario || nuevosCoros.includes(usuario) || nuevoPiano === usuario || nuevaGuitarra === usuario || nuevoBajo === usuario || nuevaBateria === usuario;
+    if (yaEstaPostulado) { alert(`⚠️ Ya estás postulado en este servicio.`); setModalPostularVisible(false); return; }
 
-    if (yaEstaPostulado) { 
-      alert(`⚠️ Ya estás postulado en este servicio.`); 
-      setModalPostularVisible(false); 
-      return; 
-    }
-
-    if (rol === "vozPrincipal") { 
-      if (nuevaVozP !== "Sin asignar") { 
-        alert("⚠️ La Voz Principal ya se encuentra ocupada."); 
-        return; 
-      } 
-      nuevaVozP = usuario; 
-    }
-    else if (rol === "coros") { 
-      if (nuevosCoros.length >= 3) { 
-        alert("⚠️ El grupo de Coros ya alcanzó el límite máximo de 3 personas."); 
-        return; 
-      } 
-      nuevosCoros.push(usuario); 
-    }
-    else if (rol === "piano") { 
-      if (nuevoPiano !== "Sin asignar") { 
-        alert("⚠️ El Piano ya se encuentra ocupado."); 
-        return; 
-      } 
-      nuevoPiano = usuario; 
-    }
-    else if (rol === "guitarra") { 
-      if (nuevaGuitarra !== "Sin asignar") { 
-        alert("⚠️ La Guitarra ya se encuentra ocupada."); 
-        return; 
-      } 
-      nuevaGuitarra = usuario; 
-    }
-    else if (rol === "bajo") { 
-      if (nuevoBajo !== "Sin asignar") { 
-        alert("⚠️ El Bajo ya se encuentra ocupado."); 
-        return; 
-      } 
-      nuevoBajo = usuario; 
-    }
-    else if (rol === "bateria") { 
-      if (nuevaBateria !== "Sin asignar") { 
-        alert("⚠️ La Batería ya se encuentra ocupada."); 
-        return; 
-      } 
-      nuevaBateria = usuario; 
-    }
+    if (rol === "vozPrincipal") { if (nuevaVozP !== "Sin asignar") { alert("⚠️ Voz Principal ocupada."); return; } nuevaVozP = usuario; }
+    else if (rol === "coros") { if (nuevosCoros.length >= 3) { alert("⚠️ Coros al límite (3 personas)."); return; } nuevosCoros.push(usuario); }
+    else if (rol === "piano") { if (nuevoPiano !== "Sin asignar") { alert("⚠️ Piano ocupado."); return; } nuevoPiano = usuario; }
+    else if (rol === "guitarra") { if (nuevaGuitarra !== "Sin asignar") { alert("⚠️ Guitarra ocupada."); return; } nuevaGuitarra = usuario; }
+    else if (rol === "bajo") { if (nuevoBajo !== "Sin asignar") { alert("⚠️ Bajo ocupado."); return; } nuevoBajo = usuario; }
+    else if (rol === "bateria") { if (nuevaBateria !== "Sin asignar") { alert("⚠️ Batería ocupada."); return; } nuevaBateria = usuario; }
 
     const nVoces = { principal: nuevaVozP, coros: nuevosCoros.length > 0 ? nuevosCoros.join(", ") : "Sin asignar" };
     const nInst = { piano: nuevoPiano, guitarra: nuevaGuitarra, bajo: nuevoBajo, bateria: nuevaBateria };
@@ -758,7 +728,7 @@ export default function App() {
     setServicios(actualizados);
     await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicioPostulando);
     setModalPostularVisible(false);
-    alert(`🚀 ¡Postulación realizada con éxito!`);
+    alert(`🚀 Postulación realizada.`);
   };
 
   const liberarRol = async (idServicio, categoria) => {
@@ -852,6 +822,7 @@ export default function App() {
     );
   }
 
+  // PANTALLA MODO EN VIVO CON AVANCE AUTOMÁTICO Y BPM DINÁMICO
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo];
     const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo.toLowerCase());
@@ -875,6 +846,7 @@ export default function App() {
 
         <ScrollView contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
           <View style={{ width: "100%", maxWidth: 700 }}>
+            {/* Panel Superior Escenario / Metrónomo / Avance Automático */}
             <View style={{ backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#334155" }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <View style={{ flex: 1 }}>
@@ -950,7 +922,7 @@ export default function App() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: t.bg }]}>
+    <View style={[styles.container, { backgroundColor: t.bg }, tapizActual.css]}>
       <View style={[styles.header, { backgroundColor: t.cardBg, borderBottomColor: t.border }]}>
         <View style={styles.headerTopRow}>
           <View style={{ flex: 1 }}>
@@ -985,7 +957,7 @@ export default function App() {
             onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
           >
             <Text style={{ fontSize: 11, color: t.textMain, fontWeight: "bold" }}>
-              🎨 Tema: {t.nombre}
+              🎨 Tema: {t.nombre} | Papel Tapiz: {tapizActual.nombre}
             </Text>
             <Text style={{ fontSize: 11, color: t.primary, fontWeight: "bold" }}>{mostrarMenuPersonalizacion ? "▲ Ocultar" : "▼ Personalizar"}</Text>
           </TouchableOpacity>
@@ -1013,6 +985,25 @@ export default function App() {
                     >
                       <Text style={{ fontSize: 10, color: activo ? "#FFFFFF" : t.textMain, fontWeight: activo ? "bold" : "normal" }}>
                         {itemTema.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={{ fontSize: 11, color: t.textSub, fontWeight: "bold", marginTop: 4 }}>Papel Tapiz / Fondo:</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+                {Object.keys(PAPELES_TAPIZ).map((keyTapiz) => {
+                  const activoTapiz = nombreTapiz === keyTapiz;
+                  const tapizObj = PAPELES_TAPIZ[keyTapiz];
+                  return (
+                    <TouchableOpacity
+                      key={keyTapiz}
+                      style={{ paddingVertical: 4, paddingHorizontal: 6, borderRadius: 4, backgroundColor: activoTapiz ? t.primary : t.bg, borderWidth: 1, borderColor: t.border }}
+                      onPress={() => setNombreTapiz(keyTapiz)}
+                    >
+                      <Text style={{ fontSize: 10, color: activoTapiz ? "#FFFFFF" : t.textMain, fontWeight: activoTapiz ? "bold" : "normal" }}>
+                        {tapizObj.nombre}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -1128,10 +1119,10 @@ export default function App() {
                       alignItems: "center",
                       gap: 6,
                     }}
-                    onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
+                    onPress={() => setMostrarSelectorEmojis(!mostrarSelectorEmojis)}
                   >
                     <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>
-                      {mostrarMenuPersonalizacion ? "🔽 Ocultar Emojis" : "😀 Emojis"}
+                      {mostrarSelectorEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
                     </Text>
                   </TouchableOpacity>
 
@@ -1387,7 +1378,7 @@ export default function App() {
                     ))
                   )}
 
-                  <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginTop: 10 }]}>Biblioteca de canciones ({sedeActual.nombre}) (Toca para agregar):</Text>
+                  <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginTop: 10 }]}>Biblioteca de canciones (Toca para agregar):</Text>
                   {repertorio.map((cancion) => (
                     <View key={cancion.id} style={[styles.libSongRow, { borderBottomColor: t.border }]}>
                       <Text style={{ color: t.textMain, fontSize: 13, flex: 1 }}>{cancion.titulo} <Text style={{ color: t.textSub }}>({cancion.tono} • {cancion.bpm || "120"} BPM)</Text></Text>
@@ -1434,7 +1425,6 @@ export default function App() {
                               paletaSeleccionada: paletaFinal,
                               voces: { principal: "Sin asignar", coros: "Sin asignar" },
                               instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-                              sede_id: sedeIdSeleccionada,
                             };
                             setServicios([...servicios, nuevoServicioObj]);
                             await supabase.from("servicios").insert([{
@@ -1446,9 +1436,8 @@ export default function App() {
                               paleta_seleccionada: paletaFinal,
                               voces: { principal: "Sin asignar", coros: "Sin asignar" },
                               instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-                              sede_id: sedeIdSeleccionada,
                             }]);
-                            alert(`✅ Nuevo servicio programado en ${sedeActual.nombre}.`);
+                            alert("✅ Nuevo servicio programado con éxito.");
                           }
                           setModalProgramarVisible(false);
                           setIdServicioEditando(null);
@@ -1470,15 +1459,15 @@ export default function App() {
               {modalPostularVisible && (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.selectedDay, borderWidth: 2 }]}>
                   <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 17, marginBottom: 6 }]}>✨ Selecciona tu Rol para Postularte</Text>
-                  <Text style={{ color: t.textSub, fontSize: 12, marginBottom: 14 }}>Elige en qué posición deseas servir (se aplican límites por puesto):</Text>
+                  <Text style={{ color: t.textSub, fontSize: 12, marginBottom: 14 }}>Elige en qué posición deseas servir en este servicio:</Text>
 
                   {[
-                    { key: "vozPrincipal", label: "🎤 Voz Principal (Máx. 1 persona)" },
-                    { key: "coros", label: "👥 Coros (Máx. 3 personas)" },
-                    { key: "piano", label: "🎹 Piano (Máx. 1 persona)" },
-                    { key: "guitarra", label: "🎸 Guitarra (Máx. 1 persona)" },
-                    { key: "bajo", label: "🎸 Bajo (Máx. 1 persona)" },
-                    { key: "bateria", label: "🥁 Batería (Máx. 1 persona)" },
+                    { key: "vozPrincipal", label: "🎤 Voz Principal (Máx. 1)" },
+                    { key: "coros", label: "👥 Coros (Máx. 3)" },
+                    { key: "piano", label: "🎹 Piano (Máx. 1)" },
+                    { key: "guitarra", label: "🎸 Guitarra (Máx. 1)" },
+                    { key: "bajo", label: "🎸 Bajo (Máx. 1)" },
+                    { key: "bateria", label: "🥁 Batería (Máx. 1)" },
                   ].map((rolObj) => (
                     <TouchableOpacity
                       key={rolObj.key}
@@ -1555,6 +1544,7 @@ export default function App() {
                         <Text style={{ color: t.textSub, fontSize: 12, marginLeft: 8, fontStyle: "italic" }}>Sin canciones agregadas al setlist.</Text>
                       )}
 
+                      {/* BOTÓN MODO EN VIVO */}
                       {serv.setlist && serv.setlist.length > 0 && (
                         <TouchableOpacity
                           style={{ backgroundColor: "#2563EB", padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8, marginBottom: 10 }}
@@ -1631,7 +1621,7 @@ export default function App() {
                 })
               ) : (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día en {sedeActual.nombre}.</Text>
+                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día.</Text>
                 </View>
               )}
             </>
@@ -1983,7 +1973,7 @@ export default function App() {
                 <>
                   {puedeControlarRepertorio && (
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 10 }]}>➕ Agregar Nueva Canción en {sedeActual.nombre}</Text>
+                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 10 }]}>➕ Agregar Nueva Canción</Text>
                       <View style={{ gap: 8 }}>
                         <TextInput
                           style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
@@ -2018,21 +2008,21 @@ export default function App() {
                         </View>
                         <TextInput
                           style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 70, textAlignVertical: "top", marginBottom: 0 }]}
-                          placeholder="Letra con acordes [G] o comentarios [Estribillo]..."
+                          placeholder="Letra con acordes entre corchetes [C]..."
                           placeholderTextColor={t.textSub}
                           value={nuevaLetraCancion}
                           onChangeText={setNuevaLetraCancion}
                           multiline
                         />
                         <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, padding: 10 }]} onPress={guardarOActualizarCancion}>
-                          <Text style={styles.loginButtonText}>Guardar en Repertorio de Sede</Text>
+                          <Text style={styles.loginButtonText}>Guardar en Repertorio</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   )}
 
                   <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
+                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio ({repertorio.length})</Text>
                     {repertorio.map((c) => (
                       <TouchableOpacity
                         key={c.id}

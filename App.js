@@ -140,24 +140,37 @@ const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
   return transponerNotaUnica(acordeCompuesto, semitonos);
 };
 
+// Función auxiliar para detectar si un fragmento de texto es un acorde válido
+const esAcordeValido = (str) => {
+  const limpia = str.trim().replace(/[^A-G#bm0-9/]/g, "");
+  return /^[A-G](#|b)?(m|maj|min|dim|aug|sus|[0-9])*(\/[A-G](#|b)?)?$/.test(limpia) && limpia.length > 0;
+};
+
+// FUNCIÓN DEFINITIVA Y ROBUSTA: Transpone cada línea completa de principio a fin sin detenerse
 const transponerTextoLetra = (texto, semitonos) => {
   if (semitonos === 0 || !texto) return texto;
-  let textoTranspuesto = texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
-    return "[" + transponerAcordeCompuesto(p1, semitonos) + "]";
-  });
-  const lineas = textoTranspuesto.split("\n");
+
+  const lineas = texto.split("\n");
   const lineasProcesadas = lineas.map((linea) => {
-    if (linea.trim().startsWith("[") && linea.trim().endsWith("]")) return linea;
-    const palabras = linea.trim().split(/\s+/);
-    const esLineaDeAcordes = palabras.length > 0 && palabras.every((p) => {
-      const limpia = p.replace(/[^A-G#bm0-9/]/g, "");
-      return /^[A-G](#|b)?(m|maj|min|dim|aug|sus|[0-9])*(\/[A-G](#|b)?)?$/.test(limpia);
-    });
-    if (esLineaDeAcordes) {
-      return palabras.map((p) => transponerAcordeCompuesto(p, semitonos)).join("   ");
+    const trimmed = linea.trim();
+    // Si la línea es una etiqueta entre corchetes (ej. [Estribillo]) o paréntesis, se respeta intacta
+    if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith("(") && trimmed.endsWith(")"))) {
+      return linea;
     }
-    return linea;
+
+    // Dividimos la línea manteniendo los espacios para no perder la alineación de los acordes
+    // Buscamos tokens separados por espacios y transponemos los que sean acordes válidos
+    const partes = linea.split(/(\s+)/);
+    const partesProcesadas = partes.map((parte) => {
+      if (esAcordeValido(parte)) {
+        return transponerAcordeCompuesto(parte, semitonos);
+      }
+      return parte;
+    });
+
+    return partesProcesadas.join("");
   });
+
   return lineasProcesadas.join("\n");
 };
 
@@ -364,22 +377,11 @@ export default function App() {
   const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
-  // REPERTORIO INDEPENDIENTE POR CEDE USANDO LOCALSTORAGE ESPECÍFICO
   const [repertorio, setRepertorio] = useState(() => {
     if (Platform.OS === "web") {
       try {
         const guardados = localStorage.getItem(`soundteam_repertorio_${sedeIdSeleccionada}`);
-        return guardados ? JSON.parse(guardados) : [
-          {
-            id: 1,
-            titulo: "A dónde iré",
-            artista: "Verbo y Vida",
-            tono: "F",
-            bpm: "120",
-            etiquetas: ["Adoración", "Entrega"],
-            letra: "[INTRO]\nF C Dm\nC Bb F\nGm Bb\n\n[PRIMERA PARTE]\n[F] Siento que sin ti\n[Bb] Mi vida es nada",
-          },
-        ];
+        return guardados ? JSON.parse(guardados) : [];
       } catch (e) { return []; }
     }
     return [];
@@ -1126,10 +1128,10 @@ export default function App() {
                       alignItems: "center",
                       gap: 6,
                     }}
-                    onPress={() => setMostrarSelectorEmojis(!mostrarSelectorEmojis)}
+                    onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
                   >
                     <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>
-                      {mostrarSelectorEmojis ? "🔽 Ocultar Emojis" : "😀 Emojis"}
+                      {mostrarMenuPersonalizacion ? "🔽 Ocultar Emojis" : "😀 Emojis"}
                     </Text>
                   </TouchableOpacity>
 
@@ -2016,7 +2018,7 @@ export default function App() {
                         </View>
                         <TextInput
                           style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 70, textAlignVertical: "top", marginBottom: 0 }]}
-                          placeholder="Letra con acordes entre corchetes [C]..."
+                          placeholder="Letra con acordes [G] o comentarios [Estribillo]..."
                           placeholderTextColor={t.textSub}
                           value={nuevaLetraCancion}
                           onChangeText={setNuevaLetraCancion}

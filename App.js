@@ -1415,15 +1415,24 @@ export default function App() {
                     ))
                   )}
 
-                  {/* BLOQUE DE DOS LISTAS DESPLEGABLES: SET LENTAS Y SET RÁPIDAS */}
+                  {/* BLOQUE CON REFORZADO DE FILTRADO PARA LISTAS DESPLEGABLES LENTAS / RÁPIDAS */}
                   {(() => {
                     const titulosEnSetlist = setlistActivo.map(s => s.titulo.toLowerCase());
                     const cancionesDisponibles = repertorio
                       .filter(c => !titulosEnSetlist.includes(c.titulo.toLowerCase()))
                       .sort((a, b) => a.titulo.localeCompare(b.titulo));
 
-                    const lentasDisponibles = cancionesDisponibles.filter(c => c.tipoSet === "lenta");
-                    const rapidasDisponibles = cancionesDisponibles.filter(c => c.tipoSet === "rapida");
+                    const lentasDisponibles = cancionesDisponibles.filter(c => {
+                      const tSet = (c.tipoSet || c.tipo_set || "").toLowerCase();
+                      const bpmNum = parseInt(c.bpm || "120", 10);
+                      return tSet === "lenta" || (!tSet && bpmNum < 110);
+                    });
+
+                    const rapidasDisponibles = cancionesDisponibles.filter(c => {
+                      const tSet = (c.tipoSet || c.tipo_set || "").toLowerCase();
+                      const bpmNum = parseInt(c.bpm || "120", 10);
+                      return tSet === "rapida" || (!tSet && bpmNum >= 110);
+                    });
 
                     return (
                       <View style={{ marginTop: 10, gap: 10 }}>

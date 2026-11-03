@@ -659,7 +659,6 @@ export default function App() {
           sede_id: sedeIdSeleccionada,
         };
         
-        // Intentar guardar con tipo_set, si falla por esquema se guarda sin él
         let res = await supabase.from("repertorio").update({ ...cancionActualizada, tipo_set: nuevoTipoSetCancion }).eq("id", cancionSeleccionadaDetalle.id);
         if (res.error) {
           res = await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
@@ -695,7 +694,6 @@ export default function App() {
           sede_id: sedeIdSeleccionada,
         };
 
-        // Intentar insertar con tipo_set, si la columna no existe en Supabase, insertar sin ella para evitar el fallo
         let res = await supabase.from("repertorio").insert([{ ...nuevaCancion, tipo_set: nuevoTipoSetCancion }]);
         if (res.error) {
           res = await supabase.from("repertorio").insert([nuevaCancion]);
@@ -2259,7 +2257,7 @@ export default function App() {
               )}
             </>
           )}
-        </div>
+        </View>
       </ScrollView>
 
       <View style={[styles.tabBar, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>
@@ -2358,7 +2356,7 @@ const styles = StyleSheet.create({
   teleprompterExitBtn: { backgroundColor: "#1E293B", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
   teleprompterScrollContent: { paddingBottom: 60, alignItems: "center", width: "100%" },
   teleprompterCard: { width: "100%", maxWidth: 900, backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#334155" },
-  teleprompterHeaderRow: { flexDirection: "row", justifyContent:--- "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 },
+  teleprompterHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 },
   teleprompterSongTitle: { color: "#FFF", fontSize: 26, fontWeight: "bold" },
   teleprompterToneBox: { backgroundColor: "#3B82F6", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
   teleprompterControlsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 10, flexWrap: "wrap", gap: 10 },

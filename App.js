@@ -424,7 +424,7 @@ export default function App() {
         artista: c.artista || "Sin artista",
         tono: c.tono || "C",
         bpm: c.bpm || "120",
-        tipoSet: c.tipo_set || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida"),
+        tipoSet: c.tipo_set || c.tiposet || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida"),
         etiquetas: c.etiquetas || [],
         letra: c.letra || "",
         sedeId: c.sede_id,
@@ -654,16 +654,21 @@ export default function App() {
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
-          tipo_set: nuevoTipoSetCancion,
           etiquetas: etiquetasActuales,
           letra: nuevaLetraCancion || "",
           sede_id: sedeIdSeleccionada,
         };
-        const { error } = await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
-        if (error) {
-          alert(`⚠️ Error al actualizar: ${error.message}`);
+        
+        // Intentar guardar con tipo_set, si falla por esquema se guarda sin él
+        let res = await supabase.from("repertorio").update({ ...cancionActualizada, tipo_set: nuevoTipoSetCancion }).eq("id", cancionSeleccionadaDetalle.id);
+        if (res.error) {
+          res = await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
+        }
+        if (res.error) {
+          alert(`⚠️ Error al actualizar: ${res.error.message}`);
           return;
         }
+
         await cargarRepertorioSupabase();
         setModoEdicionCancion(false);
         setSemitonosTransposicion(0);
@@ -685,16 +690,22 @@ export default function App() {
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
-          tipo_set: nuevoTipoSetCancion,
           etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
           letra: nuevaLetraCancion || "",
           sede_id: sedeIdSeleccionada,
         };
-        const { error } = await supabase.from("repertorio").insert([nuevaCancion]);
-        if (error) {
-          alert(`⚠️ Error al guardar en Supabase: ${error.message}`);
+
+        // Intentar insertar con tipo_set, si la columna no existe en Supabase, insertar sin ella para evitar el fallo
+        let res = await supabase.from("repertorio").insert([{ ...nuevaCancion, tipo_set: nuevoTipoSetCancion }]);
+        if (res.error) {
+          res = await supabase.from("repertorio").insert([nuevaCancion]);
+        }
+
+        if (res.error) {
+          alert(`⚠️ Error al guardar en Supabase: ${res.error.message}`);
           return;
         }
+
         await cargarRepertorioSupabase();
         setModoEdicionCancion(false);
         alert("🎵 Canción guardada en " + sedeActual.nombre + ".");
@@ -2248,7 +2259,7 @@ export default function App() {
               )}
             </>
           )}
-        </View>
+        </div>
       </ScrollView>
 
       <View style={[styles.tabBar, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>
@@ -2347,7 +2358,7 @@ const styles = StyleSheet.create({
   teleprompterExitBtn: { backgroundColor: "#1E293B", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
   teleprompterScrollContent: { paddingBottom: 60, alignItems: "center", width: "100%" },
   teleprompterCard: { width: "100%", maxWidth: 900, backgroundColor: "#1E293B", padding: 16, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#334155" },
-  teleprompterHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 },
+  teleprompterHeaderRow: { flexDirection: "row", justifyContent:--- "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 },
   teleprompterSongTitle: { color: "#FFF", fontSize: 26, fontWeight: "bold" },
   teleprompterToneBox: { backgroundColor: "#3B82F6", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
   teleprompterControlsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 10, flexWrap: "wrap", gap: 10 },

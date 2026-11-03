@@ -251,7 +251,6 @@ export default function App() {
     return "azul";
   });
 
-  // TAPIZ AUTÓNOMO POR PERFIL Y SEDE
   const [nombreTapiz, setNombreTapiz] = useState(() => {
     if (Platform.OS === "web" && usuario) {
       try { return localStorage.getItem(`soundteam_tapiz_${usuario}_${sedeIdSeleccionada}`) || "ninguno"; } catch (e) { return "ninguno"; }
@@ -259,12 +258,11 @@ export default function App() {
     return "ninguno";
   });
 
-  // Actualizar el tapiz al cambiar de usuario o sede
   useEffect(() => {
     if (Platform.OS === "web" && usuario) {
       try {
-        const tapizGuardado = localStorage.getItem(`soundteam_tapiz_${usuario}_${sedeIdSeleccionada}`) || "ninguno";
-        setNombreTapiz(tapizGuardado);
+        const tapizPerfilSede = localStorage.getItem(`soundteam_tapiz_${usuario}_${sedeIdSeleccionada}`) || "ninguno";
+        setNombreTapiz(tapizPerfilSede);
       } catch (e) {}
     }
   }, [usuario, sedeIdSeleccionada]);
@@ -549,7 +547,6 @@ export default function App() {
         localStorage.setItem("soundteam_sesion_usuario", nombreReal);
         localStorage.setItem("soundteam_sesion_rol", rolAsignado);
         
-        // Cargar tapiz específico de este usuario y sede al iniciar sesión
         const tapizPerfilSede = localStorage.getItem(`soundteam_tapiz_${nombreReal}_${sedeIdSeleccionada}`) || "ninguno";
         setNombreTapiz(tapizPerfilSede);
       } catch (e) {}
@@ -637,9 +634,20 @@ export default function App() {
   const guardarOActualizarCancion = async () => {
     if (!puedeControlarRepertorio) { alert("⚠️ No tienes permisos suficientes para modificar el repertorio."); return; }
     if (nuevoTituloCancion.trim() !== "") {
+      const tituloTrimmed = nuevoTituloCancion.trim().toLowerCase();
+
       if (cancionSeleccionadaDetalle !== null && modoEdicionCancion) {
+        // Validar duplicado excluyendo la canción actual que estamos editando
+        const duplicada = repertorio.some(
+          (c) => c.titulo.trim().toLowerCase() === tituloTrimmed && c.id !== cancionSeleccionadaDetalle.id
+        );
+        if (duplicada) {
+          alert(`⚠️ Ya existe otra canción con el título "${nuevoTituloCancion.trim()}" en ${sedeActual.nombre}.`);
+          return;
+        }
+
         const cancionActualizada = {
-          titulo: nuevoTituloCancion,
+          titulo: nuevoTituloCancion.trim(),
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
@@ -654,10 +662,19 @@ export default function App() {
         setCancionSeleccionadaDetalle(null);
         alert("🎵 Canción actualizada en " + sedeActual.nombre + ".");
       } else {
+        // Validar duplicado al crear una nueva canción
+        const duplicada = repertorio.some(
+          (c) => c.titulo.trim().toLowerCase() === tituloTrimmed
+        );
+        if (duplicada) {
+          alert(`⚠️ La canción "${nuevoTituloCancion.trim()}" ya se encuentra registrada en el repertorio de ${sedeActual.nombre}. No se permiten duplicados.`);
+          return;
+        }
+
         const nuevoId = Date.now();
         const nuevaCancion = {
           id: nuevoId,
-          titulo: nuevoTituloCancion,
+          titulo: nuevoTituloCancion.trim(),
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",

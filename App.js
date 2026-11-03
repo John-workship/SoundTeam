@@ -811,7 +811,7 @@ export default function App() {
     if (!servicioObjetivo) return;
 
     let nuevaVozP = servicioObjetivo.voces?.principal || "Sin asignar";
-    let nuevosCoros = servicioObjetivo.voces?.coros ? servicioObjetivo.voces.coros.split(", ").filter((c) => c !== "Sin asignar" && c !== "") : [];
+    let nuevosCoros = servicioObjetivo.voces?.coros ? servicioObjetivo.voces.coros.split(", ").map(c => c.trim()).filter((c) => c !== "Sin asignar" && c !== "") : [];
     let nuevoPiano = servicioObjetivo.instrumentos?.piano || "Sin asignar";
     let nuevaGuitarra = servicioObjetivo.instrumentos?.guitarra || "Sin asignar";
     let nuevoBajo = servicioObjetivo.instrumentos?.bajo || "Sin asignar";
@@ -837,7 +837,7 @@ export default function App() {
     alert(`🚀 Postulación realizada.`);
   };
 
-  const liberarRol = async (idServicio, categoria) => {
+  const liberarRol = async (idServicio, categoria, personaEspecifica = null) => {
     if (!esAdminOLider) { alert("⚠️ No tienes permisos para liberar esta postulación."); return; }
     const servicioObjetivo = servicios.find((s) => s.id === idServicio);
     if (!servicioObjetivo) return;
@@ -846,7 +846,15 @@ export default function App() {
     let nInst = { ...servicioObjetivo.instrumentos };
 
     if (categoria === "vozPrincipal") nVoces.principal = "Sin asignar";
-    else if (categoria === "coros") nVoces.coros = "Sin asignar";
+    else if (categoria === "coros") {
+      let listaCoros = nVoces.coros ? nVoces.coros.split(", ").map(c => c.trim()).filter(c => c !== "Sin asignar" && c !== "") : [];
+      if (personaEspecifica) {
+        listaCoros = listaCoros.filter(c => c !== personaEspecifica);
+      } else {
+        listaCoros.pop();
+      }
+      nVoces.coros = listaCoros.length > 0 ? listaCoros.join(", ") : "Sin asignar";
+    }
     else if (categoria === "piano") nInst.piano = "Sin asignar";
     else if (categoria === "guitarra") nInst.guitarra = "Sin asignar";
     else if (categoria === "bajo") nInst.bajo = "Sin asignar";
@@ -1779,14 +1787,23 @@ export default function App() {
                               </TouchableOpacity>
                             )}
                           </View>
-                          <View style={styles.roleRowClean}>
-                            <Text style={{ color: t.textMain, fontSize: 11 }} numberOfLines={1}>
-                              • Coros: <Text style={{ fontWeight: "bold" }}>{serv.voces?.coros || "Sin asignar"}</Text>
-                            </Text>
-                            {serv.voces?.coros && serv.voces?.coros !== "Sin asignar" && esAdminOLider && (
-                              <TouchableOpacity onPress={() => liberarRol(serv.id, "coros")}>
-                                <Text style={{ color: "#EF4444", fontSize: 10, fontWeight: "bold" }}>❌</Text>
-                              </TouchableOpacity>
+
+                          {/* LISTA DE COROS HACIA ABAJO */}
+                          <View style={{ marginTop: 2 }}>
+                            <Text style={{ color: t.textMain, fontSize: 11, marginBottom: 2 }}>• Coros:</Text>
+                            {(!serv.voces?.coros || serv.voces?.coros === "Sin asignar" || serv.voces?.coros === "") ? (
+                              <Text style={{ color: t.textSub, fontSize: 11, marginLeft: 10, fontStyle: "italic" }}>Sin asignar</Text>
+                            ) : (
+                              serv.voces.coros.split(",").map(c => c.trim()).filter(Boolean).map((nombreCoro, idxC) => (
+                                <View key={idxC} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginLeft: 10, marginBottom: 2, backgroundColor: t.cardBg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                  <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "bold" }}>- {nombreCoro}</Text>
+                                  {esAdminOLider && (
+                                    <TouchableOpacity onPress={() => liberarRol(serv.id, "coros", nombreCoro)}>
+                                      <Text style={{ color: "#EF4444", fontSize: 10, fontWeight: "bold" }}>❌</Text>
+                                    </TouchableOpacity>
+                                  )}
+                                </View>
+                              ))
                             )}
                           </View>
                         </View>
@@ -2276,7 +2293,7 @@ export default function App() {
                   )}
 
                   <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
+                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
                     {repertorio.map((c) => (
                       <TouchableOpacity
                         key={c.id}

@@ -2293,7 +2293,7 @@ export default function App() {
                   )}
 
                   <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
+                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
                     {repertorio.map((c) => (
                       <TouchableOpacity
                         key={c.id}

@@ -251,12 +251,23 @@ export default function App() {
     return "azul";
   });
 
+  // TAPIZ AUTÓNOMO POR PERFIL Y SEDE
   const [nombreTapiz, setNombreTapiz] = useState(() => {
-    if (Platform.OS === "web") {
-      try { return localStorage.getItem("soundteam_tapiz_app") || "ninguno"; } catch (e) { return "ninguno"; }
+    if (Platform.OS === "web" && usuario) {
+      try { return localStorage.getItem(`soundteam_tapiz_${usuario}_${sedeIdSeleccionada}`) || "ninguno"; } catch (e) { return "ninguno"; }
     }
     return "ninguno";
   });
+
+  // Actualizar el tapiz al cambiar de usuario o sede
+  useEffect(() => {
+    if (Platform.OS === "web" && usuario) {
+      try {
+        const tapizGuardado = localStorage.getItem(`soundteam_tapiz_${usuario}_${sedeIdSeleccionada}`) || "ninguno";
+        setNombreTapiz(tapizGuardado);
+      } catch (e) {}
+    }
+  }, [usuario, sedeIdSeleccionada]);
 
   const [mostrarMenuPersonalizacion, setMostrarMenuPersonalizacion] = useState(false);
 
@@ -267,10 +278,10 @@ export default function App() {
   }, [nombreTema]);
 
   useEffect(() => {
-    if (Platform.OS === "web") {
-      try { localStorage.setItem("soundteam_tapiz_app", nombreTapiz); } catch (e) {}
+    if (Platform.OS === "web" && usuario) {
+      try { localStorage.setItem(`soundteam_tapiz_${usuario}_${sedeIdSeleccionada}`, nombreTapiz); } catch (e) {}
     }
-  }, [nombreTapiz]);
+  }, [nombreTapiz, usuario, sedeIdSeleccionada]);
 
   const t = TEMAS[nombreTema];
   const tapizActual = PAPELES_TAPIZ[nombreTapiz] || PAPELES_TAPIZ.ninguno;
@@ -537,6 +548,10 @@ export default function App() {
         localStorage.setItem("soundteam_sesion_activa", "true");
         localStorage.setItem("soundteam_sesion_usuario", nombreReal);
         localStorage.setItem("soundteam_sesion_rol", rolAsignado);
+        
+        // Cargar tapiz específico de este usuario y sede al iniciar sesión
+        const tapizPerfilSede = localStorage.getItem(`soundteam_tapiz_${nombreReal}_${sedeIdSeleccionada}`) || "ninguno";
+        setNombreTapiz(tapizPerfilSede);
       } catch (e) {}
     }
   };

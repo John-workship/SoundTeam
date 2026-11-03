@@ -374,6 +374,7 @@ export default function App() {
   const [observaciones, setObservaciones] = useState("");
   const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
   const [setlistActivo, setSetlistActivo] = useState([]);
+  const [cancionDropdownSeleccionada, setCancionDropdownSeleccionada] = useState("");
 
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
@@ -1244,6 +1245,7 @@ export default function App() {
                       setObservaciones("");
                       setPaletaSeleccionadaModal(null);
                       setSetlistActivo([]);
+                      setCancionDropdownSeleccionada("");
                       setModalProgramarVisible(true);
                     }}
                   >
@@ -1309,7 +1311,7 @@ export default function App() {
                   <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginBottom: 4 }]}>Setlist Activo ({setlistActivo.length}):</Text>
 
                   {setlistActivo.length === 0 ? (
-                    <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic", marginBottom: 10 }}>No hay canciones en el setlist. Agrega desde abajo.</Text>
+                    <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic", marginBottom: 10 }}>No hay canciones en el setlist. Selecciona una abajo.</Text>
                   ) : (
                     setlistActivo.map((cancion, index) => (
                       <View key={cancion.id || index} style={[styles.setlistItemRow, { backgroundColor: t.bg, borderColor: t.border }]}>
@@ -1389,18 +1391,85 @@ export default function App() {
                     ))
                   )}
 
-                  <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginTop: 10 }]}>Repertorio de {sedeActual.nombre} (Toca para agregar):</Text>
-                  {repertorio.map((cancion) => (
-                    <View key={cancion.id} style={[styles.libSongRow, { borderBottomColor: t.border }]}>
-                      <Text style={{ color: t.textMain, fontSize: 13, flex: 1 }}>{cancion.titulo} <Text style={{ color: t.textSub }}>({cancion.tono} • {cancion.bpm || "120"} BPM)</Text></Text>
-                      <TouchableOpacity
-                        style={[styles.addSongBtn, { backgroundColor: t.primary }]}
-                        onPress={() => { setSetlistActivo([...setlistActivo, { titulo: cancion.titulo, tono: cancion.tono, bpm: cancion.bpm || "120" }]); }}
-                      >
-                        <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}>+ Agregar</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+                  <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginTop: 12 }]}>🎵 Agregar canción del repertorio (Alfabético):</Text>
+                  
+                  {(() => {
+                    // Filtrar canciones que NO estén ya en el setlist actual y ordenarlas alfabéticamente
+                    const titulosEnSetlist = setlistActivo.map(s => s.titulo.toLowerCase());
+                    const cancionesDisponibles = repertorio
+                      .filter(c => !titulosEnSetlist.includes(c.titulo.toLowerCase()))
+                      .sort((a, b) => a.titulo.localeCompare(b.titulo));
+
+                    if (cancionesDisponibles.length === 0) {
+                      return (
+                        <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic", marginBottom: 10 }}>
+                          Todas las canciones del repertorio ya han sido agregadas al setlist.
+                        </Text>
+                      );
+                    }
+
+                    return (
+                      <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, alignItems: "center" }}>
+                        {Platform.OS === "web" ? (
+                          <select
+                            value={cancionDropdownSeleccionada}
+                            onChange={(e) => setCancionDropdownSeleccionada(e.target.value)}
+                            style={{
+                              flex: 1,
+                              backgroundColor: t.bg,
+                              color: t.textMain,
+                              borderColor: t.border,
+                              borderWidth: "1px",
+                              borderRadius: "8px",
+                              padding: "10px",
+                              fontSize: "14px",
+                              outline: "none",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <option value="" disabled style={{ backgroundColor: t.cardBg, color: t.textSub }}>
+                              -- Selecciona una canción --
+                            </option>
+                            {cancionesDisponibles.map((c) => (
+                              <option key={c.id} value={c.titulo} style={{ backgroundColor: t.cardBg, color: t.textMain }}>
+                                {c.titulo} ({c.tono} • {c.bpm || "120"} BPM)
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <TextInput
+                            style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                            placeholder="Nombre de la canción..."
+                            placeholderTextColor={t.textSub}
+                            value={cancionDropdownSeleccionada}
+                            onChangeText={setCancionDropdownSeleccionada}
+                          />
+                        )}
+
+                        <TouchableOpacity
+                          style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 10, paddingHorizontal: 16 }]}
+                          onPress={() => {
+                            let tituloTarget = cancionDropdownSeleccionada;
+                            if (!tituloTarget && cancionesDisponibles.length > 0) {
+                              tituloTarget = cancionesDisponibles[0].titulo;
+                            }
+                            if (tituloTarget) {
+                              const objetoEncontrado = repertorio.find(r => r.titulo.toLowerCase() === tituloTarget.toLowerCase());
+                              const tonoAsignado = objetoEncontrado ? objetoEncontrado.tono : "C";
+                              const bpmAsignado = objetoEncontrado ? (objetoEncontrado.bpm || "120") : "120";
+
+                              setSetlistActivo([...setlistActivo, { titulo: tituloTarget, tono: tonoAsignado, bpm: bpmAsignado }]);
+                              setCancionDropdownSeleccionada("");
+                            } else {
+                              alert("⚠️ Selecciona una canción de la lista.");
+                            }
+                          }}
+                        >
+                          <Text style={[styles.loginButtonText, { fontSize: 13 }]}>+ Agregar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })()}
 
                   <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
                     <TouchableOpacity
@@ -1516,6 +1585,7 @@ export default function App() {
                                 setObservaciones(serv.observaciones);
                                 setPaletaSeleccionadaModal(serv.paletaSeleccionada || paletasCulto[0] || null);
                                 setSetlistActivo(serv.setlist || []);
+                                setCancionDropdownSeleccionada("");
                                 setModalProgramarVisible(true);
                               }}
                             >
@@ -2149,7 +2219,6 @@ const styles = StyleSheet.create({
   postulateRoleOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
   smallButton: { width: 30, height: 30, borderRadius: 6, borderWidth: 1, justifyContent: "center", alignItems: "center" },
   smallButtonText: { fontSize: 11, fontWeight: "bold" },
-  // ESTILOS TELEPROMPTER ADAPTABLE
   teleprompterContainer: { flex: 1, width: "100%", height: "100%", minHeight: "100vh", padding: 12 },
   teleprompterTopBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 10, width: "100%" },
   teleprompterExitBtn: { backgroundColor: "#1E293B", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },

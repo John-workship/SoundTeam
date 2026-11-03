@@ -374,7 +374,8 @@ export default function App() {
   const [observaciones, setObservaciones] = useState("");
   const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
   const [setlistActivo, setSetlistActivo] = useState([]);
-  const [cancionDropdownSeleccionada, setCancionDropdownSeleccionada] = useState("");
+  const [cancionLentaSeleccionada, setCancionLentaSeleccionada] = useState("");
+  const [cancionRapidaSeleccionada, setCancionRapidaSeleccionada] = useState("");
 
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
@@ -423,6 +424,7 @@ export default function App() {
         artista: c.artista || "Sin artista",
         tono: c.tono || "C",
         bpm: c.bpm || "120",
+        tipoSet: c.tipo_set || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida"),
         etiquetas: c.etiquetas || [],
         letra: c.letra || "",
         sedeId: c.sede_id,
@@ -450,6 +452,7 @@ export default function App() {
   const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
   const [nuevoTonoCancion, setNuevoTonoCancion] = useState("");
   const [nuevoBpmCancion, setNuevoBpmCancion] = useState("120");
+  const [nuevoTipoSetCancion, setNuevoTipoSetCancion] = useState("lenta");
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
@@ -651,11 +654,16 @@ export default function App() {
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
+          tipo_set: nuevoTipoSetCancion,
           etiquetas: etiquetasActuales,
           letra: nuevaLetraCancion || "",
           sede_id: sedeIdSeleccionada,
         };
-        await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
+        const { error } = await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
+        if (error) {
+          alert(`⚠️ Error al actualizar: ${error.message}`);
+          return;
+        }
         await cargarRepertorioSupabase();
         setModoEdicionCancion(false);
         setSemitonosTransposicion(0);
@@ -677,11 +685,16 @@ export default function App() {
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
+          tipo_set: nuevoTipoSetCancion,
           etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
           letra: nuevaLetraCancion || "",
           sede_id: sedeIdSeleccionada,
         };
-        await supabase.from("repertorio").insert([nuevaCancion]);
+        const { error } = await supabase.from("repertorio").insert([nuevaCancion]);
+        if (error) {
+          alert(`⚠️ Error al guardar en Supabase: ${error.message}`);
+          return;
+        }
         await cargarRepertorioSupabase();
         setModoEdicionCancion(false);
         alert("🎵 Canción guardada en " + sedeActual.nombre + ".");
@@ -690,6 +703,7 @@ export default function App() {
       setNuevoArtistaCancion("");
       setNuevoTonoCancion("");
       setNuevoBpmCancion("120");
+      setNuevoTipoSetCancion("lenta");
       setNuevaLetraCancion("");
       setEtiquetasActuales([]);
     } else { alert("⚠️ Completa el título de la canción."); }
@@ -1245,7 +1259,8 @@ export default function App() {
                       setObservaciones("");
                       setPaletaSeleccionadaModal(null);
                       setSetlistActivo([]);
-                      setCancionDropdownSeleccionada("");
+                      setCancionLentaSeleccionada("");
+                      setCancionRapidaSeleccionada("");
                       setModalProgramarVisible(true);
                     }}
                   >
@@ -1311,7 +1326,7 @@ export default function App() {
                   <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginBottom: 4 }]}>Setlist Activo ({setlistActivo.length}):</Text>
 
                   {setlistActivo.length === 0 ? (
-                    <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic", marginBottom: 10 }}>No hay canciones en el setlist. Selecciona una abajo.</Text>
+                    <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic", marginBottom: 10 }}>No hay canciones en el setlist. Selecciona de las listas inferiores.</Text>
                   ) : (
                     setlistActivo.map((cancion, index) => (
                       <View key={cancion.id || index} style={[styles.setlistItemRow, { backgroundColor: t.bg, borderColor: t.border }]}>
@@ -1391,82 +1406,141 @@ export default function App() {
                     ))
                   )}
 
-                  <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginTop: 12 }]}>🎵 Agregar canción del repertorio (Alfabético):</Text>
-                  
+                  {/* BLOQUE DE DOS LISTAS DESPLEGABLES: SET LENTAS Y SET RÁPIDAS */}
                   {(() => {
-                    // Filtrar canciones que NO estén ya en el setlist actual y ordenarlas alfabéticamente
                     const titulosEnSetlist = setlistActivo.map(s => s.titulo.toLowerCase());
                     const cancionesDisponibles = repertorio
                       .filter(c => !titulosEnSetlist.includes(c.titulo.toLowerCase()))
                       .sort((a, b) => a.titulo.localeCompare(b.titulo));
 
-                    if (cancionesDisponibles.length === 0) {
-                      return (
-                        <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic", marginBottom: 10 }}>
-                          Todas las canciones del repertorio ya han sido agregadas al setlist.
-                        </Text>
-                      );
-                    }
+                    const lentasDisponibles = cancionesDisponibles.filter(c => c.tipoSet === "lenta");
+                    const rapidasDisponibles = cancionesDisponibles.filter(c => c.tipoSet === "rapida");
 
                     return (
-                      <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, alignItems: "center" }}>
-                        {Platform.OS === "web" ? (
-                          <select
-                            value={cancionDropdownSeleccionada}
-                            onChange={(e) => setCancionDropdownSeleccionada(e.target.value)}
-                            style={{
-                              flex: 1,
-                              backgroundColor: t.bg,
-                              color: t.textMain,
-                              borderColor: t.border,
-                              borderWidth: "1px",
-                              borderRadius: "8px",
-                              padding: "10px",
-                              fontSize: "14px",
-                              outline: "none",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <option value="" disabled style={{ backgroundColor: t.cardBg, color: t.textSub }}>
-                              -- Selecciona una canción --
-                            </option>
-                            {cancionesDisponibles.map((c) => (
-                              <option key={c.id} value={c.titulo} style={{ backgroundColor: t.cardBg, color: t.textMain }}>
-                                {c.titulo} ({c.tono} • {c.bpm || "120"} BPM)
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <TextInput
-                            style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
-                            placeholder="Nombre de la canción..."
-                            placeholderTextColor={t.textSub}
-                            value={cancionDropdownSeleccionada}
-                            onChangeText={setCancionDropdownSeleccionada}
-                          />
-                        )}
+                      <View style={{ marginTop: 10, gap: 10 }}>
+                        {/* SELECTOR 1: SET LENTAS */}
+                        <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
+                          <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>🕯️ Set Lentas:</Text>
+                          {lentasDisponibles.length === 0 ? (
+                            <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones lentas disponibles.</Text>
+                          ) : (
+                            <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                              {Platform.OS === "web" ? (
+                                <select
+                                  value={cancionLentaSeleccionada}
+                                  onChange={(e) => setCancionLentaSeleccionada(e.target.value)}
+                                  style={{
+                                    flex: 1,
+                                    backgroundColor: t.cardBg,
+                                    color: t.textMain,
+                                    borderColor: t.border,
+                                    borderWidth: "1px",
+                                    borderRadius: "8px",
+                                    padding: "8px",
+                                    fontSize: "13px",
+                                    outline: "none",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <option value="" disabled style={{ backgroundColor: t.cardBg, color: t.textSub }}>
+                                    -- Selecciona canción lenta --
+                                  </option>
+                                  {lentasDisponibles.map((c) => (
+                                    <option key={c.id} value={c.titulo} style={{ backgroundColor: t.cardBg, color: t.textMain }}>
+                                      {c.titulo} ({c.tono} • {c.bpm || "120"} BPM)
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <TextInput
+                                  style={[styles.loginInput, { flex: 1, backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                                  placeholder="Canción lenta..."
+                                  placeholderTextColor={t.textSub}
+                                  value={cancionLentaSeleccionada}
+                                  onChangeText={setCancionLentaSeleccionada}
+                                />
+                              )}
+                              <TouchableOpacity
+                                style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 8, paddingHorizontal: 12 }]}
+                                onPress={() => {
+                                  let target = cancionLentaSeleccionada;
+                                  if (!target && lentasDisponibles.length > 0) target = lentasDisponibles[0].titulo;
+                                  if (target) {
+                                    const obj = repertorio.find(r => r.titulo.toLowerCase() === target.toLowerCase());
+                                    setSetlistActivo([...setlistActivo, { titulo: target, tono: obj ? obj.tono : "C", bpm: obj ? (obj.bpm || "90") : "90" }]);
+                                    setCancionLentaSeleccionada("");
+                                  } else {
+                                    alert("⚠️ Selecciona una canción lenta.");
+                                  }
+                                }}
+                              >
+                                <Text style={[styles.loginButtonText, { fontSize: 12 }]}>+ Agregar</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
 
-                        <TouchableOpacity
-                          style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 10, paddingHorizontal: 16 }]}
-                          onPress={() => {
-                            let tituloTarget = cancionDropdownSeleccionada;
-                            if (!tituloTarget && cancionesDisponibles.length > 0) {
-                              tituloTarget = cancionesDisponibles[0].titulo;
-                            }
-                            if (tituloTarget) {
-                              const objetoEncontrado = repertorio.find(r => r.titulo.toLowerCase() === tituloTarget.toLowerCase());
-                              const tonoAsignado = objetoEncontrado ? objetoEncontrado.tono : "C";
-                              const bpmAsignado = objetoEncontrado ? (objetoEncontrado.bpm || "120") : "120";
-
-                              setSetlistActivo([...setlistActivo, { titulo: tituloTarget, tono: tonoAsignado, bpm: bpmAsignado }]);
-                              setCancionDropdownSeleccionada("");
-                            } else {
-                              alert("⚠️ Selecciona una canción de la lista.");
-                            }
-                          }}
-                        >
-                          <Text style={[styles.loginButtonText, { fontSize: 13 }]}>+ Agregar</Text>
-                        </TouchableOpacity>
+                        {/* SELECTOR 2: SET RÁPIDAS */}
+                        <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
+                          <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>⚡ Set Rápidas:</Text>
+                          {rapidasDisponibles.length === 0 ? (
+                            <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones rápidas disponibles.</Text>
+                          ) : (
+                            <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                              {Platform.OS === "web" ? (
+                                <select
+                                  value={cancionRapidaSeleccionada}
+                                  onChange={(e) => setCancionRapidaSeleccionada(e.target.value)}
+                                  style={{
+                                    flex: 1,
+                                    backgroundColor: t.cardBg,
+                                    color: t.textMain,
+                                    borderColor: t.border,
+                                    borderWidth: "1px",
+                                    borderRadius: "8px",
+                                    padding: "8px",
+                                    fontSize: "13px",
+                                    outline: "none",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <option value="" disabled style={{ backgroundColor: t.cardBg, color: t.textSub }}>
+                                    -- Selecciona canción rápida --
+                                  </option>
+                                  {rapidasDisponibles.map((c) => (
+                                    <option key={c.id} value={c.titulo} style={{ backgroundColor: t.cardBg, color: t.textMain }}>
+                                      {c.titulo} ({c.tono} • {c.bpm || "120"} BPM)
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <TextInput
+                                  style={[styles.loginInput, { flex: 1, backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                                  placeholder="Canción rápida..."
+                                  placeholderTextColor={t.textSub}
+                                  value={cancionRapidaSeleccionada}
+                                  onChangeText={setCancionRapidaSeleccionada}
+                                />
+                              )}
+                              <TouchableOpacity
+                                style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 8, paddingHorizontal: 12 }]}
+                                onPress={() => {
+                                  let target = cancionRapidaSeleccionada;
+                                  if (!target && rapidasDisponibles.length > 0) target = rapidasDisponibles[0].titulo;
+                                  if (target) {
+                                    const obj = repertorio.find(r => r.titulo.toLowerCase() === target.toLowerCase());
+                                    setSetlistActivo([...setlistActivo, { titulo: target, tono: obj ? obj.tono : "C", bpm: obj ? (obj.bpm || "120") : "120" }]);
+                                    setCancionRapidaSeleccionada("");
+                                  } else {
+                                    alert("⚠️ Selecciona una canción rápida.");
+                                  }
+                                }}
+                              >
+                                <Text style={[styles.loginButtonText, { fontSize: 12 }]}>+ Agregar</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
                       </View>
                     );
                   })()}
@@ -1585,7 +1659,8 @@ export default function App() {
                                 setObservaciones(serv.observaciones);
                                 setPaletaSeleccionadaModal(serv.paletaSeleccionada || paletasCulto[0] || null);
                                 setSetlistActivo(serv.setlist || []);
-                                setCancionDropdownSeleccionada("");
+                                setCancionLentaSeleccionada("");
+                                setCancionRapidaSeleccionada("");
                                 setModalProgramarVisible(true);
                               }}
                             >
@@ -1944,6 +2019,7 @@ export default function App() {
                             setNuevoArtistaCancion(cancionSeleccionadaDetalle.artista);
                             setNuevoTonoCancion(cancionSeleccionadaDetalle.tono);
                             setNuevoBpmCancion(cancionSeleccionadaDetalle.bpm || "120");
+                            setNuevoTipoSetCancion(cancionSeleccionadaDetalle.tipoSet || "lenta");
                             setNuevaLetraCancion(cancionSeleccionadaDetalle.letra || "");
                             setEtiquetasActuales(cancionSeleccionadaDetalle.etiquetas || []);
                           }}
@@ -1994,6 +2070,29 @@ export default function App() {
                           />
                         </View>
                       </View>
+
+                      <Text style={[styles.inputLabel, { color: t.textMain }]}>Clasificación de Set:</Text>
+                      <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+                        {[
+                          { key: "lenta", label: "🕯️ Set Lentas" },
+                          { key: "rapida", label: "⚡ Set Rápidas" },
+                        ].map((sObj) => {
+                          const activo = nuevoTipoSetCancion === sObj.key;
+                          return (
+                            <TouchableOpacity
+                              key={sObj.key}
+                              style={[
+                                { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg },
+                                activo && { backgroundColor: t.primary, borderColor: t.primary },
+                              ]}
+                              onPress={() => setNuevoTipoSetCancion(sObj.key)}
+                            >
+                              <Text style={{ color: activo ? "#FFF" : t.textMain, fontWeight: "bold", fontSize: 12 }}>{sObj.label}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
                       <Text style={[styles.inputLabel, { color: t.textMain }]}>Letra con acordes [G]</Text>
                       <TextInput
                         style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 160, textAlignVertical: "top" }]}
@@ -2015,7 +2114,7 @@ export default function App() {
                       <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontSize: 22, fontWeight: "bold", color: t.textMain, marginBottom: 2 }}>{cancionSeleccionadaDetalle.titulo}</Text>
                         <Text style={{ color: t.textSub, fontSize: 13 }}>
-                          {cancionSeleccionadaDetalle.artista} • Tonalidad: <Text style={{ color: t.primary, fontWeight: "bold" }}>{transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}</Text> • ⚡ {cancionSeleccionadaDetalle.bpm || "120"} BPM
+                          {cancionSeleccionadaDetalle.artista} • Tonalidad: <Text style={{ color: t.primary, fontWeight: "bold" }}>{transponerNotaUnica(cancionSeleccionadaDetalle.tono || "C", semitonosTransposicion)}</Text> • ⚡ {cancionSeleccionadaDetalle.bpm || "120"} BPM ({cancionSeleccionadaDetalle.tipoSet === "lenta" ? "🕯️ Lenta" : "⚡ Rápida"})
                         </Text>
                       </View>
 
@@ -2088,6 +2187,30 @@ export default function App() {
                             keyboardType="numeric"
                           />
                         </View>
+
+                        {/* SELECTOR DE SET AL CREAR CANCIÓN */}
+                        <Text style={[styles.inputLabel, { color: t.textMain, marginTop: 4 }]}>Seleccionar tipo de Set:</Text>
+                        <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                          {[
+                            { key: "lenta", label: "🕯️ Set Lentas" },
+                            { key: "rapida", label: "⚡ Set Rápidas" },
+                          ].map((sObj) => {
+                            const activo = nuevoTipoSetCancion === sObj.key;
+                            return (
+                              <TouchableOpacity
+                                key={sObj.key}
+                                style={[
+                                  { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg },
+                                  activo && { backgroundColor: t.primary, borderColor: t.primary },
+                                ]}
+                                onPress={() => setNuevoTipoSetCancion(sObj.key)}
+                              >
+                                <Text style={{ color: activo ? "#FFF" : t.textMain, fontWeight: "bold", fontSize: 12 }}>{sObj.label}</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+
                         <TextInput
                           style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 70, textAlignVertical: "top", marginBottom: 0 }]}
                           placeholder="Letra con acordes entre corchetes [C]..."
@@ -2113,7 +2236,7 @@ export default function App() {
                       >
                         <View style={{ flex: 1, paddingVertical: 4 }}>
                           <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "bold", marginBottom: 2 }}>{c.titulo}</Text>
-                          <Text style={{ color: t.textSub, fontSize: 12 }}>{c.artista || "Sin artista"} • ⚡ {c.bpm || "120"} BPM</Text>
+                          <Text style={{ color: t.textSub, fontSize: 12 }}>{c.artista || "Sin artista"} • ⚡ {c.bpm || "120"} BPM ({c.tipoSet === "lenta" ? "🕯️ Lenta" : "⚡ Rápida"})</Text>
                         </View>
                         <View style={{ backgroundColor: t.primary, width: 34, height: 34, borderRadius: 6, justifyContent: "center", alignItems: "center" }}>
                           <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 13 }}>{c.tono || "C"}</Text>

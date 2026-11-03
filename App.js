@@ -424,7 +424,7 @@ export default function App() {
         artista: c.artista || "Sin artista",
         tono: c.tono || "C",
         bpm: c.bpm || "120",
-        tipoSet: c.tipo_set || c.tiposet || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida"),
+        tipoSet: (c.tipo_set || c.tiposet || c.tipoSet || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida")).toLowerCase(),
         etiquetas: c.etiquetas || [],
         letra: c.letra || "",
         sedeId: c.sede_id,
@@ -654,15 +654,14 @@ export default function App() {
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
+          tipo_set: nuevoTipoSetCancion,
+          tiposet: nuevoTipoSetCancion,
           etiquetas: etiquetasActuales,
           letra: nuevaLetraCancion || "",
           sede_id: sedeIdSeleccionada,
         };
         
-        let res = await supabase.from("repertorio").update({ ...cancionActualizada, tipo_set: nuevoTipoSetCancion }).eq("id", cancionSeleccionadaDetalle.id);
-        if (res.error) {
-          res = await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
-        }
+        let res = await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
         if (res.error) {
           alert(`⚠️ Error al actualizar: ${res.error.message}`);
           return;
@@ -689,15 +688,14 @@ export default function App() {
           artista: nuevoArtistaCancion || "Sin artista",
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
+          tipo_set: nuevoTipoSetCancion,
+          tiposet: nuevoTipoSetCancion,
           etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
           letra: nuevaLetraCancion || "",
           sede_id: sedeIdSeleccionada,
         };
 
-        let res = await supabase.from("repertorio").insert([{ ...nuevaCancion, tipo_set: nuevoTipoSetCancion }]);
-        if (res.error) {
-          res = await supabase.from("repertorio").insert([nuevaCancion]);
-        }
+        let res = await supabase.from("repertorio").insert([nuevaCancion]);
 
         if (res.error) {
           alert(`⚠️ Error al guardar en Supabase: ${res.error.message}`);
@@ -1415,7 +1413,7 @@ export default function App() {
                     ))
                   )}
 
-                  {/* BLOQUE CON REFORZADO DE FILTRADO PARA LISTAS DESPLEGABLES LENTAS / RÁPIDAS */}
+                  {/* BLOQUE DE SELECTORES LENTAS Y RÁPIDAS CORREGIDO */}
                   {(() => {
                     const titulosEnSetlist = setlistActivo.map(s => s.titulo.toLowerCase());
                     const cancionesDisponibles = repertorio
@@ -1423,15 +1421,13 @@ export default function App() {
                       .sort((a, b) => a.titulo.localeCompare(b.titulo));
 
                     const lentasDisponibles = cancionesDisponibles.filter(c => {
-                      const tSet = (c.tipoSet || c.tipo_set || "").toLowerCase();
-                      const bpmNum = parseInt(c.bpm || "120", 10);
-                      return tSet === "lenta" || (!tSet && bpmNum < 110);
+                      const tSet = (c.tipoSet || "").toLowerCase();
+                      return tSet === "lenta";
                     });
 
                     const rapidasDisponibles = cancionesDisponibles.filter(c => {
-                      const tSet = (c.tipoSet || c.tipo_set || "").toLowerCase();
-                      const bpmNum = parseInt(c.bpm || "120", 10);
-                      return tSet === "rapida" || (!tSet && bpmNum >= 110);
+                      const tSet = (c.tipoSet || "").toLowerCase();
+                      return tSet === "rapida" || tSet === "";
                     });
 
                     return (

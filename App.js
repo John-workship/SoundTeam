@@ -762,10 +762,47 @@ export default function App() {
   const enviarPorWhatsApp = (servicio) => {
     let texto = `🎵 *Setlist - ${servicio.titulo}* (${diaSeleccionado} de ${mesSeleccionadoObj.nombre} ${mesSeleccionadoObj.year})\n\n`;
     if (servicio.setlist && servicio.setlist.length > 0) {
-      servicio.setlist.forEach((s, i) => { texto += `${i + 1}. ${s.titulo} (Tono: ${s.tono} | ${s.bpm || "120"} BPM)\n`; });
-    } else { texto += `Sin canciones asignadas.\n`; }
+      const lentas = [];
+      const rapidas = [];
+
+      servicio.setlist.forEach((s) => {
+        const obj = repertorio.find(
+          (r) => r.titulo.toLowerCase() === s.titulo.toLowerCase()
+        );
+        const tSet = (
+          obj?.tipoSet ||
+          (parseInt(s.bpm || "120", 10) < 110 ? "lenta" : "rapida")
+        ).toLowerCase();
+
+        if (tSet === "lenta") {
+          lentas.push(s);
+        } else {
+          rapidas.push(s);
+        }
+      });
+
+      if (lentas.length > 0) {
+        texto += `🕯️ *SET LENTAS:*\n`;
+        lentas.forEach((s, i) => {
+          texto += `${i + 1}. ${s.titulo} (Tono: ${s.tono} | ${s.bpm || "90"} BPM)\n`;
+        });
+        texto += `\n`;
+      }
+
+      if (rapidas.length > 0) {
+        texto += `⚡ *SET RÁPIDAS:*\n`;
+        rapidas.forEach((s, i) => {
+          texto += `${i + 1}. ${s.titulo} (Tono: ${s.tono} | ${s.bpm || "120"} BPM)\n`;
+        });
+        texto += `\n`;
+      }
+    } else {
+      texto += `Sin canciones asignadas.\n`;
+    }
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
-    Linking.openURL(url).catch(() => { alert("No se pudo abrir WhatsApp."); });
+    Linking.openURL(url).catch(() => {
+      alert("No se pudo abrir WhatsApp.");
+    });
   };
 
   const confirmarPostulacionRol = async (rol) => {

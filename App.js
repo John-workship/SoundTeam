@@ -424,7 +424,7 @@ export default function App() {
         artista: c.artista || "Sin artista",
         tono: c.tono || "C",
         bpm: c.bpm || "120",
-        tipoSet: (c.tipo_set || c.tiposet || c.tipoSet || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida")).toLowerCase(),
+        tipoSet: (c.tipo_set || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida")).toLowerCase(),
         etiquetas: c.etiquetas || [],
         letra: c.letra || "",
         sedeId: c.sede_id,
@@ -655,7 +655,6 @@ export default function App() {
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
           tipo_set: nuevoTipoSetCancion,
-          tiposet: nuevoTipoSetCancion,
           etiquetas: etiquetasActuales,
           letra: nuevaLetraCancion || "",
           sede_id: sedeIdSeleccionada,
@@ -689,7 +688,6 @@ export default function App() {
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
           tipo_set: nuevoTipoSetCancion,
-          tiposet: nuevoTipoSetCancion,
           etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
           letra: nuevaLetraCancion || "",
           sede_id: sedeIdSeleccionada,
@@ -1413,7 +1411,7 @@ export default function App() {
                     ))
                   )}
 
-                  {/* BLOQUE DE SELECTORES LENTAS Y RÁPIDAS CORREGIDO */}
+                  {/* SELECTORES DE SET LENTAS Y RÁPIDAS */}
                   {(() => {
                     const titulosEnSetlist = setlistActivo.map(s => s.titulo.toLowerCase());
                     const cancionesDisponibles = repertorio

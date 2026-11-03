@@ -904,19 +904,19 @@ export default function App() {
             </View>
           )}
 
-          <Text style={[styles.inputLabel, { color: t.textMain }]}>👤 Usuario o Apodo:</Text>
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>👤 Usuario</Text>
           <TextInput
             style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
-            placeholder="Ej. Admin, Lina..."
+            placeholder="ID"
             placeholderTextColor={t.textSub}
             value={usuario}
             onChangeText={setUsuario}
           />
 
-          <Text style={[styles.inputLabel, { color: t.textMain }]}>🔑 PIN de Acceso:</Text>
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>🔑 Clave</Text>
           <TextInput
             style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
-            placeholder="Ej. 1234"
+            placeholder="Password"
             placeholderTextColor={t.textSub}
             secureTextEntry
             value={pinInput}

@@ -209,26 +209,49 @@ const acordeANashville = (acorde, tonalidadActual) => {
   return `${gradoBase}${cualidadAjustada}`;
 };
 
+// Procesador inteligente que detecta corchetes o líneas flotantes de acordes
 const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) => {
   if (!texto) return "";
-  let textoModificado = texto;
+  let tonoEfectivo = transponerNotaUnica(tonalidadActual, semitonos);
 
-  // Primero aplicamos transposición normal de tonos si el usuario usó [-] o [+]
-  if (semitonos !== 0) {
-    textoModificado = textoModificado.replace(/\[([^\]]+)\]/g, (match, p1) => {
-      return "[" + transponerAcordeCompuesto(p1, semitonos) + "]";
-    });
+  // Si tiene corchetes, procesamos cada corchete
+  if (texto.includes("[")) {
+    let textoModif = texto;
+    if (semitonos !== 0) {
+      textoModif = textoModif.replace(/\[([^\]]+)\]/g, (match, p1) => "[" + transponerAcordeCompuesto(p1, semitonos) + "]");
+    }
+    if (modoVista === "Nashville") {
+      textoModif = textoModif.replace(/\[([^\]]+)\]/g, (match, p1) => "[" + acordeANashville(p1, tonoEfectivo) + "]");
+    }
+    return textoModif;
   }
 
-  // Si está en modo Nashville, convertimos cada acorde entre corchetes al número correspondiente
-  if (modoVista === "Nashville") {
-    const tonoEfectivo = transponerNotaUnica(tonalidadActual, semitonos);
-    textoModificado = textoModificado.replace(/\[([^\]]+)\]/g, (match, p1) => {
-      return "[" + acordeANashville(p1, tonoEfectivo) + "]";
+  // Si no usa corchetes, procesamos línea por línea detectando acordes flotantes
+  const lineas = texto.split("\n");
+  const lineasProcesadas = lineas.map((linea) => {
+    if (linea.trim().startsWith("[") && linea.trim().endsWith("]")) return linea;
+    
+    const palabras = linea.split(/(\s+)/);
+    const esLineaDeAcordes = palabras.some(p => p.trim().length > 0) && palabras.every((p) => {
+      if (/^\s*$/.test(p)) return true;
+      const limpia = p.replace(/[^A-G#bm0-9/]/g, "");
+      return /^[A-G](#|b)?(m|maj|min|dim|aug|sus|[0-9])*(\/[A-G](#|b)?)?$/.test(limpia);
     });
-  }
 
-  return textoModificado;
+    if (esLineaDeAcordes) {
+      return palabras.map((p) => {
+        if (/^\s*$/.test(p)) return p;
+        let acordTransp = semitonos !== 0 ? transponerAcordeCompuesto(p, semitonos) : p;
+        if (modoVista === "Nashville") {
+          return acordeANashville(acordTransp, tonoEfectivo);
+        }
+        return acordTransp;
+      }).join("");
+    }
+    return linea;
+  });
+
+  return lineasProcesadas.join("\n");
 };
 
 export default function App() {

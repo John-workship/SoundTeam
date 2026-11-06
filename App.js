@@ -1013,7 +1013,7 @@ export default function App() {
     );
   }
 
-  // MODO EN VIVO (SEGURO Y FUNCIONAL CON SCROLL PROGRESIVO)
+  // MODO EN VIVO (ESTABLE, LIMPIO Y 100% FUNCIONAL)
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo] || {};
     const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo?.toLowerCase());
@@ -1068,17 +1068,11 @@ export default function App() {
     }, [scrollPos, contentHeight, layoutHeight, indiceCancionEnVivo, setlistEnVivoActual.length]);
 
     return (
-      <View 
-        style={[styles.teleprompterContainer, { backgroundColor: "#0B0F19" }]}
-        onStartShouldSetResponder={() => true}
-        onResponderRelease={manejarAccionAvanzar}
-        onClick={manejarAccionAvanzar}
-      >
+      <View style={[styles.teleprompterContainer, { backgroundColor: "#0B0F19" }]}>
         <View style={styles.teleprompterTopBar}>
           <TouchableOpacity 
             style={styles.teleprompterExitBtn}
-            onPress={(e) => { 
-              e.stopPropagation?.();
+            onPress={() => { 
               setModoEnVivoActivo(false); 
               setMetronomoActivo(false); 
               setAvanceAutomaticoActivo(false); 
@@ -1087,7 +1081,7 @@ export default function App() {
             <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>✕ Salir de Escenario</Text>
           </TouchableOpacity>
           <Text style={{ color: "#94A3B8", fontSize: 14, fontWeight: "bold" }}>
-            Canción {indiceCancionEnVivo + 1} de {setlistEnVivoActual.length} (Haz clic para bajar / avanzar)
+            Canción {indiceCancionEnVivo + 1} de {setlistEnVivoActual.length} (Usa los botones o flechas del teclado)
           </Text>
         </View>
 
@@ -1119,7 +1113,7 @@ export default function App() {
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                 <TouchableOpacity
                   style={[styles.teleprompterActionBtn, { backgroundColor: metronomoActivo ? "#EF4444" : "#22C55E" }]}
-                  onPress={(e) => { e.stopPropagation?.(); setMetronomoActivo(!metronomoActivo); }}
+                  onPress={() => setMetronomoActivo(!metronomoActivo)}
                 >
                   <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
                     {metronomoActivo ? "⏹️ Detener Click" : "▶️ Iniciar Click"}
@@ -1128,7 +1122,7 @@ export default function App() {
 
                 <TouchableOpacity
                   style={[styles.teleprompterActionBtn, { backgroundColor: avanceAutomaticoActivo ? "#F97316" : "#334155" }]}
-                  onPress={(e) => { e.stopPropagation?.(); setAvanceAutomaticoActivo(!avanceAutomaticoActivo); }}
+                  onPress={() => setAvanceAutomaticoActivo(!avanceAutomaticoActivo)}
                 >
                   <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
                     {avanceAutomaticoActivo ? "⏱️ Auto: ON" : "⏱️ Auto: OFF"}
@@ -1152,8 +1146,7 @@ export default function App() {
                 indiceCancionEnVivo === 0 && { opacity: 0.4 }
               ]}
               disabled={indiceCancionEnVivo === 0}
-              onPress={(e) => { 
-                e.stopPropagation?.(); 
+              onPress={() => { 
                 if (scrollPos > 50) {
                   scrollRef.current?.scrollTo({ y: 0, animated: true });
                   setScrollPos(0);
@@ -1169,10 +1162,7 @@ export default function App() {
 
             <TouchableOpacity
               style={[styles.teleprompterNavBtn, { backgroundColor: "#3B82F6" }]}
-              onPress={(e) => { 
-                e.stopPropagation?.(); 
-                manejarAccionAvanzar(); 
-              }}
+              onPress={manejarAccionAvanzar}
             >
               <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 14 }}>Siguiente / Bajar ↓</Text>
             </TouchableOpacity>

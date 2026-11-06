@@ -564,7 +564,7 @@ export default function App() {
     else if (rol === "piano") { if (nuevoPiano !== "Sin asignar") { alert("⚠️ Piano ocupado."); return; } nuevoPiano = usuario; }
     else if (rol === "guitarra") { if (nuevaGuitarra !== "Sin asignar") { alert("⚠️ Guitarra ocupada."); return; } nuevaGuitarra = usuario; }
     else if (rol === "bajo") { if (nuevoBajo !== "Sin asignar") { alert("⚠️ Bajo ocupado."); return; } nuevoBajo = usuario; }
-    else if (rol === "bateria") { if (nuevoBateria !== "Sin asignar") { alert("⚠️ Batería ocupada."); return; } nuevaBateria = usuario; }
+    else if (rol === "bateria") { if (nuevaBateria !== "Sin asignar") { alert("⚠️ Batería ocupada."); return; } nuevaBateria = usuario; }
 
     const nVoces = { principal: nuevaVozP, coros: nuevosCoros.length > 0 ? nuevosCoros.join(", ") : "Sin asignar" };
     const nInst = { piano: nuevoPiano, guitarra: nuevaGuitarra, bajo: nuevoBajo, bateria: nuevaBateria };
@@ -574,35 +574,6 @@ export default function App() {
     await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicioPostulando);
     setModalPostularVisible(false);
     alert(`🚀 Postulación realizada.`);
-  };
-
-  const liberarRol = async (idServicio, categoria, personaEspecifica = null) => {
-    if (!esAdminOLider) { alert("⚠️ No tienes permisos para liberar esta postulación."); return; }
-    const servicioObjetivo = servicios.find((s) => s.id === idServicio);
-    if (!servicioObjetivo) return;
-
-    let nVoces = { ...servicioObjetivo.voces };
-    let nInst = { ...servicioObjetivo.instrumentos };
-
-    if (categoria === "vozPrincipal") nVoces.principal = "Sin asignar";
-    else if (categoria === "coros") {
-      let listaCoros = nVoces.coros ? nVoces.coros.split(", ").map(c => c.trim()).filter(c => c !== "Sin asignar" && c !== "") : [];
-      if (personaEspecifica) {
-        listaCoros = listaCoros.filter(c => c !== personaEspecifica);
-      } else {
-        listaCoros.pop();
-      }
-      nVoces.coros = listaCoros.length > 0 ? listaCoros.join(", ") : "Sin asignar";
-    }
-    else if (categoria === "piano") nInst.piano = "Sin asignar";
-    else if (categoria === "guitarra") nInst.guitarra = "Sin asignar";
-    else if (categoria === "bajo") nInst.bajo = "Sin asignar";
-    else if (categoria === "bateria") nInst.bateria = "Sin asignar";
-
-    const actualizados = servicios.map((s) => s.id === idServicio ? { ...s, voces: nVoces, instrumentos: nInst } : s);
-    setServicios(actualizados);
-    await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicio);
-    alert("🔄 Rol liberado.");
   };
 
   if (!sesionIniciada) {
@@ -978,7 +949,7 @@ export default function App() {
                     })}
                   </View>
 
-                  {/* CALENDARIO COMPACTO Y SUTIL */}
+                  {/* MINI CALENDARIO ULTRA COMPACTO */}
                   <View style={[styles.calendarCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                     <Text style={[styles.calendarHeaderTitle, { color: t.textMain }]}>
                       {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}
@@ -1003,7 +974,7 @@ export default function App() {
                             <Text style={[styles.dayText, { color: t.textMain }, esSeleccionado && styles.dayTextSelected]}>
                               {item.diaNum}
                             </Text>
-                            {item.postulado && <View style={{ position: "absolute", top: 1, right: 1, backgroundColor: "#22C55E", width: 4, height: 4, borderRadius: 2 }} />}
+                            {item.postulado && <View style={{ position: "absolute", top: 1, right: 1, backgroundColor: "#22C55E", width: 3, height: 3, borderRadius: 1.5 }} />}
                           </TouchableOpacity>
                         );
                       })}
@@ -1386,15 +1357,15 @@ const styles = StyleSheet.create({
   monthText: { fontSize: 11 },
   monthTextActive: { color: "#FFFFFF", fontWeight: "bold" },
   
-  // ESTILOS NUEVOS: Calendario compacto y sutil
-  calendarCard: { padding: 8, borderRadius: 10, borderWidth: 1, marginBottom: 12, width: "100%", alignItems: "center" },
-  calendarHeaderTitle: { fontSize: 13, fontWeight: "bold", textAlign: "center", marginBottom: 6 },
-  weekHeaderRow: { flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 4 },
-  weekHeaderText: { fontSize: 10, fontWeight: "bold", width: "13%", textAlign: "center" },
-  daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 3, justifyContent: "flex-start", width: "100%" },
-  dayCell: { width: "13%", aspectRatio: 1.2, justifyContent: "center", alignItems: "center", borderRadius: 4, borderWidth: 1, marginBottom: 3, position: "relative" },
-  dayCellEmpty: { width: "13%", aspectRatio: 1.2, marginBottom: 3 },
-  dayText: { fontSize: 11, fontWeight: "bold" },
+  // ESTILOS NUEVOS: Mini Calendario ultra compacto y proporcionado
+  calendarCard: { padding: 6, borderRadius: 8, borderWidth: 1, marginBottom: 12, width: "100%", maxWidth: 360, alignSelf: "center", alignItems: "center" },
+  calendarHeaderTitle: { fontSize: 12, fontWeight: "bold", textAlign: "center", marginBottom: 4 },
+  weekHeaderRow: { flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 3 },
+  weekHeaderText: { fontSize: 9, fontWeight: "bold", width: "13%", textAlign: "center" },
+  daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 2, justifyContent: "flex-start", width: "100%" },
+  dayCell: { width: "13%", aspectRatio: 1.2, justifyContent: "center", alignItems: "center", borderRadius: 3, borderWidth: 1, marginBottom: 2, position: "relative" },
+  dayCellEmpty: { width: "13%", aspectRatio: 1.2, marginBottom: 2 },
+  dayText: { fontSize: 10, fontWeight: "bold" },
   dayTextSelected: { color: "#FFFFFF", fontWeight: "bold" },
 
   serviceSectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, width: "100%" },

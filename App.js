@@ -656,44 +656,44 @@ export default function App() {
                 setAvanceAutomaticoActivo(false); 
               }}
             >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>✕ Salir</Text>
+              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 11 }}>✕ Salir</Text>
             </TouchableOpacity>
-            <Text style={{ color: "#94A3B8", fontSize: 13, fontWeight: "bold" }}>
+            <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "bold" }}>
               Canción {indiceCancionEnVivo + 1} de {setlistEnVivoActual.length}
             </Text>
           </View>
 
           <ScrollView contentContainerStyle={styles.teleprompterScrollContent}>
-            {/* TARJETA EN VIVO COMPACTA */}
+            {/* TARJETA EN VIVO MÁS COMPACTA */}
             <View style={styles.teleprompterCard}>
               <View style={styles.teleprompterHeaderRow}>
-                <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text style={{ color: "#38BDF8", fontSize: 10, fontWeight: "bold", marginBottom: 1 }}>EN VIVO:</Text>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={{ color: "#38BDF8", fontSize: 9, fontWeight: "bold", marginBottom: 1 }}>EN VIVO:</Text>
                   <Text style={styles.teleprompterSongTitle} numberOfLines={1}>
                     {(setlistEnVivoActual[indiceCancionEnVivo] || {}).titulo || "Sin título"}
                   </Text>
                 </View>
                 <View style={styles.teleprompterToneBox}>
-                  <Text style={{ color: "#FFF", fontSize: 14, fontWeight: "bold" }}>
+                  <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "bold" }}>
                     Tono: {(setlistEnVivoActual[indiceCancionEnVivo] || {}).tono || "C"}
                   </Text>
                 </View>
               </View>
 
               <View style={styles.teleprompterControlsRow}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: pulsoActivo ? "#22C55E" : "#64748B" }} />
-                  <Text style={{ color: "#FFF", fontSize: 13, fontWeight: "bold" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: pulsoActivo ? "#22C55E" : "#64748B" }} />
+                  <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "bold" }}>
                     ⚡ {(setlistEnVivoActual[indiceCancionEnVivo] || {}).bpm || "120"} BPM
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+                <View style={{ flexDirection: "row", gap: 5, flexWrap: "wrap" }}>
                   <TouchableOpacity
                     style={[styles.teleprompterActionBtn, { backgroundColor: metronomoActivo ? "#EF4444" : "#22C55E" }]}
                     onPress={() => setMetronomoActivo(!metronomoActivo)}
                   >
-                    <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 11 }}>
+                    <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 10 }}>
                       {metronomoActivo ? "⏹️ Detener Click" : "▶️ Iniciar Click"}
                     </Text>
                   </TouchableOpacity>
@@ -702,7 +702,7 @@ export default function App() {
                     style={[styles.teleprompterActionBtn, { backgroundColor: avanceAutomaticoActivo ? "#F97316" : "#334155" }]}
                     onPress={() => setAvanceAutomaticoActivo(!avanceAutomaticoActivo)}
                   >
-                    <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 11 }}>
+                    <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 10 }}>
                       {avanceAutomaticoActivo ? "⏱️ Auto: ON" : "⏱️ Auto: OFF"}
                     </Text>
                   </TouchableOpacity>
@@ -726,7 +726,7 @@ export default function App() {
                 disabled={indiceCancionEnVivo === 0}
                 onPress={() => setIndiceCancionEnVivo(prev => Math.max(0, prev - 1))}
               >
-                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>← Anterior</Text>
+                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>← Anterior</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -734,7 +734,7 @@ export default function App() {
                 disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
                 onPress={() => setIndiceCancionEnVivo(prev => prev + 1)}
               >
-                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>Siguiente →</Text>
+                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>Siguiente →</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -1387,19 +1387,19 @@ const styles = StyleSheet.create({
   actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
   postulateRoleOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
   
-  // ESTILOS NUEVOS: Teleprompter / Modo en vivo ultra compacto y sutil
-  teleprompterContainer: { flex: 1, width: "100%", height: "100%", minHeight: "100vh", padding: 10 },
-  teleprompterTopBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 8, width: "100%" },
-  teleprompterExitBtn: { backgroundColor: "#1E293B", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6 },
-  teleprompterScrollContent: { paddingBottom: 40, alignItems: "center", width: "100%" },
-  teleprompterCard: { width: "100%", maxWidth: 800, backgroundColor: "#1E293B", padding: 10, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: "#334155" },
-  teleprompterHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 },
-  teleprompterSongTitle: { color: "#FFF", fontSize: 18, fontWeight: "bold" },
-  teleprompterToneBox: { backgroundColor: "#3B82F6", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, alignItems: "center" },
-  teleprompterControlsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 8, flexWrap: "wrap", gap: 8 },
-  teleprompterActionBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6 },
-  teleprompterLyricsBox: { width: "100%", maxWidth: 800, backgroundColor: "#0F172A", padding: 16, borderRadius: 10, borderWidth: 1, borderColor: "#1E293B", marginBottom: 16 },
-  teleprompterLyricsText: { color: "#F8FAFC", fontSize: 18, lineHeight: 30, textAlign: "left" },
-  teleprompterNavRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", maxWidth: 800, gap: 10 },
-  teleprompterNavBtn: { flex: 1, padding: 12, borderRadius: 8, alignItems: "center" },
+  // ESTILOS NUEVOS: Teleprompter / Modo en vivo ultra reducido
+  teleprompterContainer: { flex: 1, width: "100%", height: "100%", minHeight: "100vh", padding: 8 },
+  teleprompterTopBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 6, width: "100%" },
+  teleprompterExitBtn: { backgroundColor: "#1E293B", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 5 },
+  teleprompterScrollContent: { paddingBottom: 30, alignItems: "center", width: "100%" },
+  teleprompterCard: { width: "100%", maxWidth: 800, backgroundColor: "#1E293B", padding: 8, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: "#334155" },
+  teleprompterHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 4 },
+  teleprompterSongTitle: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
+  teleprompterToneBox: { backgroundColor: "#3B82F6", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5, alignItems: "center" },
+  teleprompterControlsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 6, flexWrap: "wrap", gap: 6 },
+  teleprompterActionBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 5 },
+  teleprompterLyricsBox: { width: "100%", maxWidth: 800, backgroundColor: "#0F172A", padding: 14, borderRadius: 8, borderWidth: 1, borderColor: "#1E293B", marginBottom: 12 },
+  teleprompterLyricsText: { color: "#F8FAFC", fontSize: 16, lineHeight: 26, textAlign: "left" },
+  teleprompterNavRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", maxWidth: 800, gap: 8 },
+  teleprompterNavBtn: { flex: 1, padding: 10, borderRadius: 6, alignItems: "center" },
 });

@@ -709,7 +709,6 @@ export default function App() {
               </View>
             </View>
 
-            {/* CAJA DE LETRA MÁS COMPACTA */}
             <View style={styles.teleprompterLyricsBox}>
               <Text style={styles.teleprompterLyricsText}>
                 {(() => {
@@ -1093,13 +1092,13 @@ export default function App() {
 
                   {serviciosDelDia.length > 0 ? (
                     serviciosDelDia.map((serv) => (
-                      <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 16 }]}>
+                      <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 16, padding: 10 }]}>
                         <View style={styles.eventCardHeaderRow}>
-                          <Text style={[styles.eventMainTitle, { color: t.textMain }]}>📅 {serv.titulo}</Text>
+                          <Text style={[styles.eventMainTitle, { color: t.textMain, fontSize: 13 }]}>📅 {serv.titulo}</Text>
                           {esAdminOLider && (
-                            <View style={{ flexDirection: "row", gap: 6 }}>
+                            <View style={{ flexDirection: "row", gap: 4 }}>
                               <TouchableOpacity
-                                style={styles.editServiceBtn}
+                                style={[styles.editServiceBtn, { paddingVertical: 2, paddingHorizontal: 5 }]}
                                 onPress={() => {
                                   setIdServicioEditando(serv.id);
                                   setNombreEvento(serv.titulo);
@@ -1108,38 +1107,38 @@ export default function App() {
                                   setModalProgramarVisible(true);
                                 }}
                               >
-                                <Text style={{ fontSize: 11, color: "#FFFFFF", fontWeight: "bold" }}>✏️ Modificar</Text>
+                                <Text style={{ fontSize: 10, color: "#FFFFFF", fontWeight: "bold" }}>✏️ Modificar</Text>
                               </TouchableOpacity>
                               <TouchableOpacity
-                                style={styles.deleteServiceBtn}
+                                style={[styles.deleteServiceBtn, { paddingVertical: 2, paddingHorizontal: 5 }]}
                                 onPress={async () => {
                                   setServicios(servicios.filter((s) => s.id !== serv.id));
                                   await supabase.from("servicios").delete().eq("id", serv.id);
                                 }}
                               >
-                                <Text style={{ fontSize: 11, color: "#FFFFFF", fontWeight: "bold" }}>🗑️ Eliminar</Text>
+                                <Text style={{ fontSize: 10, color: "#FFFFFF", fontWeight: "bold" }}>🗑️ Eliminar</Text>
                               </TouchableOpacity>
                             </View>
                           )}
                         </View>
-                        <Text style={{ color: t.textSub, fontSize: 12, marginTop: 4, marginBottom: 4 }}>Observaciones: {serv.observaciones}</Text>
+                        <Text style={{ color: t.textSub, fontSize: 11, marginTop: 2, marginBottom: 4 }}>Observaciones: {serv.observaciones}</Text>
 
-                        <Text style={{ color: t.primary, fontSize: 13, fontWeight: "bold", marginTop: 6, marginBottom: 6 }}>🎵 SETLIST ({serv.setlist?.length || 0}):</Text>
+                        <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginTop: 4, marginBottom: 4 }}>🎵 SETLIST ({serv.setlist?.length || 0}):</Text>
                         {serv.setlist && serv.setlist.length > 0 ? (
                           serv.setlist.map((s, i) => (
-                            <View key={i} style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border, marginBottom: 6 }}>
-                              <Text style={{ color: t.textMain, fontSize: 13, fontWeight: "bold" }}>
-                                {i + 1}. {s.titulo} <Text style={{ color: t.textSub, fontWeight: "normal" }}>(Tono: {s.tono} | {s.bpm || "120"} BPM)</Text>
+                            <View key={i} style={{ backgroundColor: t.bg, padding: 6, borderRadius: 6, borderWidth: 1, borderColor: t.border, marginBottom: 4 }}>
+                              <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "bold" }}>
+                                {i + 1}. {s.titulo} <Text style={{ color: t.textSub, fontWeight: "normal", fontSize: 10 }}>(Tono: {s.tono} | {s.bpm || "120"} BPM)</Text>
                               </Text>
                             </View>
                           ))
                         ) : (
-                          <Text style={{ color: t.textSub, fontSize: 12, marginLeft: 8, fontStyle: "italic" }}>Sin canciones agregadas al setlist.</Text>
+                          <Text style={{ color: t.textSub, fontSize: 11, marginLeft: 6, fontStyle: "italic" }}>Sin canciones agregadas al setlist.</Text>
                         )}
 
                         {serv.setlist && serv.setlist.length > 0 && (
                           <TouchableOpacity
-                            style={{ backgroundColor: "#2563EB", padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8, marginBottom: 10 }}
+                            style={{ backgroundColor: "#2563EB", padding: 8, borderRadius: 6, alignItems: "center", marginTop: 6, marginBottom: 6 }}
                             onPress={() => {
                               setSetlistEnVivoActual(serv.setlist);
                               setIndiceCancionEnVivo(0);
@@ -1148,19 +1147,19 @@ export default function App() {
                               setAvanceAutomaticoActivo(false);
                             }}
                           >
-                            <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 15 }}>▶️ Modo en vivo</Text>
+                            <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}>▶️ Modo en vivo</Text>
                           </TouchableOpacity>
                         )}
 
-                        <View style={{ marginTop: 14, gap: 8 }}>
-                          <TouchableOpacity style={styles.whatsappBtn} onPress={() => enviarPorWhatsApp(serv)}>
-                            <Text style={styles.actionBtnText}>🚀 Enviar setlist por WhatsApp</Text>
+                        <View style={{ marginTop: 8, gap: 6 }}>
+                          <TouchableOpacity style={[styles.whatsappBtn, { padding: 8 }]} onPress={() => enviarPorWhatsApp(serv)}>
+                            <Text style={[styles.actionBtnText, { fontSize: 12 }]}>🚀 Enviar setlist por WhatsApp</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={styles.postulateBtn}
+                            style={[styles.postulateBtn, { padding: 8 }]}
                             onPress={() => { setIdServicioPostulando(serv.id); setModalPostularVisible(true); }}
                           >
-                            <Text style={styles.actionBtnText}>Postularme (Confirmar asistencia)</Text>
+                            <Text style={[styles.actionBtnText, { fontSize: 12 }]}>Postularme (Confirmar asistencia)</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -1387,7 +1386,6 @@ const styles = StyleSheet.create({
   actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
   postulateRoleOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
   
-  // ESTILOS NUEVOS: Teleprompter / Modo en vivo compacto (letra y caja reducidas)
   teleprompterContainer: { flex: 1, width: "100%", height: "100%", minHeight: "100vh", padding: 8 },
   teleprompterTopBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 6, width: "100%" },
   teleprompterExitBtn: { backgroundColor: "#1E293B", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 5 },

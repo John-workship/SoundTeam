@@ -175,6 +175,27 @@ const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
   return transponerNotaUnica(acordeCompuesto, semitonos);
 };
 
+// Función para calcular cuántos semitonos hay de distancia entre dos notas (Tono Original -> Tono Objetivo)
+const calcularDiferenciaSemitonos = (tonoOrigen, tonoDestino) => {
+  if (!tonoOrigen || !tonoDestino) return 0;
+  let tOrigen = NOTAS_BEMOL[tonoOrigen.trim()] || tonoOrigen.trim();
+  let tDestino = NOTAS_BEMOL[tonoDestino.trim()] || tonoDestino.trim();
+
+  // Extraer solo la nota raíz si viene con cualidad de acorde (ej. C#m -> C#)
+  tOrigen = tOrigen.match(/^([A-G][#b]?)/)?.[1] || tOrigen;
+  tDestino = tDestino.match(/^([A-G][#b]?)/)?.[1] || tDestino;
+
+  const idxOrigen = NOTAS_SEMI.indexOf(tOrigen);
+  const idxDestino = NOTAS_SEMI.indexOf(tDestino);
+
+  if (idxOrigen === -1 || idxDestino === -1) return 0;
+
+  let dif = idxDestino - idxOrigen;
+  if (dif < -6) dif += 12;
+  if (dif > 6) dif -= 12;
+  return dif;
+};
+
 // Conversión individual a Sistema Nashville
 const acordeANashville = (acorde, tonalidadActual) => {
   if (!acorde || !tonalidadActual) return acorde;
@@ -209,12 +230,11 @@ const acordeANashville = (acorde, tonalidadActual) => {
   return `${gradoBase}${cualidadAjustada}`;
 };
 
-// Procesador inteligente que detecta corchetes o líneas flotantes de acordes
+// Procesador inteligente de acordes en corchetes o líneas independientes
 const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) => {
   if (!texto) return "";
   let tonoEfectivo = transponerNotaUnica(tonalidadActual, semitonos);
 
-  // Si tiene corchetes, procesamos cada corchete
   if (texto.includes("[")) {
     let textoModif = texto;
     if (semitonos !== 0) {
@@ -226,7 +246,6 @@ const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) =
     return textoModif;
   }
 
-  // Si no usa corchetes, procesamos línea por línea detectando acordes flotantes
   const lineas = texto.split("\n");
   const lineasProcesadas = lineas.map((linea) => {
     if (linea.trim().startsWith("[") && linea.trim().endsWith("]")) return linea;
@@ -1009,12 +1028,19 @@ export default function App() {
     );
   }
 
-  // MODO EN VIVO (ESTILO TELEPROMPTER ADAPTABLE A CUALQUIER PANTALLA)
+  // MODO EN VIVO (CON TRANSPOSICIÓN AUTOMÁTICA SEGÚN EL TONO EDITADO EN EL SERVICIO)
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo];
     const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo.toLowerCase());
     const letraMostrar = objetoRepertorioEnVivo ? objetoRepertorioEnVivo.letra : "[INTRO]\nLetra no disponible en biblioteca.";
     const bpmActual = objetoRepertorioEnVivo?.bpm || cancionActualEnVivo?.bpm || "120";
+
+    // Calculamos el tono base original y el tono asignado en el evento
+    const tonoOriginalBase = objetoRepertorioEnVivo?.tono || cancionActualEnVivo?.tono || "C";
+    const tonoEventoActual = cancionActualEnVivo?.tono || tonoOriginalBase;
+    
+    // Obtenemos los semitonos de diferencia para transponer la letra completa
+    const semitonosDiferencia = calcularDiferenciaSemitonos(tonoOriginalBase, tonoEventoActual);
 
     return (
       <View style={[styles.teleprompterContainer, { backgroundColor: "#0B0F19" }]}>
@@ -1038,7 +1064,7 @@ export default function App() {
                 <Text style={styles.teleprompterSongTitle} numberOfLines={1}>{cancionActualEnVivo?.titulo}</Text>
               </View>
               <View style={styles.teleprompterToneBox}>
-                <Text style={{ color: "#FFF", fontSize: 18, fontWeight: "bold" }}>Tono: {cancionActualEnVivo?.tono}</Text>
+                <Text style={{ color: "#FFF", fontSize: 18, fontWeight: "bold" }}>Tono: {tonoEventoActual}</Text>
               </View>
             </View>
 
@@ -1072,7 +1098,7 @@ export default function App() {
 
           <View style={styles.teleprompterLyricsBox}>
             <Text style={styles.teleprompterLyricsText}>
-              {procesarLetraRepertorio(letraMostrar, cancionActualEnVivo?.tono || "C", 0, "Acordes")}
+              {procesarLetraRepertorio(letraMostrar, tonoOriginalBase, semitonosDiferencia, "Acordes")}
             </Text>
           </View>
 

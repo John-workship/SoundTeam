@@ -117,94 +117,6 @@ const SEDES_DISPONIBLES = [
   { id: "occidente", nombre: "Sede Occidente" },
 ];
 
-const NOTAS_SEMI = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const NOTAS_BEMOL = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
-const MAPA_GRADOS_MAYOR = { 0: '1', 1: 'b2', 2: '2', 3: 'b3', 4: '3', 5: '4', 6: 'b5', 7: '5', 8: 'b6', 9: '6', 10: 'b7', 11: '7' };
-
-const transponerNotaUnica = (acorde, semitonos) => {
-  if (!acorde) return "";
-  let base = acorde.trim();
-  let resto = "", raiz = "";
-  if (base.length >= 2 && (base[1] === "#" || base[1] === "b")) {
-    raiz = base.substring(0, 2);
-    resto = base.substring(2);
-  } else {
-    raiz = base.substring(0, 1);
-    resto = base.substring(1);
-  }
-  if (NOTAS_BEMOL[raiz]) raiz = NOTAS_BEMOL[raiz];
-  let idx = NOTAS_SEMI.indexOf(raiz);
-  if (idx === -1) return acorde;
-  let nuevoIdx = (idx + semitonos) % 12;
-  if (nuevoIdx < 0) nuevoIdx += 12;
-  return NOTAS_SEMI[nuevoIdx] + resto;
-};
-
-const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
-  if (semitonos === 0) return acordeCompuesto;
-  if (acordeCompuesto.includes("/")) {
-    const partes = acordeCompuesto.split("/");
-    return transponerNotaUnica(partes[0], semitonos) + "/" + transponerNotaUnica(partes[1], semitonos);
-  }
-  return transponerNotaUnica(acordeCompuesto, semitonos);
-};
-
-const calcularDiferenciaSemitonos = (tonoOrigen, tonoDestino) => {
-  if (!tonoOrigen || !tonoDestino) return 0;
-  let tOrigen = NOTAS_BEMOL[tonoOrigen.trim()] || tonoOrigen.trim();
-  let tDestino = NOTAS_BEMOL[tonoDestino.trim()] || tonoDestino.trim();
-  tOrigen = tOrigen.match(/^([A-G][#b]?)/)?.[1] || tOrigen;
-  tDestino = tDestino.match(/^([A-G][#b]?)/)?.[1] || tDestino;
-  const idxOrigen = NOTAS_SEMI.indexOf(tOrigen);
-  const idxDestino = NOTAS_SEMI.indexOf(tDestino);
-  if (idxOrigen === -1 || idxDestino === -1) return 0;
-  let dif = idxDestino - idxOrigen;
-  if (dif < -6) dif += 12;
-  if (dif > 6) dif -= 12;
-  return dif;
-};
-
-const acordeANashville = (acorde, tonalidadActual) => {
-  if (!acorde || !tonalidadActual) return acorde;
-  let acordeLimpio = acorde.trim();
-  if (acordeLimpio.includes('/')) {
-    const [raiz, bajo] = acordeLimpio.split('/');
-    return `${acordeANashville(raiz, tonalidadActual)}/${acordeANashville(bajo, tonalidadActual)}`;
-  }
-  const regex = /^([A-G][#b]?)(.*)$/;
-  const match = acordeLimpio.match(regex);
-  if (!match) return acordeLimpio;
-  const [, raizRaw, cualidad] = match;
-  let raiz = NOTAS_BEMOL[raizRaw] || raizRaw;
-  let tonica = NOTAS_BEMOL[tonalidadActual] || tonalidadActual;
-  const idxTonica = NOTAS_SEMI.indexOf(tonica);
-  const idxRaiz = NOTAS_SEMI.indexOf(raiz);
-  if (idxTonica === -1 || idxRaiz === -1) return acordeLimpio;
-  const semitonos = (idxRaiz - idxTonica + 12) % 12;
-  const gradoBase = MAPA_GRADOS_MAYOR[semitonos];
-  let cualidadAjustada = cualidad;
-  if (cualidadAjustada.startsWith('m') && !cualidadAjustada.startsWith('maj')) {
-    cualidadAjustada = cualidadAjustada.slice(1);
-  }
-  return `${gradoBase}${cualidadAjustada}`;
-};
-
-const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) => {
-  if (!texto) return "";
-  let tonoEfectivo = transponerNotaUnica(tonalidadActual, semitonos);
-  if (texto.includes("[")) {
-    let textoModif = texto;
-    if (semitonos !== 0) {
-      textoModif = textoModif.replace(/\[([^\]]+)\]/g, (match, p1) => "[" + transponerAcordeCompuesto(p1, semitonos) + "]");
-    }
-    if (modoVista === "Nashville") {
-      textoModif = textoModif.replace(/\[([^\]]+)\]/g, (match, p1) => "[" + acordeANashville(p1, tonoEfectivo) + "]");
-    }
-    return textoModif;
-  }
-  return texto;
-};
-
 export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState(() => {
     if (Platform.OS === "web") {
@@ -332,21 +244,6 @@ export default function App() {
   const [diaSeleccionado, setDiaSeleccionado] = useState(fechaActualObj.getDate());
   const esDomingoSeleccionado = new Date(mesSeleccionadoObj.year, mesSeleccionadoObj.mesIndex, diaSeleccionado).getDay() === 0;
 
-  const [paletasCulto, setPaletasCulto] = useState(() => {
-    if (Platform.OS === "web") {
-      try {
-        const guardados = localStorage.getItem("soundteam_paletas_culto");
-        return guardados ? JSON.parse(guardados) : [
-          { id: 1, nombre: "Atardecer Violeta", colores: ["#064680", "#31245A", "#AC6DBF", "#2A7CA3", "#588BC2"] },
-          { id: 2, nombre: "Tonos Arena", colores: ["#C29B78", "#A17651", "#5C4033", "#222222"] },
-          { id: 3, nombre: "Blanco Sacro", colores: ["#748185", "#93afb3", "#456467"] },
-          { id: 4, nombre: "Rosa Alba", colores: ["#E29578", "#FFDDD2", "#83C5BE", "#006D77"] },
-        ];
-      } catch (e) { return []; }
-    }
-    return [];
-  });
-
   const [servicios, setServicios] = useState([]);
 
   const cargarServiciosSupabase = async () => {
@@ -384,10 +281,7 @@ export default function App() {
   const [idServicioPostulando, setIdServicioPostulando] = useState(null);
   const [nombreEvento, setNombreEvento] = useState("");
   const [observaciones, setObservaciones] = useState("");
-  const [paletaSeleccionadaModal, setPaletaSeleccionadaModal] = useState(null);
   const [setlistActivo, setSetlistActivo] = useState([]);
-  const [cancionLentaSeleccionada, setCancionLentaSeleccionada] = useState("");
-  const [cancionRapidaSeleccionada, setCancionRapidaSeleccionada] = useState("");
 
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
@@ -435,22 +329,10 @@ export default function App() {
   }, [sedeIdSeleccionada]);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
-  const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
-  const [modoVisualizacionRepertorio, setModoVisualizacionRepertorio] = useState("Acordes");
-  const [modoEdicionCancion, setModoEdicionCancion] = useState(false);
-  const [nuevoTituloCancion, setNuevoTituloCancion] = useState("");
-  const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
-  const [nuevoTonoCancion, setNuevoTonoCancion] = useState("");
-  const [nuevoBpmCancion, setNuevoBpmCancion] = useState("120");
-  const [nuevoTipoSetCancion, setNuevoTipoSetCancion] = useState("lenta");
-  const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
-  const [etiquetasActuales, setEtiquetasActuales] = useState([]);
-
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
   const [idMensajeEditando, setIdMensajeEditando] = useState(null);
-  const [textoOriginalEditando, setTextoOriginalEditando] = useState("");
 
   const cargarMensajesSupabase = async () => {
     const { data, error } = await supabase
@@ -471,7 +353,6 @@ export default function App() {
     return () => { supabase.removeChannel(canalSub); };
   }, [canalChatActivo, sedeIdSeleccionada]);
 
-  // HOOKS GLOBALES SIEMPRE ACTIVOS (Soluciona el error #310)
   useEffect(() => {
     let intervalo = null;
     if (modoEnVivoActivo && metronomoActivo && setlistEnVivoActual.length > 0) {
@@ -591,7 +472,6 @@ export default function App() {
         const { error } = await supabase.from("mensajes").update({ texto: textoModificado, editado: true }).eq("id", idNumerico);
         if (error) { alert(`⚠️ No se pudo corregir el mensaje: ${error.message}`); return; }
         setIdMensajeEditando(null);
-        setTextoOriginalEditando("");
         setNuevoMensajeTexto("");
         await cargarMensajesSupabase();
         alert("✏️ Mensaje corregido con éxito.");
@@ -616,67 +496,6 @@ export default function App() {
     if (confirm(`¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} para esta sede (${sedeActual.nombre})?`)) {
       const { error } = await supabase.from("mensajes").delete().eq("canal", canalChatActivo).eq("sede", sedeIdSeleccionada);
       if (!error) { setMensajesChat([]); alert("🧹 Chat de la sede limpiado con éxito."); } else { alert("⚠️ No se pudo limpiar el chat."); }
-    }
-  };
-
-  const guardarOActualizarCancion = async () => {
-    if (!puedeControlarRepertorio) { alert("⚠️ No tienes permisos suficientes para modificar el repertorio."); return; }
-    if (nuevoTituloCancion.trim() !== "") {
-      const tituloTrimmed = nuevoTituloCancion.trim().toLowerCase();
-      if (cancionSeleccionadaDetalle !== null && modoEdicionCancion) {
-        const cancionActualizada = {
-          titulo: nuevoTituloCancion.trim(),
-          artista: nuevoArtistaCancion || "Sin artista",
-          tono: nuevoTonoCancion || "C",
-          bpm: nuevoBpmCancion || "120",
-          tipo_set: nuevoTipoSetCancion,
-          etiquetas: etiquetasActuales,
-          letra: nuevaLetraCancion || "",
-          sede_id: sedeIdSeleccionada,
-        };
-        let res = await supabase.from("repertorio").update(cancionActualizada).eq("id", cancionSeleccionadaDetalle.id);
-        if (res.error) { alert(`⚠️ Error al actualizar: ${res.error.message}`); return; }
-        await cargarRepertorioSupabase();
-        setModoEdicionCancion(false);
-        setSemitonosTransposicion(0);
-        setCancionSeleccionadaDetalle(null);
-        alert("🎵 Canción actualizada en " + sedeActual.nombre + ".");
-      } else {
-        const nuevoId = Date.now();
-        const nuevaCancion = {
-          id: nuevoId,
-          titulo: nuevoTituloCancion.trim(),
-          artista: nuevoArtistaCancion || "Sin artista",
-          tono: nuevoTonoCancion || "C",
-          bpm: nuevoBpmCancion || "120",
-          tipo_set: nuevoTipoSetCancion,
-          etiquetas: ["Adoración"],
-          letra: nuevaLetraCancion || "",
-          sede_id: sedeIdSeleccionada,
-        };
-        let res = await supabase.from("repertorio").insert([nuevaCancion]);
-        if (res.error) { alert(`⚠️ Error al guardar en Supabase: ${res.error.message}`); return; }
-        await cargarRepertorioSupabase();
-        setModoEdicionCancion(false);
-        alert("🎵 Canción guardada en " + sedeActual.nombre + ".");
-      }
-      setNuevoTituloCancion("");
-      setNuevoArtistaCancion("");
-      setNuevoTonoCancion("");
-      setNuevoBpmCancion("120");
-      setNuevoTipoSetCancion("lenta");
-      setNuevaLetraCancion("");
-      setEtiquetasActuales([]);
-    } else { alert("⚠️ Completa el título de la canción."); }
-  };
-
-  const eliminarCancionRepertorio = async (id) => {
-    if (!puedeControlarRepertorio) { alert("⚠️ Sin permisos para borrar canciones."); return; }
-    if (confirm("¿Deseas eliminar esta canción del repertorio de esta sede?")) {
-      await supabase.from("repertorio").delete().eq("id", id);
-      await cargarRepertorioSupabase();
-      setCancionSeleccionadaDetalle(null);
-      alert("🗑️ Canción eliminada.");
     }
   };
 
@@ -745,7 +564,7 @@ export default function App() {
     else if (rol === "piano") { if (nuevoPiano !== "Sin asignar") { alert("⚠️ Piano ocupado."); return; } nuevoPiano = usuario; }
     else if (rol === "guitarra") { if (nuevaGuitarra !== "Sin asignar") { alert("⚠️ Guitarra ocupada."); return; } nuevaGuitarra = usuario; }
     else if (rol === "bajo") { if (nuevoBajo !== "Sin asignar") { alert("⚠️ Bajo ocupado."); return; } nuevoBajo = usuario; }
-    else if (rol === "bateria") { if (nuevaBateria !== "Sin asignar") { alert("⚠️ Batería ocupada."); return; } nuevaBateria = usuario; }
+    else if (rol === "bateria") { if (nuevoBateria !== "Sin asignar") { alert("⚠️ Batería ocupada."); return; } nuevaBateria = usuario; }
 
     const nVoces = { principal: nuevaVozP, coros: nuevosCoros.length > 0 ? nuevosCoros.join(", ") : "Sin asignar" };
     const nInst = { piano: nuevoPiano, guitarra: nuevaGuitarra, bajo: nuevoBajo, bateria: nuevaBateria };
@@ -1105,7 +924,6 @@ export default function App() {
                                       <TouchableOpacity
                                         onPress={() => {
                                           setIdMensajeEditando(m.id);
-                                          setTextoOriginalEditando(m.texto);
                                           setNuevoMensajeTexto(m.texto);
                                         }}
                                       >
@@ -1160,6 +978,7 @@ export default function App() {
                     })}
                   </View>
 
+                  {/* CALENDARIO COMPACTO Y SUTIL */}
                   <View style={[styles.calendarCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                     <Text style={[styles.calendarHeaderTitle, { color: t.textMain }]}>
                       {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}
@@ -1184,7 +1003,7 @@ export default function App() {
                             <Text style={[styles.dayText, { color: t.textMain }, esSeleccionado && styles.dayTextSelected]}>
                               {item.diaNum}
                             </Text>
-                            {item.postulado && <View style={{ position: "absolute", top: 2, right: 2, backgroundColor: "#22C55E", width: 6, height: 6, borderRadius: 3 }} />}
+                            {item.postulado && <View style={{ position: "absolute", top: 1, right: 1, backgroundColor: "#22C55E", width: 4, height: 4, borderRadius: 2 }} />}
                           </TouchableOpacity>
                         );
                       })}
@@ -1202,7 +1021,6 @@ export default function App() {
                           setIdServicioEditando(null);
                           setNombreEvento(esDomingoSeleccionado ? "Culto Dominical" : "Culto");
                           setObservaciones("");
-                          setPaletaSeleccionadaModal(null);
                           setSetlistActivo([]);
                           setModalProgramarVisible(true);
                         }}
@@ -1563,19 +1381,22 @@ const styles = StyleSheet.create({
   welcomeTitle: { color: "#FFFFFF", fontSize: 17, fontWeight: "bold", marginBottom: 6 },
   welcomeBannerText: { color: "#E2E8F0", fontSize: 14, fontStyle: "italic" },
   inputLabel: { fontSize: 11, marginBottom: 4, fontWeight: "500" },
-  monthsRow: { flexDirection: "row", gap: 6, marginBottom: 10, width: "100%" },
-  monthTab: { flex: 1, paddingVertical: 6, alignItems: "center", borderRadius: 8, borderWidth: 1 },
+  monthsRow: { flexDirection: "row", gap: 6, marginBottom: 8, width: "100%" },
+  monthTab: { flex: 1, paddingVertical: 5, alignItems: "center", borderRadius: 6, borderWidth: 1 },
   monthText: { fontSize: 11 },
   monthTextActive: { color: "#FFFFFF", fontWeight: "bold" },
-  calendarCard: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 14, width: "100%", alignItems: "center" },
-  calendarHeaderTitle: { fontSize: 14, fontWeight: "bold", textAlign: "center", marginBottom: 8 },
-  weekHeaderRow: { flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 6 },
-  weekHeaderText: { fontSize: 11, fontWeight: "bold", width: "13%", textAlign: "center" },
-  daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, justifyContent: "flex-start", width: "100%" },
-  dayCell: { width: "13%", aspectRatio: 1, justifyContent: "center", alignItems: "center", borderRadius: 6, borderWidth: 1, marginBottom: 4, position: "relative" },
-  dayCellEmpty: { width: "13%", aspectRatio: 1, marginBottom: 4 },
-  dayText: { fontSize: 13, fontWeight: "bold" },
+  
+  // ESTILOS NUEVOS: Calendario compacto y sutil
+  calendarCard: { padding: 8, borderRadius: 10, borderWidth: 1, marginBottom: 12, width: "100%", alignItems: "center" },
+  calendarHeaderTitle: { fontSize: 13, fontWeight: "bold", textAlign: "center", marginBottom: 6 },
+  weekHeaderRow: { flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 4 },
+  weekHeaderText: { fontSize: 10, fontWeight: "bold", width: "13%", textAlign: "center" },
+  daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 3, justifyContent: "flex-start", width: "100%" },
+  dayCell: { width: "13%", aspectRatio: 1.2, justifyContent: "center", alignItems: "center", borderRadius: 4, borderWidth: 1, marginBottom: 3, position: "relative" },
+  dayCellEmpty: { width: "13%", aspectRatio: 1.2, marginBottom: 3 },
+  dayText: { fontSize: 11, fontWeight: "bold" },
   dayTextSelected: { color: "#FFFFFF", fontWeight: "bold" },
+
   serviceSectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, width: "100%" },
   serviceSectionTitle: { fontSize: 13, fontWeight: "bold", flex: 1 },
   programBtn: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },

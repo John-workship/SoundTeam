@@ -132,6 +132,21 @@ const SEDES_DISPONIBLES = [
 const NOTAS_SEMI = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const NOTAS_BEMOL = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
 
+const MAPA_GRADOS_MAYOR = {
+  0: '1',
+  1: 'b2',
+  2: '2',
+  3: 'b3',
+  4: '3',
+  5: '4',
+  6: 'b5',
+  7: '5',
+  8: 'b6',
+  9: '6',
+  10: 'b7',
+  11: '7'
+};
+
 const transponerNotaUnica = (acorde, semitonos) => {
   if (!acorde) return "";
   let base = acorde.trim();
@@ -160,25 +175,60 @@ const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
   return transponerNotaUnica(acordeCompuesto, semitonos);
 };
 
-const transponerTextoLetra = (texto, semitonos) => {
-  if (semitonos === 0 || !texto) return texto;
-  let textoTranspuesto = texto.replace(/\[([^\]]+)\]/g, (match, p1) => {
-    return "[" + transponerAcordeCompuesto(p1, semitonos) + "]";
-  });
-  const lineas = textoTranspuesto.split("\n");
-  const lineasProcesadas = lineas.map((linea) => {
-    if (linea.trim().startsWith("[") && linea.trim().endsWith("]")) return linea;
-    const palabras = linea.trim().split(/\s+/);
-    const esLineaDeAcordes = palabras.length > 0 && palabras.every((p) => {
-      const limpia = p.replace(/[^A-G#bm0-9/]/g, "");
-      return /^[A-G](#|b)?(m|maj|min|dim|aug|sus|[0-9])*(\/[A-G](#|b)?)?$/.test(limpia);
+// Conversión individual a Sistema Nashville
+const acordeANashville = (acorde, tonalidadActual) => {
+  if (!acorde || !tonalidadActual) return acorde;
+  let acordeLimpio = acorde.trim();
+
+  if (acordeLimpio.includes('/')) {
+    const [raiz, bajo] = acordeLimpio.split('/');
+    return `${acordeANashville(raiz, tonalidadActual)}/${acordeANashville(bajo, tonalidadActual)}`;
+  }
+
+  const regex = /^([A-G][#b]?)(.*)$/;
+  const match = acordeLimpio.match(regex);
+  if (!match) return acordeLimpio;
+
+  const [, raizRaw, cualidad] = match;
+  let raiz = NOTAS_BEMOL[raizRaw] || raizRaw;
+  let tonica = NOTAS_BEMOL[tonalidadActual] || tonalidadActual;
+
+  const idxTonica = NOTAS_SEMI.indexOf(tonica);
+  const idxRaiz = NOTAS_SEMI.indexOf(raiz);
+
+  if (idxTonica === -1 || idxRaiz === -1) return acordeLimpio;
+
+  const semitonos = (idxRaiz - idxTonica + 12) % 12;
+  const gradoBase = MAPA_GRADOS_MAYOR[semitonos];
+
+  let cualidadAjustada = cualidad;
+  if (cualidadAjustada.startsWith('m') && !cualidadAjustada.startsWith('maj')) {
+    cualidadAjustada = cualidadAjustada.slice(1);
+  }
+
+  return `${gradoBase}${cualidadAjustada}`;
+};
+
+const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) => {
+  if (!texto) return "";
+  let textoModificado = texto;
+
+  // Primero aplicamos transposición normal de tonos si el usuario usó [-] o [+]
+  if (semitonos !== 0) {
+    textoModificado = textoModificado.replace(/\[([^\]]+)\]/g, (match, p1) => {
+      return "[" + transponerAcordeCompuesto(p1, semitonos) + "]";
     });
-    if (esLineaDeAcordes) {
-      return palabras.map((p) => transponerAcordeCompuesto(p, semitonos)).join("   ");
-    }
-    return linea;
-  });
-  return lineasProcesadas.join("\n");
+  }
+
+  // Si está en modo Nashville, convertimos cada acorde entre corchetes al número correspondiente
+  if (modoVista === "Nashville") {
+    const tonoEfectivo = transponerNotaUnica(tonalidadActual, semitonos);
+    textoModificado = textoModificado.replace(/\[([^\]]+)\]/g, (match, p1) => {
+      return "[" + acordeANashville(p1, tonoEfectivo) + "]";
+    });
+  }
+
+  return textoModificado;
 };
 
 export default function App() {
@@ -999,7 +1049,7 @@ export default function App() {
 
           <View style={styles.teleprompterLyricsBox}>
             <Text style={styles.teleprompterLyricsText}>
-              {transponerTextoLetra(letraMostrar, 0)}
+              {procesarLetraRepertorio(letraMostrar, cancionActualEnVivo?.tono || "C", 0, "Acordes")}
             </Text>
           </View>
 
@@ -2210,7 +2260,12 @@ export default function App() {
 
                       <View style={{ backgroundColor: t.bg, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
                         <Text style={{ color: t.textMain, fontSize: 14, lineHeight: 22, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" }}>
-                          {transponerTextoLetra(cancionSeleccionadaDetalle.letra || "Sin letra registrada.", semitonosTransposicion)}
+                          {procesarLetraRepertorio(
+                            cancionSeleccionadaDetalle.letra || "Sin letra registrada.",
+                            cancionSeleccionadaDetalle.tono || "C",
+                            semitonosTransposicion,
+                            modoVisualizacionRepertorio
+                          )}
                         </Text>
                       </View>
                     </View>

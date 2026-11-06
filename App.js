@@ -1303,6 +1303,7 @@ export default function App() {
             </View>
           </ScrollView>
 
+          {/* BARRA DE NAVEGACIÓN INFERIOR AMPLIADA Y MÁS VISIBLE */}
           <View style={[styles.tabBar, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>
             {[
               { key: "inicio", label: "🏠 Inicio" },
@@ -1312,7 +1313,7 @@ export default function App() {
             ].map((tab) => (
               <TouchableOpacity
                 key={tab.key}
-                style={[styles.tabItem, pestana === tab.key && { borderTopWidth: 3, borderTopColor: t.primary }]}
+                style={[styles.tabItem, pestana === tab.key && { borderTopWidth: 4, borderTopColor: t.primary }]}
                 onPress={() => { setPestana(tab.key); setCancionSeleccionadaDetalle(null); }}
               >
                 <Text style={[styles.tabText, { color: t.textSub }, pestana === tab.key && { color: t.textMain, fontWeight: "bold" }]} numberOfLines={1}>
@@ -1375,9 +1376,12 @@ const styles = StyleSheet.create({
   editServiceBtn: { backgroundColor: "#3B82F6", paddingVertical: 3, paddingHorizontal: 6, borderRadius: 4 },
   deleteServiceBtn: { backgroundColor: "#EF4444", paddingVertical: 3, paddingHorizontal: 6, borderRadius: 4 },
   repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
-  tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1, width: "100%" },
-  tabItem: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 2 },
-  tabText: { fontSize: 10, textAlign: "center" },
+  
+  // ESTILOS DE LA BARRA INFERIOR AMPLIADOS Y MÁS VISIBLES
+  tabBar: { flexDirection: "row", height: 75, borderTopWidth: 1, width: "100%", paddingHorizontal: 8, alignItems: "center" },
+  tabItem: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 10 },
+  tabText: { fontSize: 14, textAlign: "center", fontWeight: "600" },
+
   memberCard: { padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
   memberHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   memberTitle: { fontSize: 14, fontWeight: "bold" },

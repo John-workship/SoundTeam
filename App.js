@@ -106,19 +106,19 @@ const PAPELES_TAPIZ = {
   ninguno: { nombre: "🎨 Liso", css: {} },
   ipuc: { 
     nombre: "⛪ IPUC", 
-    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
+    css: Platform.OS === "web" ? { backgroundColor: "#0f172a" } : {} 
   },
   patronMusical: { 
     nombre: "🎵 Notas Musicales", 
-    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
+    css: Platform.OS === "web" ? { backgroundColor: "#1e1b4b" } : {} 
   },
   eventos: { 
     nombre: "📷 Eventos", 
-    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
+    css: Platform.OS === "web" ? { backgroundColor: "#311026" } : {} 
   },
   maderaAcustica: { 
     nombre: "🪵 Madera Estudio", 
-    css: Platform.OS === "web" ? { backgroundImage: `url('https://images.unsplash.com/photo-1546484475-7f7bd55792da?q=80&w=1200&auto=format&fit=crop')`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" } : {} 
+    css: Platform.OS === "web" ? { backgroundColor: "#1c1917" } : {} 
   },
 };
 
@@ -536,9 +536,9 @@ export default function App() {
   useEffect(() => {
     let intervalo = null;
     if (modoEnVivoActivo && metronomoActivo && setlistEnVivoActual.length > 0) {
-      const cancionActual = setlistEnVivoActual[indiceCancionEnVivo];
-      const objetoRepo = repertorio.find(r => r.titulo.toLowerCase() === cancionActual?.titulo.toLowerCase());
-      const bpmNum = parseInt(objetoRepo?.bpm || cancionActual?.bpm || "120", 10) || 120;
+      const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
+      const objetoRepo = repertorio.find(r => r.titulo && cancionActual.titulo && r.titulo.toLowerCase() === cancionActual.titulo.toLowerCase()) || {};
+      const bpmNum = parseInt(objetoRepo.bpm || cancionActual.bpm || "120", 10) || 120;
       const msPorBeat = (60 / bpmNum) * 1000;
 
       intervalo = setInterval(() => {
@@ -555,9 +555,9 @@ export default function App() {
   useEffect(() => {
     let timerAvance = null;
     if (modoEnVivoActivo && avanceAutomaticoActivo && setlistEnVivoActual.length > 0) {
-      const cancionActual = setlistEnVivoActual[indiceCancionEnVivo];
-      const objetoRepo = repertorio.find(r => r.titulo.toLowerCase() === cancionActual?.titulo.toLowerCase());
-      const bpmNum = parseInt(objetoRepo?.bpm || cancionActual?.bpm || "120", 10) || 120;
+      const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
+      const objetoRepo = repertorio.find(r => r.titulo && cancionActual.titulo && r.titulo.toLowerCase() === cancionActual.titulo.toLowerCase()) || {};
+      const bpmNum = parseInt(objetoRepo.bpm || cancionActual.bpm || "120", 10) || 120;
       const tiempoEstimadoMs = (240000 * 120) / bpmNum; 
 
       timerAvance = setTimeout(() => {
@@ -844,10 +844,10 @@ export default function App() {
 
       servicio.setlist.forEach((s) => {
         const obj = repertorio.find(
-          (r) => r.titulo.toLowerCase() === s.titulo.toLowerCase()
-        );
+          (r) => r.titulo && s.titulo && r.titulo.toLowerCase() === s.titulo.toLowerCase()
+        ) || {};
         const tSet = (
-          obj?.tipoSet ||
+          obj.tipoSet ||
           (parseInt(s.bpm || "120", 10) < 110 ? "lenta" : "rapida")
         ).toLowerCase();
 
@@ -1013,33 +1013,23 @@ export default function App() {
     );
   }
 
-  // MODO EN VIVO (ESTABLE, LIMPIO Y 100% FUNCIONAL)
+  // MODO EN VIVO (SEGURO, LIMPIO Y SIN FALLOS WEB)
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo] || {};
-    const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo?.toLowerCase());
-    const letraMostrar = objetoRepertorioEnVivo?.letra || cancionActualEnVivo?.letra || "[INTRO]\nLetra no disponible en biblioteca.";
-    const bpmActual = objetoRepertorioEnVivo?.bpm || cancionActualEnVivo?.bpm || "120";
+    const objetoRepertorioEnVivo = repertorio.find(r => r.titulo && cancionActualEnVivo.titulo && r.titulo.toLowerCase() === cancionActualEnVivo.titulo.toLowerCase()) || {};
+    const letraMostrar = objetoRepertorioEnVivo.letra || cancionActualEnVivo.letra || "[INTRO]\nLetra no disponible en biblioteca.";
+    const bpmActual = objetoRepertorioEnVivo.bpm || cancionActualEnVivo.bpm || "120";
 
-    const tonoOriginalBase = objetoRepertorioEnVivo?.tono || cancionActualEnVivo?.tono || "C";
-    const tonoEventoActual = cancionActualEnVivo?.tono || tonoOriginalBase;
+    const tonoOriginalBase = objetoRepertorioEnVivo.tono || cancionActualEnVivo.tono || "C";
+    const tonoEventoActual = cancionActualEnVivo.tono || tonoOriginalBase;
     const semitonosDiferencia = calcularDiferenciaSemitonos(tonoOriginalBase, tonoEventoActual);
 
     const scrollRef = React.useRef(null);
-    const [scrollPos, setScrollPos] = useState(0);
-    const [contentHeight, setContentHeight] = useState(1);
-    const [layoutHeight, setLayoutHeight] = useState(1);
 
     const manejarAccionAvanzar = () => {
-      if (scrollPos + layoutHeight < contentHeight - 40) {
-        const nuevoScroll = Math.min(contentHeight, scrollPos + 280);
-        scrollRef.current?.scrollTo({ y: nuevoScroll, animated: true });
-        setScrollPos(nuevoScroll);
-      } else {
-        if (indiceCancionEnVivo < setlistEnVivoActual.length - 1) {
-          setIndiceCancionEnVivo(prev => prev + 1);
-          scrollRef.current?.scrollTo({ y: 0, animated: false });
-          setScrollPos(0);
-        }
+      if (indiceCancionEnVivo < setlistEnVivoActual.length - 1) {
+        setIndiceCancionEnVivo(prev => prev + 1);
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     };
 
@@ -1051,21 +1041,16 @@ export default function App() {
             manejarAccionAvanzar();
           } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
             e.preventDefault();
-            if (scrollPos > 50) {
-              const nuevoScroll = Math.max(0, scrollPos - 280);
-              scrollRef.current?.scrollTo({ y: nuevoScroll, animated: true });
-              setScrollPos(nuevoScroll);
-            } else if (indiceCancionEnVivo > 0) {
+            if (indiceCancionEnVivo > 0) {
               setIndiceCancionEnVivo(prev => prev - 1);
               scrollRef.current?.scrollTo({ y: 0, animated: false });
-              setScrollPos(0);
             }
           }
         };
         window.addEventListener("keydown", manejarTecladoEnVivo);
         return () => window.removeEventListener("keydown", manejarTecladoEnVivo);
       }
-    }, [scrollPos, contentHeight, layoutHeight, indiceCancionEnVivo, setlistEnVivoActual.length]);
+    }, [indiceCancionEnVivo, setlistEnVivoActual.length]);
 
     return (
       <View style={[styles.teleprompterContainer, { backgroundColor: "#0B0F19" }]}>
@@ -1088,16 +1073,12 @@ export default function App() {
         <ScrollView 
           ref={scrollRef}
           contentContainerStyle={styles.teleprompterScrollContent}
-          onContentSizeChange={(_, h) => setContentHeight(h)}
-          onLayout={(e) => setLayoutHeight(e.nativeEvent.layout.height)}
-          onScroll={(e) => setScrollPos(e.nativeEvent.contentOffset.y)}
-          scrollEventThrottle={16}
         >
           <View style={styles.teleprompterCard}>
             <View style={styles.teleprompterHeaderRow}>
               <View style={{ flex: 1, marginRight: 10 }}>
                 <Text style={{ color: "#38BDF8", fontSize: 11, fontWeight: "bold", marginBottom: 2 }}>EN VIVO:</Text>
-                <Text style={styles.teleprompterSongTitle} numberOfLines={1}>{cancionActualEnVivo?.titulo || "Sin título"}</Text>
+                <Text style={styles.teleprompterSongTitle} numberOfLines={1}>{cancionActualEnVivo.titulo || "Sin título"}</Text>
               </View>
               <View style={styles.teleprompterToneBox}>
                 <Text style={{ color: "#FFF", fontSize: 18, fontWeight: "bold" }}>Tono: {tonoEventoActual}</Text>
@@ -1147,24 +1128,23 @@ export default function App() {
               ]}
               disabled={indiceCancionEnVivo === 0}
               onPress={() => { 
-                if (scrollPos > 50) {
-                  scrollRef.current?.scrollTo({ y: 0, animated: true });
-                  setScrollPos(0);
-                } else {
-                  setIndiceCancionEnVivo(prev => Math.max(0, prev - 1));
-                  scrollRef.current?.scrollTo({ y: 0, animated: false });
-                  setScrollPos(0);
-                }
+                setIndiceCancionEnVivo(prev => Math.max(0, prev - 1));
+                scrollRef.current?.scrollTo({ y: 0, animated: false });
               }}
             >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 14 }}>← Anterior</Text>
+              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 14 }}>← Canción Anterior</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.teleprompterNavBtn, { backgroundColor: "#3B82F6" }]}
+              style={[
+                styles.teleprompterNavBtn, 
+                { backgroundColor: "#3B82F6" },
+                indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.4 }
+              ]}
+              disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
               onPress={manejarAccionAvanzar}
             >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 14 }}>Siguiente / Bajar ↓</Text>
+              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 14 }}>Siguiente Canción →</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -1596,9 +1576,9 @@ export default function App() {
                   )}
 
                   {(() => {
-                    const titulosEnSetlist = setlistActivo.map(s => s.titulo.toLowerCase());
+                    const titulosEnSetlist = setlistActivo.map(s => s.titulo ? s.titulo.toLowerCase() : "");
                     const cancionesDisponibles = repertorio
-                      .filter(c => !titulosEnSetlist.includes(c.titulo.toLowerCase()))
+                      .filter(c => c.titulo && !titulosEnSetlist.includes(c.titulo.toLowerCase()))
                       .sort((a, b) => a.titulo.localeCompare(b.titulo));
 
                     const lentasDisponibles = cancionesDisponibles.filter(c => {
@@ -1660,7 +1640,7 @@ export default function App() {
                                   let target = cancionLentaSeleccionada;
                                   if (!target && lentasDisponibles.length > 0) target = lentasDisponibles[0].titulo;
                                   if (target) {
-                                    const obj = repertorio.find(r => r.titulo.toLowerCase() === target.toLowerCase());
+                                    const obj = repertorio.find(r => r.titulo && target && r.titulo.toLowerCase() === target.toLowerCase());
                                     setSetlistActivo([...setlistActivo, { titulo: target, tono: obj ? obj.tono : "C", bpm: obj ? (obj.bpm || "90") : "90" }]);
                                     setCancionLentaSeleccionada("");
                                   } else {
@@ -1721,7 +1701,7 @@ export default function App() {
                                   let target = cancionRapidaSeleccionada;
                                   if (!target && rapidasDisponibles.length > 0) target = rapidasDisponibles[0].titulo;
                                   if (target) {
-                                    const obj = repertorio.find(r => r.titulo.toLowerCase() === target.toLowerCase());
+                                    const obj = repertorio.find(r => r.titulo && target && r.titulo.toLowerCase() === target.toLowerCase());
                                     setSetlistActivo([...setlistActivo, { titulo: target, tono: obj ? obj.tono : "C", bpm: obj ? (obj.bpm || "120") : "120" }]);
                                     setCancionRapidaSeleccionada("");
                                   } else {

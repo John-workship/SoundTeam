@@ -133,18 +133,7 @@ const NOTAS_SEMI = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", 
 const NOTAS_BEMOL = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
 
 const MAPA_GRADOS_MAYOR = {
-  0: '1',
-  1: 'b2',
-  2: '2',
-  3: 'b3',
-  4: '3',
-  5: '4',
-  6: 'b5',
-  7: '5',
-  8: 'b6',
-  9: '6',
-  10: 'b7',
-  11: '7'
+  0: '1', 1: 'b2', 2: '2', 3: 'b3', 4: '3', 5: '4', 6: 'b5', 7: '5', 8: 'b6', 9: '6', 10: 'b7', 11: '7'
 };
 
 const transponerNotaUnica = (acorde, semitonos) => {
@@ -175,13 +164,11 @@ const transponerAcordeCompuesto = (acordeCompuesto, semitonos) => {
   return transponerNotaUnica(acordeCompuesto, semitonos);
 };
 
-// Función para calcular cuántos semitonos hay de distancia entre dos notas (Tono Original -> Tono Objetivo)
 const calcularDiferenciaSemitonos = (tonoOrigen, tonoDestino) => {
   if (!tonoOrigen || !tonoDestino) return 0;
   let tOrigen = NOTAS_BEMOL[tonoOrigen.trim()] || tonoOrigen.trim();
   let tDestino = NOTAS_BEMOL[tonoDestino.trim()] || tonoDestino.trim();
 
-  // Extraer solo la nota raíz si viene con cualidad de acorde (ej. C#m -> C#)
   tOrigen = tOrigen.match(/^([A-G][#b]?)/)?.[1] || tOrigen;
   tDestino = tDestino.match(/^([A-G][#b]?)/)?.[1] || tDestino;
 
@@ -196,7 +183,6 @@ const calcularDiferenciaSemitonos = (tonoOrigen, tonoDestino) => {
   return dif;
 };
 
-// Conversión individual a Sistema Nashville
 const acordeANashville = (acorde, tonalidadActual) => {
   if (!acorde || !tonalidadActual) return acorde;
   let acordeLimpio = acorde.trim();
@@ -230,7 +216,6 @@ const acordeANashville = (acorde, tonalidadActual) => {
   return `${gradoBase}${cualidadAjustada}`;
 };
 
-// Procesador inteligente de acordes en corchetes o líneas independientes
 const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) => {
   if (!texto) return "";
   let tonoEfectivo = transponerNotaUnica(tonalidadActual, semitonos);
@@ -1028,35 +1013,92 @@ export default function App() {
     );
   }
 
-  // MODO EN VIVO (CON TRANSPOSICIÓN AUTOMÁTICA SEGÚN EL TONO EDITADO EN EL SERVICIO)
+  // MODO EN VIVO (CON SCROLL AL HACER CLIC Y SALTO DE CANCIÓN AL LLEGAR AL FINAL)
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo];
     const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo.toLowerCase());
     const letraMostrar = objetoRepertorioEnVivo ? objetoRepertorioEnVivo.letra : "[INTRO]\nLetra no disponible en biblioteca.";
     const bpmActual = objetoRepertorioEnVivo?.bpm || cancionActualEnVivo?.bpm || "120";
 
-    // Calculamos el tono base original y el tono asignado en el evento
     const tonoOriginalBase = objetoRepertorioEnVivo?.tono || cancionActualEnVivo?.tono || "C";
     const tonoEventoActual = cancionActualEnVivo?.tono || tonoOriginalBase;
-    
-    // Obtenemos los semitonos de diferencia para transponer la letra completa
     const semitonosDiferencia = calcularDiferenciaSemitonos(tonoOriginalBase, tonoEventoActual);
 
+    const scrollRef = React.useRef(null);
+    const [scrollPos, setScrollPos] = useState(0);
+    const [contentHeight, setContentHeight] = useState(1);
+    const [layoutHeight, setLayoutHeight] = useState(1);
+
+    const manejarAccionAvanzar = () => {
+      if (scrollPos + layoutHeight < contentHeight - 40) {
+        const nuevoScroll = Math.min(contentHeight, scrollPos + 280);
+        scrollRef.current?.scrollTo({ y: nuevoScroll, animated: true });
+        setScrollPos(nuevoScroll);
+      } else {
+        if (indiceCancionEnVivo < setlistEnVivoActual.length - 1) {
+          setIndiceCancionEnVivo(prev => prev + 1);
+          scrollRef.current?.scrollTo({ y: 0, animated: false });
+          setScrollPos(0);
+        }
+      }
+    };
+
+    useEffect(() => {
+      if (Platform.OS === "web") {
+        const manejarTecladoEnVivo = (e) => {
+          if (e.key === "ArrowRight" || e.key === " ") {
+            e.preventDefault();
+            manejarAccionAvanzar();
+          } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+            e.preventDefault();
+            if (scrollPos > 50) {
+              const nuevoScroll = Math.max(0, scrollPos - 280);
+              scrollRef.current?.scrollTo({ y: nuevoScroll, animated: true });
+              setScrollPos(nuevoScroll);
+            } else if (indiceCancionEnVivo > 0) {
+              setIndiceCancionEnVivo(prev => prev - 1);
+              scrollRef.current?.scrollTo({ y: 0, animated: false });
+              setScrollPos(0);
+            }
+          }
+        };
+        window.addEventListener("keydown", manejarTecladoEnVivo);
+        return () => window.removeEventListener("keydown", manejarTecladoEnVivo);
+      }
+    }, [scrollPos, contentHeight, layoutHeight, indiceCancionEnVivo, setlistEnVivoActual.length]);
+
     return (
-      <View style={[styles.teleprompterContainer, { backgroundColor: "#0B0F19" }]}>
+      <View 
+        style={[styles.teleprompterContainer, { backgroundColor: "#0B0F19" }]}
+        onStartShouldSetResponder={() => true}
+        onResponderRelease={manejarAccionAvanzar}
+        onClick={manejarAccionAvanzar}
+      >
         <View style={styles.teleprompterTopBar}>
           <TouchableOpacity 
             style={styles.teleprompterExitBtn}
-            onPress={() => { setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
+            onPress={(e) => { 
+              e.stopPropagation?.();
+              setModoEnVivoActivo(false); 
+              setMetronomoActivo(false); 
+              setAvanceAutomaticoActivo(false); 
+            }}
           >
             <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>✕ Salir de Escenario</Text>
           </TouchableOpacity>
           <Text style={{ color: "#94A3B8", fontSize: 14, fontWeight: "bold" }}>
-            Canción {indiceCancionEnVivo + 1} de {setlistEnVivoActual.length}
+            Canción {indiceCancionEnVivo + 1} de {setlistEnVivoActual.length} (Haz clic para bajar / avanzar)
           </Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.teleprompterScrollContent}>
+        <ScrollView 
+          ref={scrollRef}
+          contentContainerStyle={styles.teleprompterScrollContent}
+          onContentSizeChange={(_, h) => setContentHeight(h)}
+          onLayout={(e) => setLayoutHeight(e.nativeEvent.layout.height)}
+          onScroll={(e) => setScrollPos(e.nativeEvent.contentOffset.y)}
+          scrollEventThrottle={16}
+        >
           <View style={styles.teleprompterCard}>
             <View style={styles.teleprompterHeaderRow}>
               <View style={{ flex: 1, marginRight: 10 }}>
@@ -1077,7 +1119,7 @@ export default function App() {
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                 <TouchableOpacity
                   style={[styles.teleprompterActionBtn, { backgroundColor: metronomoActivo ? "#EF4444" : "#22C55E" }]}
-                  onPress={() => setMetronomoActivo(!metronomoActivo)}
+                  onPress={(e) => { e.stopPropagation?.(); setMetronomoActivo(!metronomoActivo); }}
                 >
                   <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
                     {metronomoActivo ? "⏹️ Detener Click" : "▶️ Iniciar Click"}
@@ -1086,7 +1128,7 @@ export default function App() {
 
                 <TouchableOpacity
                   style={[styles.teleprompterActionBtn, { backgroundColor: avanceAutomaticoActivo ? "#F97316" : "#334155" }]}
-                  onPress={() => setAvanceAutomaticoActivo(!avanceAutomaticoActivo)}
+                  onPress={(e) => { e.stopPropagation?.(); setAvanceAutomaticoActivo(!avanceAutomaticoActivo); }}
                 >
                   <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>
                     {avanceAutomaticoActivo ? "⏱️ Auto: ON" : "⏱️ Auto: OFF"}
@@ -1110,21 +1152,29 @@ export default function App() {
                 indiceCancionEnVivo === 0 && { opacity: 0.4 }
               ]}
               disabled={indiceCancionEnVivo === 0}
-              onPress={() => setIndiceCancionEnVivo(prev => Math.max(0, prev - 1))}
+              onPress={(e) => { 
+                e.stopPropagation?.(); 
+                if (scrollPos > 50) {
+                  scrollRef.current?.scrollTo({ y: 0, animated: true });
+                  setScrollPos(0);
+                } else {
+                  setIndiceCancionEnVivo(prev => Math.max(0, prev - 1));
+                  scrollRef.current?.scrollTo({ y: 0, animated: false });
+                  setScrollPos(0);
+                }
+              }}
             >
               <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 14 }}>← Anterior</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[
-                styles.teleprompterNavBtn,
-                { backgroundColor: "#3B82F6" },
-                indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.4 }
-              ]}
-              disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
-              onPress={() => setIndiceCancionEnVivo(prev => Math.min(setlistEnVivoActual.length - 1, prev + 1))}
+              style={[styles.teleprompterNavBtn, { backgroundColor: "#3B82F6" }]}
+              onPress={(e) => { 
+                e.stopPropagation?.(); 
+                manejarAccionAvanzar(); 
+              }}
             >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 14 }}>Siguiente →</Text>
+              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 14 }}>Siguiente / Bajar ↓</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -1555,7 +1605,6 @@ export default function App() {
                     ))
                   )}
 
-                  {/* SELECTORES DE SET LENTAS Y RÁPIDAS */}
                   {(() => {
                     const titulosEnSetlist = setlistActivo.map(s => s.titulo.toLowerCase());
                     const cancionesDisponibles = repertorio
@@ -1574,7 +1623,6 @@ export default function App() {
 
                     return (
                       <View style={{ marginTop: 10, gap: 10 }}>
-                        {/* SELECTOR 1: SET LENTAS */}
                         <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
                           <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>🕯️ Set Lentas:</Text>
                           {lentasDisponibles.length === 0 ? (
@@ -1636,7 +1684,6 @@ export default function App() {
                           )}
                         </View>
 
-                        {/* SELECTOR 2: SET RÁPIDAS */}
                         <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
                           <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>⚡ Set Rápidas:</Text>
                           {rapidasDisponibles.length === 0 ? (
@@ -1887,7 +1934,6 @@ export default function App() {
                             )}
                           </View>
 
-                          {/* LISTA DE COROS HACIA ABAJO */}
                           <View style={{ marginTop: 2 }}>
                             <Text style={{ color: t.textMain, fontSize: 11, marginBottom: 2 }}>• Coros:</Text>
                             {(!serv.voces?.coros || serv.voces?.coros === "Sin asignar" || serv.voces?.coros === "") ? (
@@ -2358,7 +2404,6 @@ export default function App() {
                           />
                         </View>
 
-                        {/* SELECTOR DE SET AL CREAR CANCIÓN */}
                         <Text style={[styles.inputLabel, { color: t.textMain, marginTop: 4 }]}>Seleccionar tipo de Set:</Text>
                         <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
                           {[

@@ -1013,11 +1013,11 @@ export default function App() {
     );
   }
 
-  // MODO EN VIVO (CON SCROLL AL HACER CLIC Y SALTO DE CANCIÓN AL LLEGAR AL FINAL)
+  // MODO EN VIVO (SEGURO Y FUNCIONAL CON SCROLL PROGRESIVO)
   if (modoEnVivoActivo) {
-    const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo];
-    const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo.toLowerCase());
-    const letraMostrar = objetoRepertorioEnVivo ? objetoRepertorioEnVivo.letra : "[INTRO]\nLetra no disponible en biblioteca.";
+    const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo] || {};
+    const objetoRepertorioEnVivo = repertorio.find(r => r.titulo.toLowerCase() === cancionActualEnVivo?.titulo?.toLowerCase());
+    const letraMostrar = objetoRepertorioEnVivo?.letra || cancionActualEnVivo?.letra || "[INTRO]\nLetra no disponible en biblioteca.";
     const bpmActual = objetoRepertorioEnVivo?.bpm || cancionActualEnVivo?.bpm || "120";
 
     const tonoOriginalBase = objetoRepertorioEnVivo?.tono || cancionActualEnVivo?.tono || "C";
@@ -1103,7 +1103,7 @@ export default function App() {
             <View style={styles.teleprompterHeaderRow}>
               <View style={{ flex: 1, marginRight: 10 }}>
                 <Text style={{ color: "#38BDF8", fontSize: 11, fontWeight: "bold", marginBottom: 2 }}>EN VIVO:</Text>
-                <Text style={styles.teleprompterSongTitle} numberOfLines={1}>{cancionActualEnVivo?.titulo}</Text>
+                <Text style={styles.teleprompterSongTitle} numberOfLines={1}>{cancionActualEnVivo?.titulo || "Sin título"}</Text>
               </View>
               <View style={styles.teleprompterToneBox}>
                 <Text style={{ color: "#FFF", fontSize: 18, fontWeight: "bold" }}>Tono: {tonoEventoActual}</Text>

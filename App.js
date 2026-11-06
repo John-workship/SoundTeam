@@ -664,7 +664,6 @@ export default function App() {
           </View>
 
           <ScrollView contentContainerStyle={styles.teleprompterScrollContent}>
-            {/* TARJETA EN VIVO MÁS COMPACTA */}
             <View style={styles.teleprompterCard}>
               <View style={styles.teleprompterHeaderRow}>
                 <View style={{ flex: 1, marginRight: 8 }}>
@@ -710,6 +709,7 @@ export default function App() {
               </View>
             </View>
 
+            {/* CAJA DE LETRA MÁS COMPACTA */}
             <View style={styles.teleprompterLyricsBox}>
               <Text style={styles.teleprompterLyricsText}>
                 {(() => {
@@ -1387,7 +1387,7 @@ const styles = StyleSheet.create({
   actionBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
   postulateRoleOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
   
-  // ESTILOS NUEVOS: Teleprompter / Modo en vivo ultra reducido
+  // ESTILOS NUEVOS: Teleprompter / Modo en vivo compacto (letra y caja reducidas)
   teleprompterContainer: { flex: 1, width: "100%", height: "100%", minHeight: "100vh", padding: 8 },
   teleprompterTopBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 6, width: "100%" },
   teleprompterExitBtn: { backgroundColor: "#1E293B", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 5 },
@@ -1398,8 +1398,8 @@ const styles = StyleSheet.create({
   teleprompterToneBox: { backgroundColor: "#3B82F6", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5, alignItems: "center" },
   teleprompterControlsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 6, flexWrap: "wrap", gap: 6 },
   teleprompterActionBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 5 },
-  teleprompterLyricsBox: { width: "100%", maxWidth: 800, backgroundColor: "#0F172A", padding: 14, borderRadius: 8, borderWidth: 1, borderColor: "#1E293B", marginBottom: 12 },
-  teleprompterLyricsText: { color: "#F8FAFC", fontSize: 16, lineHeight: 26, textAlign: "left" },
+  teleprompterLyricsBox: { width: "100%", maxWidth: 800, backgroundColor: "#0F172A", padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#1E293B", marginBottom: 10 },
+  teleprompterLyricsText: { color: "#F8FAFC", fontSize: 13, lineHeight: 21, textAlign: "left" },
   teleprompterNavRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", maxWidth: 800, gap: 8 },
   teleprompterNavBtn: { flex: 1, padding: 10, borderRadius: 6, alignItems: "center" },
 });

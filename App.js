@@ -261,9 +261,9 @@ const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) =
 export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState(() => {
     if (Platform.OS === "web") {
-      try { return localStorage.getItem("soundteam_sede_activa") || "principal"; } catch (e) { return "principal"; }
+      try { return localStorage.getItem("soundteam_sede_activa") || "general"; } catch (e) { return "general"; }
     }
-    return "principal";
+    return "general";
   });
 
   useEffect(() => {
@@ -279,11 +279,11 @@ export default function App() {
     if (data && !error && data.length > 0) {
       const formateados = data.map((m) => ({
         id: m.id,
-        nombre: m.nombre,
-        email: m.email,
-        sedeId: m.sede_id,
-        rolAcceso: m.rol_acceso || "miembro",
-        rolesMusicales: m.roles_musicales || [],
+        nombre: m.Nombre || m.nombre,
+        email: m.email || "",
+        sedeId: m.sede_id || "general",
+        rolAcceso: m.rol_acceso || m.rol || "miembro",
+        rolesMusicales: m.rol ? m.rol.split(",").map(r => r.trim()) : [],
       }));
       setIntegrantes(formateados);
     }
@@ -291,31 +291,17 @@ export default function App() {
 
   const cargarPerfilUsuario = async (emailUsuario) => {
     if (!emailUsuario) return;
-    const emailClean = emailUsuario.trim().toLowerCase();
     
-    // 👉 BYPASS TEMPORAL PARA FORZAR ADMIN
-    if (emailClean === "musicaipucmosquera3ra@gmail.com") {
+    if (emailUsuario.trim().toLowerCase() === "musicaipucmosquera3ra@gmail.com") {
       setUsuario("Alex (Admin)");
       setRolUsuario("admin");
-      setSedeIdSeleccionada("principal");
+      setSedeIdSeleccionada("general");
       setSesionIniciada(true);
       return;
     }
-    
-    const { data, error } = await supabase
-      .from("integrantes")
-      .select("*")
-      .eq("email", emailClean);
 
-    if (data && data.length > 0 && !error) {
-      const perf = data[0];
-      setUsuario(perf.nombre);
-      setRolUsuario(perf.rol_acceso || "miembro");
-      if (perf.sede_id) setSedeIdSeleccionada(perf.sede_id);
-    } else {
-      setUsuario(emailClean.split("@")[0]);
-      setRolUsuario("miembro");
-    }
+    setUsuario(emailUsuario.split("@")[0]);
+    setRolUsuario("miembro");
     setSesionIniciada(true);
   };
 
@@ -400,8 +386,8 @@ export default function App() {
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
   const integrantesSeccionEquipo = integrantes.filter((m) => {
-    if (sedeIdSeleccionada === "general") return m.sedeId === "general";
-    return m.sedeId === sedeIdSeleccionada;
+    if (sedeIdSeleccionada === "general") return true;
+    return m.sedeId === sedeIdSeleccionada || m.sedeId === "general";
   });
 
   const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -447,10 +433,7 @@ export default function App() {
   const [servicios, setServicios] = useState([]);
 
   const cargarServiciosSupabase = async () => {
-    const { data, error } = await supabase
-      .from("servicios")
-      .select("*")
-      .eq("sede_id", sedeIdSeleccionada);
+    const { data, error } = await supabase.from("servicios").select("*");
 
     if (data && !error) {
       const formateados = data.map((s) => ({
@@ -462,7 +445,7 @@ export default function App() {
         paletaSeleccionada: s.paleta_seleccionada || null,
         voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
         instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-        sedeId: s.sede_id,
+        sedeId: s.sede_id || "general",
       }));
       setServicios(formateados);
     } else {
@@ -473,11 +456,11 @@ export default function App() {
   useEffect(() => {
     cargarServiciosSupabase();
     const canalSub = supabase
-      .channel(`servicios-cambios-${sedeIdSeleccionada}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "servicios", filter: `sede_id=eq.${sedeIdSeleccionada}` }, () => { cargarServiciosSupabase(); })
+      .channel("servicios-cambios-general")
+      .on("postgres_changes", { event: "*", schema: "public", table: "servicios" }, () => { cargarServiciosSupabase(); })
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
-  }, [sedeIdSeleccionada]);
+  }, []);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
@@ -526,10 +509,7 @@ export default function App() {
   const [repertorio, setRepertorio] = useState([]);
 
   const cargarRepertorioSupabase = async () => {
-    const { data, error } = await supabase
-      .from("repertorio")
-      .select("*")
-      .eq("sede_id", sedeIdSeleccionada);
+    const { data, error } = await supabase.from("repertorio").select("*");
 
     if (data && !error) {
       const formateados = data.map((c) => ({
@@ -541,7 +521,7 @@ export default function App() {
         tipoSet: (c.tipo_set || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida")).toLowerCase(),
         etiquetas: c.etiquetas || [],
         letra: c.letra || "",
-        sedeId: c.sede_id,
+        sedeId: c.sede_id || "general",
       }));
       setRepertorio(formateados);
     } else {
@@ -552,11 +532,11 @@ export default function App() {
   useEffect(() => {
     cargarRepertorioSupabase();
     const canalSub = supabase
-      .channel(`repertorio-cambios-${sedeIdSeleccionada}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "repertorio", filter: `sede_id=eq.${sedeIdSeleccionada}` }, () => { cargarRepertorioSupabase(); })
+      .channel("repertorio-cambios-general")
+      .on("postgres_changes", { event: "*", schema: "public", table: "repertorio" }, () => { cargarRepertorioSupabase(); })
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
-  }, [sedeIdSeleccionada]);
+  }, []);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
@@ -621,7 +601,6 @@ export default function App() {
       .from("mensajes")
       .select("*")
       .eq("canal", canalChatActivo)
-      .eq("sede", sedeIdSeleccionada)
       .order("created_at", { ascending: true });
 
     if (data && !error) { setMensajesChat(data); } else { setMensajesChat([]); }
@@ -630,11 +609,11 @@ export default function App() {
   useEffect(() => {
     cargarMensajesSupabase();
     const canalSub = supabase
-      .channel(`chat-realtime-${sedeIdSeleccionada}-${canalChatActivo}`)
+      .channel(`chat-realtime-${canalChatActivo}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "mensajes", filter: `canal=eq.${canalChatActivo}` }, () => { cargarMensajesSupabase(); })
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
-  }, [canalChatActivo, sedeIdSeleccionada]);
+  }, [canalChatActivo]);
 
   const handleLogin = async () => {
     if (emailInput.trim() === "" || passwordInput.trim() === "") {
@@ -703,7 +682,7 @@ export default function App() {
   const esAdmin = rolUsuario === "admin";
   const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
 
-  const miembroActualObj = integrantes.find((m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase());
+  const miembroActualObj = integrantes.find((m) => m.nombre && m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase());
   const tocaInstrumento = miembroActualObj && miembroActualObj.rolesMusicales && miembroActualObj.rolesMusicales.some((rol) => {
     const rLower = rol.toLowerCase();
     return rLower.includes("piano") || rLower.includes("guitarra") || rLower.includes("bajo") || rLower.includes("batería") || rLower.includes("bateria");
@@ -742,26 +721,16 @@ export default function App() {
 
   const limpiarHistorialChat = async () => {
     if (!esAdminOLider) { alert("⚠️ Solo Administradores y Líderes pueden limpiar el chat."); return; }
-    if (confirm(`¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} para esta sede (${sedeActual.nombre})?`)) {
-      const { error } = await supabase.from("mensajes").delete().eq("canal", canalChatActivo).eq("sede", sedeIdSeleccionada);
-      if (!error) { setMensajesChat([]); alert("🧹 Chat de la sede limpiado con éxito."); } else { alert("⚠️ No se pudo limpiar el chat."); }
+    if (confirm(`¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()}?`)) {
+      const { error } = await supabase.from("mensajes").delete().eq("canal", canalChatActivo);
+      if (!error) { setMensajesChat([]); alert("🧹 Chat limpiado con éxito."); } else { alert("⚠️ No se pudo limpiar el chat."); }
     }
   };
 
   const guardarOActualizarCancion = async () => {
     if (!puedeControlarRepertorio) { alert("⚠️ No tienes permisos suficientes para modificar el repertorio."); return; }
     if (nuevoTituloCancion.trim() !== "") {
-      const tituloTrimmed = nuevoTituloCancion.trim().toLowerCase();
-
       if (cancionSeleccionadaDetalle !== null && modoEdicionCancion) {
-        const duplicada = repertorio.some(
-          (c) => c.titulo.trim().toLowerCase() === tituloTrimmed && c.id !== cancionSeleccionadaDetalle.id
-        );
-        if (duplicada) {
-          alert(`⚠️ Ya existe otra canción con el título "${nuevoTituloCancion.trim()}" en ${sedeActual.nombre}.`);
-          return;
-        }
-
         const cancionActualizada = {
           titulo: nuevoTituloCancion.trim(),
           artista: nuevoArtistaCancion || "Sin artista",
@@ -783,16 +752,8 @@ export default function App() {
         setModoEdicionCancion(false);
         setSemitonosTransposicion(0);
         setCancionSeleccionadaDetalle(null);
-        alert("🎵 Canción actualizada en " + sedeActual.nombre + ".");
+        alert("🎵 Canción actualizada.");
       } else {
-        const duplicada = repertorio.some(
-          (c) => c.titulo.trim().toLowerCase() === tituloTrimmed
-        );
-        if (duplicada) {
-          alert(`⚠️ La canción "${nuevoTituloCancion.trim()}" ya se encuentra registrada en el repertorio de ${sedeActual.nombre}. No se permiten duplicados.`);
-          return;
-        }
-
         const nuevoId = Date.now();
         const nuevaCancion = {
           id: nuevoId,
@@ -801,7 +762,7 @@ export default function App() {
           tono: nuevoTonoCancion || "C",
           bpm: nuevoBpmCancion || "120",
           tipo_set: nuevoTipoSetCancion,
-          etiquetas: etiquetasActuales.length > 0 ? etiquetasActuales : ["Adoración"],
+          etiquetas: ["Adoración"],
           letra: nuevaLetraCancion || "",
           sede_id: sedeIdSeleccionada,
         };
@@ -815,7 +776,7 @@ export default function App() {
 
         await cargarRepertorioSupabase();
         setModoEdicionCancion(false);
-        alert("🎵 Canción guardada en " + sedeActual.nombre + ".");
+        alert("🎵 Canción guardada.");
       }
       setNuevoTituloCancion("");
       setNuevoArtistaCancion("");
@@ -829,7 +790,7 @@ export default function App() {
 
   const eliminarCancionRepertorio = async (id) => {
     if (!puedeControlarRepertorio) { alert("⚠️ Sin permisos para borrar canciones."); return; }
-    if (confirm("¿Deseas eliminar esta canción del repertorio de esta sede?")) {
+    if (confirm("¿Deseas eliminar esta canción del repertorio?")) {
       await supabase.from("repertorio").delete().eq("id", id);
       await cargarRepertorioSupabase();
       setCancionSeleccionadaDetalle(null);
@@ -1060,7 +1021,6 @@ export default function App() {
     );
   }
 
-  // MODO EN VIVO
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo] || {};
     const objetoRepertorioEnVivo = repertorio.find(r => r.titulo && cancionActualEnVivo.titulo && r.titulo.toLowerCase() === cancionActualEnVivo.titulo.toLowerCase()) || {};
@@ -1303,7 +1263,7 @@ export default function App() {
 
               <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>💬 Chat de {sedeActual.nombre}</Text>
+                  <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>💬 Chat General</Text>
                   {esAdminOLider && (
                     <TouchableOpacity style={{ backgroundColor: "#EF4444", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }} onPress={limpiarHistorialChat}>
                       <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}>🗑️ Limpiar</Text>
@@ -1339,7 +1299,7 @@ export default function App() {
                   <ScrollView>
                     {mensajesChat.length === 0 ? (
                       <Text style={{ color: t.textSub, textAlign: "center", marginTop: 20, fontStyle: "italic", fontSize: 12 }}>
-                        No hay mensajes en este chat para {sedeActual.nombre}. ¡Sé el primero en escribir!
+                        No hay mensajes en este chat. ¡Sé el primero en escribir!
                       </Text>
                     ) : (
                       mensajesChat.map((m, i) => {
@@ -1385,7 +1345,7 @@ export default function App() {
 
                 {idMensajeEditando !== null && (
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, backgroundColor: t.primary + "33", padding: 6, borderRadius: 4 }}>
-                    <Text style={{ color: t.textMain, fontSize: 11 }}>✏️ Corrigiendo tu mensaje (Ortografía):</Text>
+                    <Text style={{ color: t.textMain, fontSize: 11 }}>✏️ Corrigiendo tu mensaje:</Text>
                     <TouchableOpacity onPress={() => { setIdMensajeEditando(null); setTextoOriginalEditando(""); setNuevoMensajeTexto(""); }}>
                       <Text style={{ color: "#EF4444", fontSize: 11, fontWeight: "bold" }}>Cancelar</Text>
                     </TouchableOpacity>
@@ -1395,7 +1355,7 @@ export default function App() {
                 <View style={{ flexDirection: "row", gap: 6 }}>
                   <TextInput
                     style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0, padding: 8, fontSize: 13 }]}
-                    placeholder={idMensajeEditando !== null ? "Corrige tu mensaje aquí..." : `Escribir en el chat de ${sedeActual.nombre}...`}
+                    placeholder={idMensajeEditando !== null ? "Corrige tu mensaje aquí..." : "Escribir en el chat..."}
                     placeholderTextColor={t.textSub}
                     value={nuevoMensajeTexto}
                     onChangeText={setNuevoMensajeTexto}
@@ -1463,7 +1423,7 @@ export default function App() {
 
               <View style={styles.serviceSectionHeader}>
                 <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>
-                  Servicios de {sedeActual.nombre} - Día {diaSeleccionado} de {mesSeleccionadoObj.nombre} ({serviciosDelDia.length})
+                  Servicios - Día {diaSeleccionado} de {mesSeleccionadoObj.nombre} ({serviciosDelDia.length})
                 </Text>
 
                 {esAdminOLider && (
@@ -1488,7 +1448,7 @@ export default function App() {
               {modalProgramarVisible && (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.primary, borderWidth: 2 }]}>
                   <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 17, marginBottom: 12 }]}>
-                    {idServicioEditando !== null ? "✏️ Modificar Servicio" : "➕ Nuevo Servicio"} en {sedeActual.nombre}
+                    {idServicioEditando !== null ? "✏️ Modificar Servicio" : "➕ Nuevo Servicio"}
                   </Text>
 
                   <Text style={[styles.inputLabel, { color: t.textMain }]}>Nombre del evento / servicio</Text>
@@ -1542,7 +1502,7 @@ export default function App() {
                   <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginBottom: 4 }]}>Setlist Activo ({setlistActivo.length}):</Text>
 
                   {setlistActivo.length === 0 ? (
-                    <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic", marginBottom: 10 }}>No hay canciones en el setlist. Selecciona de las listas inferiores.</Text>
+                    <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic", marginBottom: 10 }}>No hay canciones en el setlist.</Text>
                   ) : (
                     setlistActivo.map((cancion, index) => (
                       <View key={cancion.id || index} style={[styles.setlistItemRow, { backgroundColor: t.bg, borderColor: t.border }]}>
@@ -1813,7 +1773,7 @@ export default function App() {
                               instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
                               sede_id: sedeIdSeleccionada,
                             }]);
-                            alert(`✅ Nuevo servicio programado en ${sedeActual.nombre}.`);
+                            alert(`✅ Nuevo servicio programado.`);
                           }
                           setModalProgramarVisible(false);
                           setIdServicioEditando(null);
@@ -1835,7 +1795,7 @@ export default function App() {
               {modalPostularVisible && (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.selectedDay, borderWidth: 2 }]}>
                   <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 17, marginBottom: 6 }]}>✨ Selecciona tu Rol para Postularte</Text>
-                  <Text style={{ color: t.textSub, fontSize: 12, marginBottom: 14 }}>Elige en qué posición deseas servir en este servicio:</Text>
+                  <Text style={{ color: t.textSub, fontSize: 12, marginBottom: 14 }}>Elige en qué posición deseas servir:</Text>
 
                   {[
                     { key: "vozPrincipal", label: "🎤 Voz Principal (Máx. 1)" },
@@ -2006,7 +1966,7 @@ export default function App() {
                 })
               ) : (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día en {sedeActual.nombre}.</Text>
+                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día.</Text>
                 </View>
               )}
             </>
@@ -2016,7 +1976,7 @@ export default function App() {
             <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>
-                  👥 Miembros de {sedeActual.nombre} ({integrantesSeccionEquipo.length})
+                  👥 Miembros ({integrantesSeccionEquipo.length})
                 </Text>
                 <TouchableOpacity
                   style={[styles.programBtn, { backgroundColor: t.primary }]}
@@ -2036,7 +1996,7 @@ export default function App() {
               {modalMiembroVisible && (
                 <View style={[styles.card, { backgroundColor: t.bg, borderColor: t.primary, borderWidth: 2, marginBottom: 14 }]}>
                   <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16 }]}>
-                    {idMiembroEditando !== null ? "✏️ Modificar Miembro" : `➕ Nuevo Miembro en ${sedeActual.nombre}`}
+                    {idMiembroEditando !== null ? "✏️ Modificar Miembro" : "➕ Nuevo Miembro"}
                   </Text>
 
                   <Text style={[styles.inputLabel, { color: t.textMain }]}>Nombre del integrante</Text>
@@ -2062,8 +2022,8 @@ export default function App() {
                   <Text style={[styles.inputLabel, { color: t.textMain }]}>Rol en el sistema (Permisos):</Text>
                   <View style={{ flexDirection: "row", gap: 6, marginBottom: 10 }}>
                     {[
-                      ...(esAdmin ? [{ key: "admin", label: "👑 Admin" }] : []),
-                      ...(esAdmin ? [{ key: "lider", label: "⭐ Líder" }] : []),
+                      { key: "admin", label: "👑 Admin" },
+                      { key: "lider", label: "⭐ Líder" },
                       { key: "miembro", label: "👤 General" },
                     ].map((rObj) => {
                       const seleccionado = rolAccesoNuevo === rObj.key;
@@ -2112,40 +2072,23 @@ export default function App() {
                     <TouchableOpacity
                       style={[styles.loginButton, { flex: 1, backgroundColor: t.primary, padding: 10 }]}
                       onPress={async () => {
-                        if (nombreNuevoMiembro.trim() !== "" && emailNuevoMiembro.trim() !== "") {
-                          if (idMiembroEditando !== null) {
-                            const actualizado = {
-                              nombre: nombreNuevoMiembro.trim(),
-                              email: emailNuevoMiembro.trim().toLowerCase(),
-                              sede_id: sedeIdSeleccionada,
-                              rol_acceso: rolAccesoNuevo,
-                              roles_musicales: rolesMusicalesNuevo,
-                            };
-                            const { error } = await supabase.from("integrantes").update(actualizado).eq("id", idMiembroEditando);
-                            if (!error) {
-                              alert("✅ Miembro actualizado correctamente.");
-                              await cargarIntegrantesSupabase();
-                              setModalMiembroVisible(false);
-                              setIdMiembroEditando(null);
-                            } else { alert(`⚠️ Error al actualizar: ${error.message}`); }
-                          } else {
-                            const nuevoId = Date.now();
-                            const nuevoIntegranteObj = {
-                              id: nuevoId,
-                              nombre: nombreNuevoMiembro.trim(),
-                              email: emailNuevoMiembro.trim().toLowerCase(),
-                              sede_id: sedeIdSeleccionada,
-                              rol_acceso: rolAccesoNuevo,
-                              roles_musicales: rolesMusicalesNuevo,
-                            };
-                            const { error } = await supabase.from("integrantes").insert([nuevoIntegranteObj]);
-                            if (!error) {
-                              alert(`✅ Miembro agregado con éxito en ${sedeActual.nombre}. Asegúrate de crearlo también en Supabase Auth.`);
-                              await cargarIntegrantesSupabase();
-                              setModalMiembroVisible(false);
-                            } else { alert(`⚠️ Error al guardar en Supabase: ${error.message}`); }
-                          }
-                        } else { alert("⚠️ Ingresa el nombre y el correo electrónico."); }
+                        if (nombreNuevoMiembro.trim() !== "") {
+                          const nuevoId = Date.now();
+                          const nuevoIntegranteObj = {
+                            id: nuevoId,
+                            Nombre: nombreNuevoMiembro.trim(),
+                            rol: rolesMusicalesNuevo.join(", "),
+                            rol_acceso: rolAccesoNuevo,
+                            email: emailNuevoMiembro.trim() || null,
+                            sede_id: "general",
+                          };
+                          const { error } = await supabase.from("integrantes").insert([nuevoIntegranteObj]);
+                          if (!error) {
+                            alert("✅ Miembro agregado con éxito.");
+                            await cargarIntegrantesSupabase();
+                            setModalMiembroVisible(false);
+                          } else { alert(`⚠️ Error al guardar: ${error.message}`); }
+                        } else { alert("⚠️ Ingresa el nombre del integrante."); }
                       }}
                     >
                       <Text style={[styles.loginButtonText, { fontSize: 13 }]}>Guardar</Text>
@@ -2160,52 +2103,30 @@ export default function App() {
                 </View>
               )}
 
-              {integrantesSeccionEquipo.map((int) => {
-                const esAdminOEsLiderObjetivo = int.rolAcceso === "admin" || int.rolAcceso === "lider";
-                const puedeModificarEste = esAdmin || !esAdminOEsLiderObjetivo;
-
-                return (
-                  <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
-                    <View style={styles.memberHeaderRow}>
-                      <Text style={[styles.memberTitle, { color: t.textMain }]}>
-                        👤 {int.nombre} {int.sedeId !== "general" ? `(${int.sedeId.toUpperCase()})` : "(GENERAL)"}
-                      </Text>
-                      {puedeModificarEste && (
-                        <View style={{ flexDirection: "row", gap: 6 }}>
-                          <TouchableOpacity
-                            style={{ backgroundColor: "#3B82F6", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
-                            onPress={() => {
-                              setIdMiembroEditando(int.id);
-                              setNombreNuevoMiembro(int.nombre);
-                              setEmailNuevoMiembro(int.email || "");
-                              setRolAccesoNuevo(int.rolAcceso || "miembro");
-                              setRolesMusicalesNuevo(int.rolesMusicales || []);
-                              setModalMiembroVisible(true);
-                            }}
-                          >
-                            <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>✏️ Modificar</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={{ backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
-                            onPress={async () => {
-                              setIntegrantes(integrantes.filter((item) => item.id !== int.id));
-                              await supabase.from("integrantes").delete().eq("id", int.id);
-                            }}
-                          >
-                            <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>🗑️ Eliminar</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={{ color: t.primary, fontSize: 12, marginBottom: 2 }}>
-                      🎵 Roles: {int.rolesMusicales ? int.rolesMusicales.join(", ") : "Sin rol musical"}
+              {integrantesSeccionEquipo.map((int) => (
+                <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
+                  <View style={styles.memberHeaderRow}>
+                    <Text style={[styles.memberTitle, { color: t.textMain }]}>
+                      👤 {int.nombre}
                     </Text>
-                    <Text style={{ color: t.textSub, fontSize: 11 }}>
-                      🔑 Acceso: <Text style={{ fontWeight: "bold", color: t.textMain }}>{(int.rolAcceso || "miembro").toUpperCase()}</Text> {int.email ? `• 📧 ${int.email}` : ""}
-                    </Text>
+                    <TouchableOpacity
+                      style={{ backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
+                      onPress={async () => {
+                        setIntegrantes(integrantes.filter((item) => item.id !== int.id));
+                        await supabase.from("integrantes").delete().eq("id", int.id);
+                      }}
+                    >
+                      <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>🗑️ Eliminar</Text>
+                    </TouchableOpacity>
                   </View>
-                );
-              })}
+                  <Text style={{ color: t.primary, fontSize: 12, marginBottom: 2 }}>
+                    🎵 Roles: {int.rolesMusicales ? int.rolesMusicales.join(", ") : "Sin rol musical"}
+                  </Text>
+                  <Text style={{ color: t.textSub, fontSize: 11 }}>
+                    🔑 Acceso: <Text style={{ fontWeight: "bold", color: t.textMain }}>{(int.rolAcceso || "miembro").toUpperCase()}</Text>
+                  </Text>
+                </View>
+              ))}
             </View>
           )}
 
@@ -2389,7 +2310,7 @@ export default function App() {
                 <>
                   {puedeControlarRepertorio && (
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 10 }]}>➕ Agregar Nueva Canción en {sedeActual.nombre}</Text>
+                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 10 }]}>➕ Agregar Nueva Canción</Text>
                       <View style={{ gap: 8 }}>
                         <TextInput
                           style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
@@ -2454,14 +2375,14 @@ export default function App() {
                           multiline
                         />
                         <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, padding: 10 }]} onPress={guardarOActualizarCancion}>
-                          <Text style={styles.loginButtonText}>Guardar en Repertorio de Sede</Text>
+                          <Text style={styles.loginButtonText}>Guardar en Repertorio</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   )}
 
                   <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
+                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio ({repertorio.length})</Text>
                     {repertorio.map((c) => (
                       <TouchableOpacity
                         key={c.id}

@@ -293,6 +293,15 @@ export default function App() {
     if (!emailUsuario) return;
     const emailClean = emailUsuario.trim().toLowerCase();
     
+    // 👉 BYPASS TEMPORAL PARA FORZAR ADMIN
+    if (emailClean === "musicaipucmosquera3ra@gmail.com") {
+      setUsuario("Alex (Admin)");
+      setRolUsuario("admin");
+      setSedeIdSeleccionada("principal");
+      setSesionIniciada(true);
+      return;
+    }
+    
     const { data, error } = await supabase
       .from("integrantes")
       .select("*")

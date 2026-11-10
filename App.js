@@ -118,25 +118,23 @@ const SEDES_DISPONIBLES = [
 ];
 
 export default function App() {
-  const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState(() => {
-    if (Platform.OS === "web") {
-      try { return localStorage.getItem("soundteam_sede_activa") || "general"; } catch (e) { return "general"; }
-    }
-    return "general";
-  });
-
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      try { localStorage.setItem("soundteam_sede_activa", sedeIdSeleccionada); } catch (e) {}
-    }
-  }, [sedeIdSeleccionada]);
-
+  const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [integrantes, setIntegrantes] = useState([]);
+  const [usuario, setUsuario] = useState("");
+  const [rolUsuario, setRolUsuario] = useState("miembro");
+  const [sesionIniciada, setSesionIniciada] = useState(false);
 
-  const cargarIntegrantesSupabase = async () => {
+  const [emailInput, setEmailInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [cargandoAuth, setCargandoAuth] = useState(false);
+
+  // Cargar integrantes desde Supabase y sincronizar sesión activa inmediatamente
+  const cargarIntegrantesYValidarSesion = async () => {
     const { data, error } = await supabase.from("integrantes").select("*");
-    if (data && !error && data.length > 0) {
-      const formateados = data.map((m) => {
+    
+    let listaFormateada = [];
+    if (data && !error) {
+      listaFormateada = data.map((m) => {
         let sId = (m.sede_id || "general").toLowerCase();
         if (sId === "principal") sId = "general";
         return {
@@ -149,140 +147,58 @@ export default function App() {
           rolesMusicales: m.roles_musicales || [],
         };
       });
-      setIntegrantes(formateados);
+      setIntegrantes(listaFormateada);
+    }
+
+    // Verificar la sesión actual en Supabase Auth
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.email) {
+      const correoUser = session.user.email.trim().toLowerCase();
+      
+      // REGLA MAESTRA INCONDICIONAL DE DISEÑO
+      const esAdminMaster = correoUser === "musicalpucmosquera3ra@gmail.com";
+      const miembroEncontrado = listaFormateada.find((m) => m.email === correoUser);
+
+      if (esAdminMaster) {
+        setUsuario(miembroEncontrado ? miembroEncontrado.nombre : "Alex");
+        setRolUsuario("admin");
+        if (miembroEncontrado?.sedeId) setSedeIdSeleccionada(miembroEncontrado.sedeId);
+        setSesionIniciada(true);
+      } else if (miembroEncontrado) {
+        setUsuario(miembroEncontrado.nombre);
+        setRolUsuario(miembroEncontrado.rolAcceso || "miembro");
+        if (miembroEncontrado.sedeId) setSedeIdSeleccionada(miembroEncontrado.sedeId);
+        setSesionIniciada(true);
+      } else {
+        setUsuario(session.user.email);
+        setRolUsuario("miembro");
+        setSesionIniciada(true);
+      }
     }
   };
 
   useEffect(() => {
-    cargarIntegrantesSupabase();
-    const canalSub = supabase
-      .channel("integrantes-cambios")
-      .on("postgres_changes", { event: "*", schema: "public", table: "integrantes" }, () => { cargarIntegrantesSupabase(); })
-      .subscribe();
-    return () => { supabase.removeChannel(canalSub); };
-  }, []);
-
-  const [usuario, setUsuario] = useState(() => {
-    if (Platform.OS === "web") {
-      try { return localStorage.getItem("soundteam_sesion_usuario") || ""; } catch (e) { return ""; }
-    }
-    return "";
-  });
-
-  const [emailInput, setEmailInput] = useState("");
-  const [passwordInput, setPasswordInput] = useState("");
-  const [cargandoAuth, setCargandoAuth] = useState(false);
-
-  const [sesionIniciada, setSesionIniciada] = useState(() => {
-    if (Platform.OS === "web") {
-      try { return localStorage.getItem("soundteam_sesion_activa") === "true"; } catch (e) { return false; }
-    }
-    return false;
-  });
-
-  const [rolUsuario, setRolUsuario] = useState(() => {
-    if (Platform.OS === "web") {
-      try { return localStorage.getItem("soundteam_sesion_rol") || "miembro"; } catch (e) { return "miembro"; }
-    }
-    return "miembro";
-  });
-
-  useEffect(() => {
-    const verificarSesionSupabase = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email) {
-        const correoUser = session.user.email.trim().toLowerCase();
-        const miembroEncontrado = integrantes.find(
-          (m) => m.email && m.email === correoUser
-        );
-        
-        // Blindaje maestro para administrador
-        const esAdminMaster = correoUser === "musicalpucmosquera3ra@gmail.com";
-
-        if (miembroEncontrado || esAdminMaster) {
-          setUsuario(miembroEncontrado ? miembroEncontrado.nombre : "Alex");
-          setRolUsuario(miembroEncontrado ? (miembroEncontrado.rolAcceso || "admin") : "admin");
-          if (miembroEncontrado?.sedeId) {
-            setSedeIdSeleccionada(miembroEncontrado.sedeId);
-          }
-          setSesionIniciada(true);
-        } else if (integrantes.length > 0) {
-          setUsuario(session.user.email);
-          setRolUsuario("miembro");
-          setSesionIniciada(true);
-        }
-      }
-    };
-
-    if (integrantes.length > 0) {
-      verificarSesionSupabase();
-    }
+    cargarIntegrantesYValidarSesion();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user?.email) {
-        const correoUser = session.user.email.trim().toLowerCase();
-        const miembroEncontrado = integrantes.find(
-          (m) => m.email && m.email === correoUser
-        );
-        const esAdminMaster = correoUser === "musicalpucmosquera3ra@gmail.com";
-
-        if (miembroEncontrado || esAdminMaster) {
-          setUsuario(miembroEncontrado ? miembroEncontrado.nombre : "Alex");
-          setRolUsuario(miembroEncontrado ? (miembroEncontrado.rolAcceso || "admin") : "admin");
-          if (miembroEncontrado?.sedeId) {
-            setSedeIdSeleccionada(miembroEncontrado.sedeId);
-          }
-          setSesionIniciada(true);
-        } else if (integrantes.length > 0) {
-          setUsuario(session.user.email);
-          setRolUsuario("miembro");
-          setSesionIniciada(true);
-        }
+        cargarIntegrantesYValidarSesion();
+      } else {
+        setSesionIniciada(false);
+        setUsuario("");
+        setRolUsuario("miembro");
       }
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [integrantes]);
+  }, []);
 
   const [pestana, setPestana] = useState("inicio");
-  const [nombreTema, setNombreTema] = useState(() => {
-    if (Platform.OS === "web") {
-      try { return localStorage.getItem("soundteam_tema_app") || "azul"; } catch (e) { return "azul"; }
-    }
-    return "azul";
-  });
-
-  const [nombreTapiz, setNombreTapiz] = useState(() => {
-    if (Platform.OS === "web" && usuario) {
-      try { return localStorage.getItem(`soundteam_tapiz_${usuario}_${sedeIdSeleccionada}`) || "ninguno"; } catch (e) { return "ninguno"; }
-    }
-    return "ninguno";
-  });
-
-  useEffect(() => {
-    if (Platform.OS === "web" && usuario) {
-      try {
-        const tapizPerfilSede = localStorage.getItem(`soundteam_tapiz_${usuario}_${sedeIdSeleccionada}`) || "ninguno";
-        setNombreTapiz(tapizPerfilSede);
-      } catch (e) {}
-    }
-  }, [usuario, sedeIdSeleccionada]);
-
+  const [nombreTema, setNombreTema] = useState("azul");
+  const [nombreTapiz, setNombreTapiz] = useState("ninguno");
   const [mostrarMenuPersonalizacion, setMostrarMenuPersonalizacion] = useState(false);
-
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      try { localStorage.setItem("soundteam_tema_app", nombreTema); } catch (e) {}
-    }
-  }, [nombreTema]);
-
-  useEffect(() => {
-    if (Platform.OS === "web" && usuario) {
-      try { localStorage.setItem(`soundteam_tapiz_${usuario}_${sedeIdSeleccionada}`, nombreTapiz); } catch (e) {}
-    }
-  }, [nombreTapiz, usuario, sedeIdSeleccionada]);
 
   const t = TEMAS[nombreTema];
   const tapizActual = PAPELES_TAPIZ[nombreTapiz] || PAPELES_TAPIZ.ninguno;
@@ -335,11 +251,6 @@ export default function App() {
 
   useEffect(() => {
     cargarServiciosSupabase();
-    const canalSub = supabase
-      .channel(`servicios-cambios-${sedeIdSeleccionada}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "servicios", filter: `sede_id=eq.${sedeIdSeleccionada}` }, () => { cargarServiciosSupabase(); })
-      .subscribe();
-    return () => { supabase.removeChannel(canalSub); };
   }, [sedeIdSeleccionada]);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
@@ -376,7 +287,7 @@ export default function App() {
         artista: c.artista || "Sin artista",
         tono: c.tono || "C",
         bpm: c.bpm || "120",
-        tipoSet: (c.tipo_set || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida")).toLowerCase(),
+        tipoSet: (c.tipo_set || "rapida").toLowerCase(),
         etiquetas: c.etiquetas || [],
         letra: c.letra || "",
         sedeId: c.sede_id,
@@ -389,11 +300,6 @@ export default function App() {
 
   useEffect(() => {
     cargarRepertorioSupabase();
-    const canalSub = supabase
-      .channel(`repertorio-cambios-${sedeIdSeleccionada}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "repertorio", filter: `sede_id=eq.${sedeIdSeleccionada}` }, () => { cargarRepertorioSupabase(); })
-      .subscribe();
-    return () => { supabase.removeChannel(canalSub); };
   }, [sedeIdSeleccionada]);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
@@ -414,50 +320,7 @@ export default function App() {
 
   useEffect(() => {
     cargarMensajesSupabase();
-    const canalSub = supabase
-      .channel(`chat-realtime-${sedeIdSeleccionada}-${canalChatActivo}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "mensajes", filter: `canal=eq.${canalChatActivo}` }, () => { cargarMensajesSupabase(); })
-      .subscribe();
-    return () => { supabase.removeChannel(canalSub); };
   }, [canalChatActivo, sedeIdSeleccionada]);
-
-  useEffect(() => {
-    let intervalo = null;
-    if (modoEnVivoActivo && metronomoActivo && setlistEnVivoActual.length > 0) {
-      const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
-      const objetoRepo = repertorio.find(r => r.titulo && cancionActual.titulo && r.titulo.toLowerCase() === cancionActual.titulo.toLowerCase()) || {};
-      const bpmNum = parseInt(objetoRepo.bpm || cancionActual.bpm || "120", 10) || 120;
-      const msPorBeat = (60 / bpmNum) * 1000;
-      intervalo = setInterval(() => {
-        setPulsoActivo(prev => !prev);
-      }, msPorBeat / 2);
-    } else {
-      setPulsoActivo(false);
-    }
-    return () => {
-      if (intervalo) clearInterval(intervalo);
-    };
-  }, [modoEnVivoActivo, metronomoActivo, indiceCancionEnVivo, setlistEnVivoActual, repertorio]);
-
-  useEffect(() => {
-    let timerAvance = null;
-    if (modoEnVivoActivo && avanceAutomaticoActivo && setlistEnVivoActual.length > 0) {
-      const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
-      const objetoRepo = repertorio.find(r => r.titulo && cancionActual.titulo && r.titulo.toLowerCase() === cancionActual.titulo.toLowerCase()) || {};
-      const bpmNum = parseInt(objetoRepo.bpm || cancionActual.bpm || "120", 10) || 120;
-      const tiempoEstimadoMs = (240000 * 120) / bpmNum;
-      timerAvance = setTimeout(() => {
-        if (indiceCancionEnVivo < setlistEnVivoActual.length - 1) {
-          setIndiceCancionEnVivo(prev => prev + 1);
-        } else {
-          setAvanceAutomaticoActivo(false);
-        }
-      }, tiempoEstimadoMs);
-    }
-    return () => {
-      if (timerAvance) clearTimeout(timerAvance);
-    };
-  }, [modoEnVivoActivo, avanceAutomaticoActivo, indiceCancionEnVivo, setlistEnVivoActual, repertorio]);
 
   const handleLogin = async () => {
     if (emailInput.trim() === "" || passwordInput.trim() === "") {
@@ -465,7 +328,7 @@ export default function App() {
       return;
     }
     setCargandoAuth(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email: emailInput.trim(),
       password: passwordInput,
     });
@@ -475,35 +338,7 @@ export default function App() {
       alert(`⚠️ Error de acceso: ${error.message}`);
       return;
     }
-
-    if (data?.user) {
-      const correoUser = data.user.email.trim().toLowerCase();
-      const miembroEncontrado = integrantes.find(
-        (m) => m.email && m.email === correoUser
-      );
-      const esAdminMaster = correoUser === "musicalpucmosquera3ra@gmail.com";
-
-      const nombreReal = miembroEncontrado ? miembroEncontrado.nombre : (esAdminMaster ? "Alex" : data.user.email);
-      const rolAsignado = miembroEncontrado ? (miembroEncontrado.rolAcceso || "admin") : (esAdminMaster ? "admin" : "miembro");
-
-      if (miembroEncontrado && miembroEncontrado.sedeId) {
-        setSedeIdSeleccionada(miembroEncontrado.sedeId);
-      }
-
-      setUsuario(nombreReal);
-      setRolUsuario(rolAsignado);
-      setSesionIniciada(true);
-
-      if (Platform.OS === "web") {
-        try {
-          localStorage.setItem("soundteam_sesion_activa", "true");
-          localStorage.setItem("soundteam_sesion_usuario", nombreReal);
-          localStorage.setItem("soundteam_sesion_rol", rolAsignado);
-          const tapizPerfilSede = localStorage.getItem(`soundteam_tapiz_${nombreReal}_${sedeIdSeleccionada}`) || "ninguno";
-          setNombreTapiz(tapizPerfilSede);
-        } catch (e) {}
-      }
-    }
+    await cargarIntegrantesYValidarSesion();
   };
 
   const handleGoogleLogin = async () => {
@@ -531,22 +366,18 @@ export default function App() {
     setPestana("inicio");
     setCancionSeleccionadaDetalle(null);
     setModoEnVivoActivo(false);
-    setMetronomoActivo(false);
-    setAvanceAutomaticoActivo(false);
     if (Platform.OS === "web") {
       try {
-        localStorage.removeItem("soundteam_sesion_activa");
-        localStorage.removeItem("soundteam_sesion_usuario");
-        localStorage.removeItem("soundteam_sesion_rol");
+        localStorage.clear();
       } catch (e) {}
     }
   };
 
   const recargarDatosApp = async () => {
+    await cargarIntegrantesYValidarSesion();
     await cargarServiciosSupabase();
     await cargarRepertorioSupabase();
     await cargarMensajesSupabase();
-    await cargarIntegrantesSupabase();
     if (Platform.OS === "web") {
       window.location.reload(true);
     }
@@ -554,12 +385,6 @@ export default function App() {
 
   const esAdmin = rolUsuario === "admin";
   const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
-  const miembroActualObj = integrantes.find((m) => m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase());
-  const tocaInstrumento = miembroActualObj && miembroActualObj.rolesMusicales && miembroActualObj.rolesMusicales.some((rol) => {
-    const rLower = rol.toLowerCase();
-    return rLower.includes("piano") || rLower.includes("guitarra") || rLower.includes("bajo") || rLower.includes("batería") || rLower.includes("bateria");
-  });
-  const puedeControlarRepertorio = esAdminOLider || tocaInstrumento;
 
   const enviarOActualizarMensajeChat = async () => {
     if (nuevoMensajeTexto.trim() !== "") {
@@ -572,7 +397,6 @@ export default function App() {
         setIdMensajeEditando(null);
         setNuevoMensajeTexto("");
         await cargarMensajesSupabase();
-        alert("✏️ Mensaje corregido con éxito.");
       } else {
         const mensaje = {
           autor: usuario,
@@ -593,7 +417,7 @@ export default function App() {
     if (!esAdminOLider) { alert("⚠️ Solo Administradores y Líderes pueden limpiar el chat."); return; }
     if (confirm(`¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} para esta sede (${sedeActual.nombre})?`)) {
       const { error } = await supabase.from("mensajes").delete().eq("canal", canalChatActivo).eq("sede", sedeIdSeleccionada);
-      if (!error) { setMensajesChat([]); alert("🧹 Chat de la sede limpiado con éxito."); } else { alert("⚠️ No se pudo limpiar el chat."); }
+      if (!error) { setMensajesChat([]); alert("🧹 Chat de la sede limpiado con éxito."); }
     }
   };
 
@@ -731,11 +555,7 @@ export default function App() {
           <View style={styles.teleprompterTopBar}>
             <TouchableOpacity 
               style={styles.teleprompterExitBtn}
-              onPress={() => { 
-                setModoEnVivoActivo(false); 
-                setMetronomoActivo(false); 
-                setAvanceAutomaticoActivo(false); 
-              }}
+              onPress={() => { setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
             >
               <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 11 }}>✕ Salir</Text>
             </TouchableOpacity>

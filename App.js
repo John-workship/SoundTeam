@@ -2099,7 +2099,6 @@ export default function App() {
                       onPress={async () => {
                         if (nombreNuevoMiembro.trim() !== "") {
                           const nuevoId = Date.now();
-                          // ENVIAMOS EXCLUSIVAMENTE 'nombre' EN MINÚSCULA PARA EVITAR CONFLICTOS CON LA CACHÉ
                           const nuevoIntegranteObj = {
                             id: nuevoId,
                             nombre: nombreNuevoMiembro.trim(),
@@ -2107,6 +2106,7 @@ export default function App() {
                             rol_acceso: rolAccesoNuevo,
                             email: emailNuevoMiembro.trim() || null,
                             sede_id: sedeIdSeleccionada,
+                            pin: "1234",
                           };
                           const { error } = await supabase.from("integrantes").insert([nuevoIntegranteObj]);
                           if (!error) {

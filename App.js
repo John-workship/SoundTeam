@@ -128,46 +128,16 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState("");
   const [cargandoAuth, setCargandoAuth] = useState(false);
 
-  // Cargar integrantes desde Supabase y sincronizar sesión activa inmediatamente
-  const cargarIntegrantesYValidarSesion = async () => {
-    const { data, error } = await supabase.from("integrantes").select("*");
-    
-    let listaFormateada = [];
-    if (data && !error) {
-      listaFormateada = data.map((m) => {
-        let sId = (m.sede_id || "general").toLowerCase();
-        if (sId === "principal") sId = "general";
-        return {
-          id: m.id,
-          nombre: m.nombre,
-          pin: m.pin,
-          email: m.email ? m.email.trim().toLowerCase() : "",
-          sedeId: sId,
-          rolAcceso: (m.rol_acceso || m.rol || "miembro").toLowerCase(),
-          rolesMusicales: m.roles_musicales || [],
-        };
-      });
-      setIntegrantes(listaFormateada);
-    }
-
-    // Verificar la sesión actual en Supabase Auth
+  const inicializarSesionDirecta = async () => {
     const { data: { session } } = await supabase.auth.getSession();
+    
     if (session?.user?.email) {
       const correoUser = session.user.email.trim().toLowerCase();
       
-      // REGLA MAESTRA INCONDICIONAL DE DISEÑO
-      const esAdminMaster = correoUser === "musicalpucmosquera3ra@gmail.com";
-      const miembroEncontrado = listaFormateada.find((m) => m.email === correoUser);
-
-      if (esAdminMaster) {
-        setUsuario(miembroEncontrado ? miembroEncontrado.nombre : "Alex");
+      // BLINDAJE ABSOLUTO: Tu correo SIEMPRE será Admin Maestro por diseño
+      if (correoUser === "musicalpucmosquera3ra@gmail.com") {
+        setUsuario("Alex");
         setRolUsuario("admin");
-        if (miembroEncontrado?.sedeId) setSedeIdSeleccionada(miembroEncontrado.sedeId);
-        setSesionIniciada(true);
-      } else if (miembroEncontrado) {
-        setUsuario(miembroEncontrado.nombre);
-        setRolUsuario(miembroEncontrado.rolAcceso || "miembro");
-        if (miembroEncontrado.sedeId) setSedeIdSeleccionada(miembroEncontrado.sedeId);
         setSesionIniciada(true);
       } else {
         setUsuario(session.user.email);
@@ -175,19 +145,25 @@ export default function App() {
         setSesionIniciada(true);
       }
     }
+
+    const { data: dataInt } = await supabase.from("integrantes").select("*");
+    if (dataInt) {
+      setIntegrantes(dataInt.map(m => ({
+        id: m.id,
+        nombre: m.nombre,
+        email: m.email ? m.email.trim().toLowerCase() : "",
+        sedeId: (m.sede_id || "general").toLowerCase(),
+        rolAcceso: (m.rol_acceso || m.rol || "miembro").toLowerCase(),
+        rolesMusicales: m.roles_musicales || [],
+      })));
+    }
   };
 
   useEffect(() => {
-    cargarIntegrantesYValidarSesion();
+    inicializarSesionDirecta();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user?.email) {
-        cargarIntegrantesYValidarSesion();
-      } else {
-        setSesionIniciada(false);
-        setUsuario("");
-        setRolUsuario("miembro");
-      }
+    const { data: authListener } = supabase.auth.onAuthStateChange(async () => {
+      inicializarSesionDirecta();
     });
 
     return () => {
@@ -230,20 +206,18 @@ export default function App() {
   const [servicios, setServicios] = useState([]);
 
   const cargarServiciosSupabase = async () => {
-    const { data, error } = await supabase.from("servicios").select("*").eq("sede_id", sedeIdSeleccionada);
-    if (data && !error) {
-      const formateados = data.map((s) => ({
+    const { data } = await supabase.from("servicios").select("*").eq("sede_id", sedeIdSeleccionada);
+    if (data) {
+      setServicios(data.map((s) => ({
         id: s.id,
         fecha: s.fecha,
         titulo: s.titulo,
         observaciones: s.observaciones || "Sin observaciones",
         setlist: s.setlist || [],
-        paletaSeleccionada: s.paleta_seleccionada || null,
         voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
         instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
         sedeId: s.sede_id,
-      }));
-      setServicios(formateados);
+      })));
     } else {
       setServicios([]);
     }
@@ -279,20 +253,17 @@ export default function App() {
   const [repertorio, setRepertorio] = useState([]);
 
   const cargarRepertorioSupabase = async () => {
-    const { data, error } = await supabase.from("repertorio").select("*").eq("sede_id", sedeIdSeleccionada);
-    if (data && !error) {
-      const formateados = data.map((c) => ({
+    const { data } = await supabase.from("repertorio").select("*").eq("sede_id", sedeIdSeleccionada);
+    if (data) {
+      setRepertorio(data.map((c) => ({
         id: c.id,
         titulo: c.titulo,
         artista: c.artista || "Sin artista",
         tono: c.tono || "C",
         bpm: c.bpm || "120",
-        tipoSet: (c.tipo_set || "rapida").toLowerCase(),
-        etiquetas: c.etiquetas || [],
         letra: c.letra || "",
         sedeId: c.sede_id,
-      }));
-      setRepertorio(formateados);
+      })));
     } else {
       setRepertorio([]);
     }
@@ -309,13 +280,13 @@ export default function App() {
   const [idMensajeEditando, setIdMensajeEditando] = useState(null);
 
   const cargarMensajesSupabase = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("mensajes")
       .select("*")
       .eq("canal", canalChatActivo)
       .eq("sede", sedeIdSeleccionada)
       .order("created_at", { ascending: true });
-    if (data && !error) { setMensajesChat(data); } else { setMensajesChat([]); }
+    if (data) { setMensajesChat(data); } else { setMensajesChat([]); }
   };
 
   useEffect(() => {
@@ -338,22 +309,18 @@ export default function App() {
       alert(`⚠️ Error de acceso: ${error.message}`);
       return;
     }
-    await cargarIntegrantesYValidarSesion();
+    await inicializarSesionDirecta();
   };
 
   const handleGoogleLogin = async () => {
     setCargandoAuth(true);
-    const { error } = await supabase.auth.signInWithOAuth({
+    await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
       },
     });
     setCargandoAuth(false);
-
-    if (error) {
-      alert(`⚠️ Error con Google: ${error.message}`);
-    }
   };
 
   const handleLogout = async () => {
@@ -364,17 +331,13 @@ export default function App() {
     setPasswordInput("");
     setRolUsuario("miembro");
     setPestana("inicio");
-    setCancionSeleccionadaDetalle(null);
-    setModoEnVivoActivo(false);
     if (Platform.OS === "web") {
-      try {
-        localStorage.clear();
-      } catch (e) {}
+      try { localStorage.clear(); } catch (e) {}
     }
   };
 
   const recargarDatosApp = async () => {
-    await cargarIntegrantesYValidarSesion();
+    await inicializarSesionDirecta();
     await cargarServiciosSupabase();
     await cargarRepertorioSupabase();
     await cargarMensajesSupabase();
@@ -390,10 +353,8 @@ export default function App() {
     if (nuevoMensajeTexto.trim() !== "") {
       const horaActual = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       if (idMensajeEditando !== null) {
-        const textoModificado = nuevoMensajeTexto.trim();
-        const idNumerico = Number(idMensajeEditando);
-        const { error } = await supabase.from("mensajes").update({ texto: textoModificado, editado: true }).eq("id", idNumerico);
-        if (error) { alert(`⚠️ No se pudo corregir el mensaje: ${error.message}`); return; }
+        const { error } = await supabase.from("mensajes").update({ texto: nuevoMensajeTexto.trim(), editado: true }).eq("id", Number(idMensajeEditando));
+        if (error) { alert(`⚠️ No se pudo corregir el mensaje.`); return; }
         setIdMensajeEditando(null);
         setNuevoMensajeTexto("");
         await cargarMensajesSupabase();
@@ -963,7 +924,6 @@ export default function App() {
                                 titulo: nombreEvento,
                                 observaciones: observaciones || "Sin observaciones",
                                 setlist: setlistActivo,
-                                paletaSeleccionada: null,
                                 voces: { principal: "Sin asignar", coros: "Sin asignar" },
                                 instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
                                 sede_id: sedeIdSeleccionada,

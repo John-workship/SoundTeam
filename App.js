@@ -9,7 +9,7 @@ import {
   Platform,
   Linking,
 } from "react-native";
-import { supabase } from "./supabase";
+import { supabase, isSupabaseConfigured } from "./supabase";
 
 const TEMAS = {
   azul: {
@@ -121,54 +121,110 @@ export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [integrantes, setIntegrantes] = useState([]);
   const [usuario, setUsuario] = useState("");
+  const [usuarioId, setUsuarioId] = useState(null);
   const [rolUsuario, setRolUsuario] = useState("miembro");
   const [sesionIniciada, setSesionIniciada] = useState(false);
-
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [cargandoAuth, setCargandoAuth] = useState(false);
+  const [errorAuth, setErrorAuth] = useState("");
+  const [errorDatos, setErrorDatos] = useState("");
 
   const sincronizarDatosApp = async () => {
-    const { data: dataInt } = await supabase.from("integrantes").select("*");
-    if (dataInt) {
-      setIntegrantes(dataInt.map(m => ({
-        id: m.id,
-        nombre: m.nombre,
-        email: m.email ? m.email.trim().toLowerCase() : "",
-        sedeId: (m.sede_id || "general").toLowerCase(),
-        rolAcceso: (m.rol_acceso || m.rol || "miembro").toLowerCase(),
-        rolesMusicales: m.roles_musicales || [],
-      })));
+    const { data: dataInt, error } = await supabase
+      .from("integrantes")
+      .select("*")
+      .order("nombre", { ascending: true });
+    if (error) {
+      setErrorDatos(`No se pudieron cargar los integrantes: ${error.message}`);
+      return false;
     }
+    setIntegrantes((dataInt || []).map((m) => ({
+      id: m.id,
+      nombre: m.nombre || "",
+      email: m.email ? m.email.trim().toLowerCase() : "",
+      sedeId: (m.sede_id || "general").toLowerCase(),
+      rolAcceso: (m.rol_acceso || m.rol || "miembro").toLowerCase(),
+      rolesMusicales: m.roles_musicales || [],
+    })));
+    return true;
   };
 
-  const verificarSesionActiva = async () => {
-    await sincronizarDatosApp();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.user?.email) {
-      const correoUser = session.user.email.trim().toLowerCase();
-      
-      if (correoUser === "musicalpucmosquera3ra@gmail.com") {
-        setUsuario("Alex");
-        setRolUsuario("admin");
-        setSesionIniciada(true);
-      } else {
-        setUsuario(session.user.email);
-        setRolUsuario("miembro");
-        setSesionIniciada(true);
-      }
+  const verificarSesionActiva = async (sessionRecibida = undefined) => {
+    if (!isSupabaseConfigured) {
+      setErrorAuth("Falta configurar EXPO_PUBLIC_SUPABASE_URL y EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY en el entorno de despliegue.");
+      return;
     }
+
+    let session = sessionRecibida;
+    if (sessionRecibida === undefined) {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        setErrorAuth(`No se pudo comprobar la sesión: ${error.message}`);
+        return;
+      }
+      session = data.session;
+    }
+
+    if (!session?.user?.id || !session.user.email) {
+      setSesionIniciada(false);
+      setUsuario("");
+      setUsuarioId(null);
+      setRolUsuario("miembro");
+      return;
+    }
+
+    // Vincula el perfil previamente creado por un administrador con la cuenta autenticada.
+    const { error: claimError } = await supabase.rpc("claim_soundteam_profile");
+    if (claimError) {
+      setErrorAuth(`No se pudo validar tu perfil en SoundTeam: ${claimError.message}`);
+      setSesionIniciada(false);
+      return;
+    }
+
+    const { data: perfil, error: perfilError } = await supabase
+      .from("integrantes")
+      .select("id, nombre, email, sede_id, rol_acceso, roles_musicales, user_id")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+
+    if (perfilError || !perfil) {
+      setErrorAuth(perfilError?.message || "Tu cuenta inició sesión, pero todavía no tiene un perfil autorizado en SoundTeam. Solicita al administrador que registre tu correo.");
+      setSesionIniciada(false);
+      return;
+    }
+
+    setErrorAuth("");
+    setUsuario(perfil.nombre || session.user.email);
+    setUsuarioId(session.user.id);
+    setRolUsuario((perfil.rol_acceso || "miembro").toLowerCase());
+    setSedeIdSeleccionada(perfil.sede_id || "general");
+    setSesionIniciada(true);
+    await sincronizarDatosApp();
   };
 
   useEffect(() => {
-    verificarSesionActiva();
+    if (!isSupabaseConfigured) {
+      setErrorAuth("Configura las variables públicas de Supabase para iniciar SoundTeam.");
+      return;
+    }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async () => {
-      verificarSesionActiva();
+    let mounted = true;
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+      if (error) setErrorAuth(`Error de sesión: ${error.message}`);
+      else verificarSesionActiva(data.session);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Evita ejecutar consultas de Supabase dentro del callback síncrono de Auth.
+      Promise.resolve().then(() => {
+        if (mounted) verificarSesionActiva(session);
+      });
     });
 
     return () => {
+      mounted = false;
       authListener.subscription.unsubscribe();
     };
   }, []);
@@ -208,7 +264,12 @@ export default function App() {
   const [servicios, setServicios] = useState([]);
 
   const cargarServiciosSupabase = async () => {
-    const { data } = await supabase.from("servicios").select("*").eq("sede_id", sedeIdSeleccionada);
+    if (!sesionIniciada) return;
+    const { data, error } = await supabase.from("servicios").select("*").eq("sede_id", sedeIdSeleccionada);
+    if (error) {
+      setErrorDatos(`No se pudieron cargar los servicios: ${error.message}`);
+      return;
+    }
     if (data) {
       setServicios(data.map((s) => ({
         id: s.id,
@@ -226,8 +287,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    cargarServiciosSupabase();
-  }, [sedeIdSeleccionada]);
+    if (sesionIniciada) cargarServiciosSupabase();
+  }, [sedeIdSeleccionada, sesionIniciada]);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
@@ -247,7 +308,6 @@ export default function App() {
   const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
   const [idMiembroEditando, setIdMiembroEditando] = useState(null);
   const [nombreNuevoMiembro, setNombreNuevoMiembro] = useState("");
-  const [pinNuevoMiembro, setPinNuevoMiembro] = useState("1234");
   const [emailNuevoMiembro, setEmailNuevoMiembro] = useState("");
   const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
@@ -255,7 +315,12 @@ export default function App() {
   const [repertorio, setRepertorio] = useState([]);
 
   const cargarRepertorioSupabase = async () => {
-    const { data } = await supabase.from("repertorio").select("*").eq("sede_id", sedeIdSeleccionada);
+    if (!sesionIniciada) return;
+    const { data, error } = await supabase.from("repertorio").select("*").eq("sede_id", sedeIdSeleccionada);
+    if (error) {
+      setErrorDatos(`No se pudo cargar el repertorio: ${error.message}`);
+      return;
+    }
     if (data) {
       setRepertorio(data.map((c) => ({
         id: c.id,
@@ -272,8 +337,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    cargarRepertorioSupabase();
-  }, [sedeIdSeleccionada]);
+    if (sesionIniciada) cargarRepertorioSupabase();
+  }, [sedeIdSeleccionada, sesionIniciada]);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
@@ -282,81 +347,72 @@ export default function App() {
   const [idMensajeEditando, setIdMensajeEditando] = useState(null);
 
   const cargarMensajesSupabase = async () => {
-    const { data } = await supabase
+    if (!sesionIniciada) return;
+    const { data, error } = await supabase
       .from("mensajes")
       .select("*")
       .eq("canal", canalChatActivo)
       .eq("sede", sedeIdSeleccionada)
       .order("created_at", { ascending: true });
-    if (data) { setMensajesChat(data); } else { setMensajesChat([]); }
+    if (error) {
+      setErrorDatos(`No se pudieron cargar los mensajes: ${error.message}`);
+      return;
+    }
+    setMensajesChat(data || []);
   };
 
   useEffect(() => {
-    cargarMensajesSupabase();
-  }, [canalChatActivo, sedeIdSeleccionada]);
+    if (sesionIniciada) cargarMensajesSupabase();
+  }, [canalChatActivo, sedeIdSeleccionada, sesionIniciada]);
 
   const handleLogin = async () => {
-    const inputClean = emailInput.trim().toLowerCase();
-    
-    // ACCESO RÁPIDO MAESTRO POR CREDENCIALES DE TEXTO DIRECTO
-    if ((inputClean === "admin" || inputClean === "musicalpucmosquera3ra@gmail.com") && passwordInput === "1234") {
-      setUsuario("Alex");
-      setRolUsuario("admin");
-      setSesionIniciada(true);
+    const email = emailInput.trim().toLowerCase();
+    if (!email || !passwordInput) {
+      setErrorAuth("Ingresa tu correo electrónico y contraseña.");
       return;
     }
-
-    if (inputClean === "" || passwordInput.trim() === "") {
-      alert("⚠️ Ingresa tu usuario/correo y contraseña.");
+    if (!isSupabaseConfigured) {
+      setErrorAuth("Supabase no está configurado. Revisa las variables de entorno.");
       return;
     }
 
     setCargandoAuth(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: inputClean,
-      password: passwordInput,
-    });
-    setCargandoAuth(false);
-
-    if (error) {
-      alert(`⚠️ Error de acceso: ${error.message} (Usa 'Admin' y '1234' para acceso rápido).`);
-      return;
+    setErrorAuth("");
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: passwordInput });
+      if (error) setErrorAuth(`No se pudo iniciar sesión: ${error.message}`);
+    } catch (error) {
+      setErrorAuth(`Error inesperado al iniciar sesión: ${error.message}`);
+    } finally {
+      setCargandoAuth(false);
     }
-    await verificarSesionActiva();
-  };
-
-  const handleGoogleLogin = async () => {
-    setCargandoAuth(true);
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
-      },
-    });
-    setCargandoAuth(false);
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setErrorAuth(`No se pudo cerrar la sesión: ${error.message}`);
+      return;
+    }
     setSesionIniciada(false);
     setUsuario("");
+    setUsuarioId(null);
     setEmailInput("");
     setPasswordInput("");
     setRolUsuario("miembro");
     setPestana("inicio");
-    if (Platform.OS === "web") {
-      try { localStorage.clear(); } catch (e) {}
-    }
+    setErrorAuth("");
+    setErrorDatos("");
   };
 
   const recargarDatosApp = async () => {
+    setErrorDatos("");
     await verificarSesionActiva();
-    await cargarServiciosSupabase();
-    await cargarRepertorioSupabase();
-    await cargarMensajesSupabase();
-    if (Platform.OS === "web") {
-      window.location.reload(true);
-    }
+    await Promise.all([
+      cargarServiciosSupabase(),
+      cargarRepertorioSupabase(),
+      cargarMensajesSupabase(),
+    ]);
   };
 
   const esAdmin = rolUsuario === "admin";
@@ -367,7 +423,7 @@ export default function App() {
       const horaActual = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       if (idMensajeEditando !== null) {
         const { error } = await supabase.from("mensajes").update({ texto: nuevoMensajeTexto.trim(), editado: true }).eq("id", Number(idMensajeEditando));
-        if (error) { alert(`⚠️ No se pudo corregir el mensaje.`); return; }
+        if (error) { alert(`No se pudo corregir el mensaje: ${error.message}`); return; }
         setIdMensajeEditando(null);
         setNuevoMensajeTexto("");
         await cargarMensajesSupabase();
@@ -380,8 +436,9 @@ export default function App() {
           sede: sedeIdSeleccionada,
           editado: false,
         };
+        const { error } = await supabase.from("mensajes").insert([{ ...mensaje, user_id: usuarioId }]);
+        if (error) { alert(`No se pudo enviar el mensaje: ${error.message}`); return; }
         setNuevoMensajeTexto("");
-        await supabase.from("mensajes").insert([mensaje]);
         await cargarMensajesSupabase();
       }
     }
@@ -391,7 +448,9 @@ export default function App() {
     if (!esAdminOLider) { alert("⚠️ Solo Administradores y Líderes pueden limpiar el chat."); return; }
     if (confirm(`¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} para esta sede (${sedeActual.nombre})?`)) {
       const { error } = await supabase.from("mensajes").delete().eq("canal", canalChatActivo).eq("sede", sedeIdSeleccionada);
-      if (!error) { setMensajesChat([]); alert("🧹 Chat de la sede limpiado con éxito."); }
+      if (error) { alert(`No se pudo limpiar el chat: ${error.message}`); return; }
+      setMensajesChat([]);
+      alert("Chat de la sede limpiado con éxito.");
     }
   };
 
@@ -465,11 +524,17 @@ export default function App() {
     const nVoces = { principal: nuevaVozP, coros: nuevosCoros.length > 0 ? nuevosCoros.join(", ") : "Sin asignar" };
     const nInst = { piano: nuevoPiano, guitarra: nuevaGuitarra, bajo: nuevoBajo, bateria: nuevaBateria };
 
-    const actualizados = servicios.map((s) => s.id === idServicioPostulando ? { ...s, voces: nVoces, instrumentos: nInst } : s);
-    setServicios(actualizados);
-    await supabase.from("servicios").update({ voces: nVoces, instrumentos: nInst }).eq("id", idServicioPostulando);
+    const { error } = await supabase.rpc("postularse_servicio", {
+      p_servicio_id: idServicioPostulando,
+      p_rol: rol,
+    });
+    if (error) {
+      alert(`No se pudo registrar la postulación: ${error.message}`);
+      return;
+    }
+    await cargarServiciosSupabase();
     setModalPostularVisible(false);
-    alert(`🚀 Postulación realizada.`);
+    alert("Postulación realizada correctamente.");
   };
 
   if (!sesionIniciada) {
@@ -482,7 +547,7 @@ export default function App() {
           <Text style={[styles.inputLabel, { color: t.textMain }]}>📧 Usuario / Correo</Text>
           <TextInput
             style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
-            placeholder="Admin o correo@ejemplo.com"
+            placeholder="correo@ejemplo.com"
             placeholderTextColor={t.textSub}
             autoCapitalize="none"
             value={emailInput}
@@ -492,7 +557,7 @@ export default function App() {
           <Text style={[styles.inputLabel, { color: t.textMain }]}>🔑 Contraseña</Text>
           <TextInput
             style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
-            placeholder="1234"
+            placeholder="Tu contraseña"
             placeholderTextColor={t.textSub}
             secureTextEntry
             value={passwordInput}
@@ -505,16 +570,14 @@ export default function App() {
               onPress={handleLogin}
               disabled={cargandoAuth}
             >
-              <Text style={styles.loginButtonText}>{cargandoAuth ? "Verificando..." : "Entrar como Admin"}</Text>
+              <Text style={styles.loginButtonText}>{cargandoAuth ? "Verificando..." : "Iniciar sesión"}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.loginButton, { backgroundColor: "#DB4437" }]} 
-              onPress={handleGoogleLogin}
-              disabled={cargandoAuth}
-            >
-              <Text style={styles.loginButtonText}>🌐 Iniciar sesión con Google</Text>
-            </TouchableOpacity>
+            {!!errorAuth && (
+              <Text accessibilityRole="alert" style={{ color: "#EF4444", fontSize: 12, marginTop: 8 }}>
+                {errorAuth}
+              </Text>
+            )}
           </View>
         </View>
       </View>
@@ -523,6 +586,11 @@ export default function App() {
 
   return (
     <View style={[styles.container, { backgroundColor: t.bg }, tapizActual.css]}>
+      {!!errorDatos && (
+        <TouchableOpacity onPress={() => setErrorDatos("")} style={{ padding: 8, backgroundColor: "#7F1D1D" }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 12 }}>{errorDatos} · Toca para cerrar</Text>
+        </TouchableOpacity>
+      )}
       {modoEnVivoActivo ? (
         <View style={[styles.teleprompterContainer, { backgroundColor: "#0B0F19" }]}>
           <View style={styles.teleprompterTopBar}>
@@ -929,9 +997,7 @@ export default function App() {
                           style={[styles.loginButton, { flex: 1, backgroundColor: t.primary, padding: 12 }]}
                           onPress={async () => {
                             if (nombreEvento.trim() !== "") {
-                              const nuevoId = idServicioEditando !== null ? idServicioEditando : Date.now();
                               const nuevoServicioObj = {
-                                id: nuevoId,
                                 fecha: fechaActualClave,
                                 titulo: nombreEvento,
                                 observaciones: observaciones || "Sin observaciones",
@@ -941,12 +1007,13 @@ export default function App() {
                                 sede_id: sedeIdSeleccionada,
                               };
                               if (idServicioEditando !== null) {
-                                setServicios(servicios.map((s) => s.id === idServicioEditando ? nuevoServicioObj : s));
-                                await supabase.from("servicios").update({ titulo: nombreEvento, observaciones, setlist: setlistActivo }).eq("id", idServicioEditando);
+                                const { error } = await supabase.from("servicios").update({ titulo: nombreEvento.trim(), observaciones, setlist: setlistActivo }).eq("id", idServicioEditando);
+                                if (error) { alert(`No se pudo actualizar el servicio: ${error.message}`); return; }
                               } else {
-                                setServicios([...servicios, nuevoServicioObj]);
-                                await supabase.from("servicios").insert([{ ...nuevoServicioObj, paleta_seleccionada: null }]);
+                                const { error } = await supabase.from("servicios").insert([{ ...nuevoServicioObj, paleta_seleccionada: null }]);
+                                if (error) { alert(`No se pudo crear el servicio: ${error.message}`); return; }
                               }
+                              await cargarServiciosSupabase();
                               setModalProgramarVisible(false);
                               setIdServicioEditando(null);
                             } else { alert("⚠️ Ingresa el nombre del evento."); }
@@ -1011,8 +1078,9 @@ export default function App() {
                               <TouchableOpacity
                                 style={[styles.deleteServiceBtn, { paddingVertical: 2, paddingHorizontal: 5 }]}
                                 onPress={async () => {
-                                  setServicios(servicios.filter((s) => s.id !== serv.id));
-                                  await supabase.from("servicios").delete().eq("id", serv.id);
+                                  const { error } = await supabase.from("servicios").delete().eq("id", serv.id);
+                                  if (error) { alert(`No se pudo eliminar el servicio: ${error.message}`); return; }
+                                  await cargarServiciosSupabase();
                                 }}
                               >
                                 <Text style={{ fontSize: 10, color: "#FFFFFF", fontWeight: "bold" }}>🗑️ Eliminar</Text>
@@ -1082,7 +1150,6 @@ export default function App() {
                       onPress={() => {
                         setIdMiembroEditando(null);
                         setNombreNuevoMiembro("");
-                        setPinNuevoMiembro("1234");
                         setEmailNuevoMiembro("");
                         setRolAccesoNuevo("miembro");
                         setRolesMusicalesNuevo([]);
@@ -1114,34 +1181,30 @@ export default function App() {
                         value={emailNuevoMiembro}
                         onChangeText={setEmailNuevoMiembro}
                       />
-                      <TextInput
-                        style={[styles.loginInput, { backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain }]}
-                        placeholder="PIN (Opcional)"
-                        placeholderTextColor={t.textSub}
-                        value={pinNuevoMiembro}
-                        onChangeText={setPinNuevoMiembro}
-                      />
+                      <Text style={{ color: t.textSub, fontSize: 11, marginBottom: 8 }}>
+                        Crea también la cuenta de acceso en Supabase → Authentication → Users usando este mismo correo.
+                      </Text>
                       <TouchableOpacity
                         style={[styles.loginButton, { backgroundColor: t.primary, padding: 10, marginTop: 6 }]}
                         onPress={async () => {
                           if (nombreNuevoMiembro.trim() !== "") {
-                            const nuevoId = idMiembroEditando !== null ? idMiembroEditando : Date.now();
+                            const correoMiembro = emailNuevoMiembro.trim().toLowerCase();
+                            if (!correoMiembro) { alert("Ingresa el correo que usará para iniciar sesión."); return; }
                             const integranteObj = {
-                              id: nuevoId,
                               nombre: nombreNuevoMiembro.trim(),
-                              pin: pinNuevoMiembro.trim() || "1234",
-                              email: emailNuevoMiembro.trim().toLowerCase() || "",
+                              email: correoMiembro,
                               sede_id: sedeIdSeleccionada,
                               rol_acceso: rolAccesoNuevo,
                               roles_musicales: rolesMusicalesNuevo,
                             };
                             if (idMiembroEditando !== null) {
-                              setIntegrantes(integrantes.map(i => i.id === idMiembroEditando ? integranteObj : i));
-                              await supabase.from("integrantes").update(integranteObj).eq("id", idMiembroEditando);
+                              const { error } = await supabase.from("integrantes").update(integranteObj).eq("id", idMiembroEditando);
+                              if (error) { alert(`No se pudo actualizar el integrante: ${error.message}`); return; }
                             } else {
-                              setIntegrantes([...integrantes, integranteObj]);
-                              await supabase.from("integrantes").insert([integranteObj]);
+                              const { error } = await supabase.from("integrantes").insert([integranteObj]);
+                              if (error) { alert(`No se pudo crear el perfil: ${error.message}`); return; }
                             }
+                            await sincronizarDatosApp();
                             setModalMiembroVisible(false);
                             setIdMiembroEditando(null);
                           } else { alert("⚠️ Ingresa el nombre."); }
@@ -1159,8 +1222,9 @@ export default function App() {
                         <TouchableOpacity
                           style={{ backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
                           onPress={async () => {
-                            setIntegrantes(integrantes.filter((item) => item.id !== int.id));
-                            await supabase.from("integrantes").delete().eq("id", int.id);
+                            const { error } = await supabase.from("integrantes").delete().eq("id", int.id);
+                            if (error) { alert(`No se pudo eliminar el integrante: ${error.message}`); return; }
+                            await sincronizarDatosApp();
                           }}
                         >
                           <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>🗑️ Eliminar</Text>

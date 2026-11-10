@@ -1,11 +1,39 @@
-# Sample Snack app
+# SoundTeam
 
-Open the `App.js` file to start writing some code. You can preview the changes directly on your phone or tablet by scanning the **QR code** or use the iOS or Android emulators. When you're done, click **Save** and share the link!
+Aplicación web/móvil construida con Expo, React Native y Supabase.
 
-When you're ready to see everything that Expo provides (or if you want to use your own editor) you can **Download** your project and use it with [expo cli](https://docs.expo.dev/get-started/installation/#expo-cli)).
+## Requisitos
+- Node.js LTS
+- Proyecto Supabase
+- Cuenta Vercel vinculada al repositorio Git
 
-All projects created in Snack are publicly available, so you can easily share the link to this project via link, or embed it on a web page with the `<>` button.
+## Configuración local
+1. Copia `.env.example` a `.env`.
+2. Completa `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` con los valores de **Supabase → Project Settings → API**.
+3. Instala dependencias: `npm install`.
+4. Ejecuta: `npm run web`.
 
-If you're having problems, you can tweet to us [@expo](https://twitter.com/expo) or ask in our [forums](https://forums.expo.dev/c/expo-dev-tools/61) or [Discord](https://chat.expo.dev/).
+Nunca uses `service_role` en variables `EXPO_PUBLIC_*`. Las variables `EXPO_PUBLIC_*` se incluyen en el bundle del navegador y son visibles para los usuarios.
 
-Snack is Open Source. You can find the code on the [GitHub repo](https://github.com/expo/snack).
+## Supabase
+1. Revisa y ejecuta `supabase/migrations/20261110_soundteam_hardening.sql` en SQL Editor.
+2. Crea el primer administrador siguiendo `supabase/BOOTSTRAP_ADMIN.md`.
+3. Para cada integrante, crea su cuenta en **Authentication → Users** y registra su perfil desde la sección Equipo de SoundTeam con el mismo correo. El perfil se vincula a la cuenta autenticada al iniciar sesión.
+4. Habilita confirmación de correo en Supabase Auth para evitar cuentas no verificadas.
+
+La migración conserva las filas existentes; normaliza el nombre de la tabla `Integrantes`, agrega columnas y activa RLS. Revisa el SQL antes de ejecutarlo en cualquier proyecto que contenga datos importantes.
+
+## Despliegue en Vercel
+- Framework preset: Other (o Expo si Vercel lo detecta correctamente).
+- Build command: `npx expo export --platform web`
+- Output directory: `dist`
+- Environment variables:
+  - `EXPO_PUBLIC_SUPABASE_URL`
+  - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- Aplica las variables a Production, Preview y Development según corresponda.
+- Después de guardar las variables, crea un nuevo deployment.
+
+`vercel.json` ya declara el comando de compilación, la carpeta `dist` y la reescritura SPA.
+
+## Comprobación
+Antes de publicar, prueba inicio/cierre de sesión, perfiles sin autorización, separación de sedes, creación/edición/eliminación de servicios, chat, repertorio y postulaciones. Revisa también las políticas RLS en Supabase.

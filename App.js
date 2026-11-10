@@ -128,24 +128,7 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState("");
   const [cargandoAuth, setCargandoAuth] = useState(false);
 
-  const inicializarSesionDirecta = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.user?.email) {
-      const correoUser = session.user.email.trim().toLowerCase();
-      
-      // BLINDAJE ABSOLUTO: Tu correo SIEMPRE será Admin Maestro por diseño
-      if (correoUser === "musicalpucmosquera3ra@gmail.com") {
-        setUsuario("Alex");
-        setRolUsuario("admin");
-        setSesionIniciada(true);
-      } else {
-        setUsuario(session.user.email);
-        setRolUsuario("miembro");
-        setSesionIniciada(true);
-      }
-    }
-
+  const sincronizarDatosApp = async () => {
     const { data: dataInt } = await supabase.from("integrantes").select("*");
     if (dataInt) {
       setIntegrantes(dataInt.map(m => ({
@@ -159,11 +142,30 @@ export default function App() {
     }
   };
 
+  const verificarSesionActiva = async () => {
+    await sincronizarDatosApp();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user?.email) {
+      const correoUser = session.user.email.trim().toLowerCase();
+      
+      if (correoUser === "musicalpucmosquera3ra@gmail.com") {
+        setUsuario("Alex");
+        setRolUsuario("admin");
+        setSesionIniciada(true);
+      } else {
+        setUsuario(session.user.email);
+        setRolUsuario("miembro");
+        setSesionIniciada(true);
+      }
+    }
+  };
+
   useEffect(() => {
-    inicializarSesionDirecta();
+    verificarSesionActiva();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async () => {
-      inicializarSesionDirecta();
+      verificarSesionActiva();
     });
 
     return () => {
@@ -294,22 +296,33 @@ export default function App() {
   }, [canalChatActivo, sedeIdSeleccionada]);
 
   const handleLogin = async () => {
-    if (emailInput.trim() === "" || passwordInput.trim() === "") {
-      alert("⚠️ Ingresa tu correo electrónico y contraseña.");
+    const inputClean = emailInput.trim().toLowerCase();
+    
+    // ACCESO RÁPIDO MAESTRO POR CREDENCIALES DE TEXTO DIRECTO
+    if ((inputClean === "admin" || inputClean === "musicalpucmosquera3ra@gmail.com") && passwordInput === "1234") {
+      setUsuario("Alex");
+      setRolUsuario("admin");
+      setSesionIniciada(true);
       return;
     }
+
+    if (inputClean === "" || passwordInput.trim() === "") {
+      alert("⚠️ Ingresa tu usuario/correo y contraseña.");
+      return;
+    }
+
     setCargandoAuth(true);
     const { error } = await supabase.auth.signInWithPassword({
-      email: emailInput.trim(),
+      email: inputClean,
       password: passwordInput,
     });
     setCargandoAuth(false);
 
     if (error) {
-      alert(`⚠️ Error de acceso: ${error.message}`);
+      alert(`⚠️ Error de acceso: ${error.message} (Usa 'Admin' y '1234' para acceso rápido).`);
       return;
     }
-    await inicializarSesionDirecta();
+    await verificarSesionActiva();
   };
 
   const handleGoogleLogin = async () => {
@@ -337,7 +350,7 @@ export default function App() {
   };
 
   const recargarDatosApp = async () => {
-    await inicializarSesionDirecta();
+    await verificarSesionActiva();
     await cargarServiciosSupabase();
     await cargarRepertorioSupabase();
     await cargarMensajesSupabase();
@@ -466,12 +479,11 @@ export default function App() {
           <Text style={[styles.loginTitle, { color: t.textMain }]}>SoundTeam</Text>
           <Text style={[styles.loginSubtitle, { color: t.textSub }]}>Inicio de Sesión</Text>
           
-          <Text style={[styles.inputLabel, { color: t.textMain }]}>📧 Correo Electrónico</Text>
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>📧 Usuario / Correo</Text>
           <TextInput
             style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
-            placeholder="correo@ejemplo.com"
+            placeholder="Admin o correo@ejemplo.com"
             placeholderTextColor={t.textSub}
-            keyboardType="email-address"
             autoCapitalize="none"
             value={emailInput}
             onChangeText={setEmailInput}
@@ -480,7 +492,7 @@ export default function App() {
           <Text style={[styles.inputLabel, { color: t.textMain }]}>🔑 Contraseña</Text>
           <TextInput
             style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
-            placeholder="••••••••"
+            placeholder="1234"
             placeholderTextColor={t.textSub}
             secureTextEntry
             value={passwordInput}
@@ -493,7 +505,7 @@ export default function App() {
               onPress={handleLogin}
               disabled={cargandoAuth}
             >
-              <Text style={styles.loginButtonText}>{cargandoAuth ? "Verificando..." : "Iniciar Sesión"}</Text>
+              <Text style={styles.loginButtonText}>{cargandoAuth ? "Verificando..." : "Entrar como Admin"}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -1270,8 +1282,8 @@ const styles = StyleSheet.create({
   programBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
   eventCardHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   eventMainTitle: { fontSize: 15, fontWeight: "bold" },
-  editServiceBtn: { backgroundColor: "#3B82F6", paddingVertical: 3, paddingHorizontal: 6, borderRadius: 4 },
-  deleteServiceBtn: { backgroundColor: "#EF4444", paddingVertical: 3, paddingHorizontal: 6, borderRadius: 4 },
+  editServiceBtn: { backgroundColor: "#3B82F6", paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
+  deleteServiceBtn: { backgroundColor: "#EF4444", paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
   repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
   tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1, width: "100%" },
   tabItem: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 2 },

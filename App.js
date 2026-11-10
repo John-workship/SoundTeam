@@ -492,6 +492,21 @@ export default function App() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setCargandoAuth(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
+      },
+    });
+    setCargandoAuth(false);
+
+    if (error) {
+      alert(`⚠️ Error con Google: ${error.message}`);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setSesionIniciada(false);
@@ -680,6 +695,14 @@ export default function App() {
               disabled={cargandoAuth}
             >
               <Text style={styles.loginButtonText}>{cargandoAuth ? "Verificando..." : "Iniciar Sesión"}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.loginButton, { backgroundColor: "#DB4437" }]} 
+              onPress={handleGoogleLogin}
+              disabled={cargandoAuth}
+            >
+              <Text style={styles.loginButtonText}>🌐 Iniciar sesión con Google</Text>
             </TouchableOpacity>
           </View>
         </View>

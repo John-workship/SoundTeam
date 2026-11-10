@@ -259,20 +259,13 @@ const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) =
 };
 
 export default function App() {
-  const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState(() => {
-    if (Platform.OS === "web") {
-      try { return localStorage.getItem("soundteam_sede_activa") || "principal"; } catch (e) { return "principal"; }
-    }
-    return "principal";
-  });
-
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      try { localStorage.setItem("soundteam_sede_activa", sedeIdSeleccionada); } catch (e) {}
-    }
-  }, [sedeIdSeleccionada]);
-
+  const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("principal");
   const [integrantes, setIntegrantes] = useState([]);
+  
+  const [emailAuthActual, setEmailAuthActual] = useState("");
+  const [requiereRegistroPerfil, setRequiereRegistroPerfil] = useState(false);
+  const [nombreRegistroInput, setNombreRegistroInput] = useState("");
+  const [sedeRegistroInput, setSedeRegistroInput] = useState("principal");
 
   const cargarIntegrantesSupabase = async () => {
     const { data, error } = await supabase.from("integrantes").select("*");
@@ -283,34 +276,40 @@ export default function App() {
         email: m.email || "",
         sedeId: m.sede_id || "principal",
         rolAcceso: m.rol_acceso || m.rol || "miembro",
-        rolesMusicales: m.rol ? m.rol.split(",").map(r => r.trim()) : [],
+        rolesMusicales: m.rol && !m.rol_acceso ? m.rol.split(",").map(r => r.trim()) : (m.rol ? m.rol.split(",").map(r => r.trim()) : []),
       }));
       setIntegrantes(formateados);
     }
   };
 
-  const cargarPerfilUsuario = async (emailUsuario) => {
+  const procesarInicioSesionEmail = async (emailUsuario) => {
     if (!emailUsuario) return;
-    
+    setEmailAuthActual(emailUsuario);
+
     if (emailUsuario.trim().toLowerCase() === "musicaipucmosquera3ra@gmail.com") {
       setUsuario("Alex (Admin)");
       setRolUsuario("admin");
+      setSedeIdSeleccionada("principal");
       setSesionIniciada(true);
+      setRequiereRegistroPerfil(false);
       return;
     }
 
     const integranteEncontrado = integrantes.find(i => i.email && i.email.trim().toLowerCase() === emailUsuario.trim().toLowerCase());
+    
     if (integranteEncontrado) {
       setUsuario(integranteEncontrado.nombre);
       setRolUsuario(integranteEncontrado.rolAcceso || "miembro");
       if (integranteEncontrado.sedeId) {
         setSedeIdSeleccionada(integranteEncontrado.sedeId);
       }
+      setSesionIniciada(true);
+      setRequiereRegistroPerfil(false);
     } else {
-      setUsuario(emailUsuario.split("@")[0]);
-      setRolUsuario("miembro");
+      // Usuario nuevo que no está registrado en la tabla integrantes: pedir nombre y sede
+      setRequiereRegistroPerfil(true);
+      setSesionIniciada(true);
     }
-    setSesionIniciada(true);
   };
 
   useEffect(() => {
@@ -319,17 +318,18 @@ export default function App() {
     const verificarSesion = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.email) {
-        await cargarPerfilUsuario(session.user.email);
+        await procesarInicioSesionEmail(session.user.email);
       }
     };
     verificarSesion();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user?.email) {
-        await cargarPerfilUsuario(session.user.email);
+        await procesarInicioSesionEmail(session.user.email);
       } else {
         setSesionIniciada(false);
         setUsuario("");
+        setRequiereRegistroPerfil(false);
       }
     });
 
@@ -393,6 +393,7 @@ export default function App() {
   const tapizActual = PAPELES_TAPIZ[nombreTapiz] || PAPELES_TAPIZ.ninguno;
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
+  const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
   const integrantesSeccionEquipo = integrantes.filter((m) => m.sedeId === sedeIdSeleccionada);
 
   const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -638,7 +639,7 @@ export default function App() {
     if (error) {
       alert(`⚠️ Error de acceso: ${error.message}`);
     } else if (data?.user) {
-      await cargarPerfilUsuario(data.user.email);
+      await procesarInicioSesionEmail(data.user.email);
       setEmailInput("");
       setPasswordInput("");
     }
@@ -662,6 +663,35 @@ export default function App() {
     }
   };
 
+  const handleCompletarRegistroPerfil = async () => {
+    if (nombreRegistroInput.trim() === "") {
+      alert("⚠️ Por favor ingresa tu nombre.");
+      return;
+    }
+    const nuevoId = Date.now();
+    const nuevoIntegranteObj = {
+      id: nuevoId,
+      nombre: nombreRegistroInput.trim(),
+      email: emailAuthActual.trim(),
+      sede_id: sedeRegistroInput,
+      rol_acceso: "miembro",
+      rol: "Miembro General",
+      pin: "1234",
+    };
+
+    const { error } = await supabase.from("integrantes").insert([nuevoIntegranteObj]);
+    if (!error) {
+      alert("✅ ¡Registro completado con éxito!");
+      setUsuario(nombreRegistroInput.trim());
+      setRolUsuario("miembro");
+      setSedeIdSeleccionada(sedeRegistroInput);
+      setRequiereRegistroPerfil(false);
+      await cargarIntegrantesSupabase();
+    } else {
+      alert(`⚠️ Error al guardar perfil: ${error.message}`);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setSesionIniciada(false);
@@ -669,6 +699,7 @@ export default function App() {
     setEmailInput("");
     setPasswordInput("");
     setRolUsuario("miembro");
+    setRequiereRegistroPerfil(false);
     setPestana("inicio");
     setCancionSeleccionadaDetalle(null);
     setModoEnVivoActivo(false);
@@ -688,8 +719,6 @@ export default function App() {
   };
 
   const esAdmin = rolUsuario === "admin";
-  const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
-
   const miembroActualObj = integrantes.find((m) => m.nombre && m.nombre.trim().toLowerCase() === usuario.trim().toLowerCase());
   const tocaInstrumento = miembroActualObj && miembroActualObj.rolesMusicales && miembroActualObj.rolesMusicales.some((rol) => {
     const rLower = rol.toLowerCase();
@@ -954,38 +983,7 @@ export default function App() {
         <View style={[styles.loginCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
           <Text style={[styles.loginTitle, { color: t.textMain }]}>SoundTeam</Text>
           <Text style={[styles.loginSubtitle, { color: t.textSub }]}>Organiza tu equipo de alabanza</Text>
-          <Text style={[styles.inputLabel, { color: t.textMain }]}>🏛️ Selecciona tu Sede:</Text>
-
-          {Platform.OS === "web" ? (
-            <select
-              value={sedeIdSeleccionada}
-              onChange={(e) => setSedeIdSeleccionada(e.target.value)}
-              style={{
-                backgroundColor: t.bg,
-                color: t.textMain,
-                borderColor: t.border,
-                borderWidth: "1px",
-                borderRadius: "8px",
-                padding: "12px",
-                fontSize: "15px",
-                marginBottom: "14px",
-                width: "100%",
-                outline: "none",
-                cursor: "pointer",
-              }}
-            >
-              {SEDES_DISPONIBLES.map((s) => (
-                <option key={s.id} value={s.id} style={{ backgroundColor: t.cardBg, color: t.textMain }}>
-                  {s.nombre}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <View style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border }]}>
-              <Text style={{ color: t.textMain }}>{sedeActual.nombre}</Text>
-            </View>
-          )}
-
+          
           <Text style={[styles.inputLabel, { color: t.textMain }]}>📧 Correo Electrónico</Text>
           <TextInput
             style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
@@ -1024,6 +1022,60 @@ export default function App() {
               <Text style={[styles.loginButtonText, { color: t.textMain }]}>Iniciar sesión con Google</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (requiereRegistroPerfil) {
+    return (
+      <View style={[styles.loginContainer, { backgroundColor: t.bg }]}>
+        <View style={[styles.loginCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+          <Text style={[styles.loginTitle, { color: t.textMain }]}>¡Bienvenido a SoundTeam! 👋</Text>
+          <Text style={[styles.loginSubtitle, { color: t.textSub }]}>Completa tus datos para unirte a tu Sede</Text>
+
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>👤 Tu Nombre y Apellido</Text>
+          <TextInput
+            style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
+            placeholder="Ej. Juan Pérez"
+            placeholderTextColor={t.textSub}
+            value={nombreRegistroInput}
+            onChangeText={setNombreRegistroInput}
+          />
+
+          <Text style={[styles.inputLabel, { color: t.textMain }]}>🏛️ Selecciona tu Sede:</Text>
+          {Platform.OS === "web" ? (
+            <select
+              value={sedeRegistroInput}
+              onChange={(e) => setSedeRegistroInput(e.target.value)}
+              style={{
+                backgroundColor: t.bg,
+                color: t.textMain,
+                borderColor: t.border,
+                borderWidth: "1px",
+                borderRadius: "8px",
+                padding: "12px",
+                fontSize: "15px",
+                marginBottom: "16px",
+                width: "100%",
+                outline: "none",
+                cursor: "pointer",
+              }}
+            >
+              {SEDES_DISPONIBLES.map((s) => (
+                <option key={s.id} value={s.id} style={{ backgroundColor: t.cardBg, color: t.textMain }}>
+                  {s.nombre}
+                </option>
+              ))}
+            </select>
+          ) : null}
+
+          <TouchableOpacity 
+            style={[styles.loginButton, { backgroundColor: t.primary, marginTop: 10 }]} 
+            onPress={handleCompletarRegistroPerfil}
+          >
+            <Text style={styles.loginButtonText}>Registrarme y Entrar</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -1188,7 +1240,8 @@ export default function App() {
         </View>
 
         <View style={{ marginTop: 8 }}>
-          {Platform.OS === "web" ? (
+          {/* Selector de sede solo visible para administradores y líderes */}
+          {esAdminOLider && Platform.OS === "web" ? (
             <select
               value={sedeIdSeleccionada}
               onChange={(e) => setSedeIdSeleccionada(e.target.value)}
@@ -2473,7 +2526,7 @@ export default function App() {
               )}
             </>
           )}
-        </View>
+        </div>
       </ScrollView>
 
       <View style={[styles.tabBar, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>

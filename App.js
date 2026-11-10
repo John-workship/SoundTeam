@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -259,6 +259,8 @@ const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) =
 };
 
 export default function App() {
+  const scrollRef = useRef(null);
+
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("principal");
   const [integrantes, setIntegrantes] = useState([]);
   
@@ -1102,8 +1104,6 @@ export default function App() {
     const tonoOriginalBase = objetoRepertorioEnVivo.tono || cancionActualEnVivo.tono || "C";
     const tonoEventoActual = cancionActualEnVivo.tono || tonoOriginalBase;
     const semitonosDiferencia = calcularDiferenciaSemitonos(tonoOriginalBase, tonoEventoActual);
-
-    const scrollRef = React.useRef(null);
 
     const manejarAccionAvanzar = () => {
       if (indiceCancionEnVivo < setlistEnVivoActual.length - 1) {
@@ -2647,7 +2647,7 @@ const styles = StyleSheet.create({
   smallButton: { width: 30, height: 30, borderRadius: 6, borderWidth: 1, justifyContent: "center", alignItems: "center" },
   smallButtonText: { fontSize: 11, fontWeight: "bold" },
   teleprompterContainer: {
-    position: Platform.OS === "web" ? "fixed" : "relative",
+    position: Platform.OS === "web" ? "fixed" : "absolute",
     top: 0,
     left: 0,
     right: 0,

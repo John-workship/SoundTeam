@@ -2099,11 +2099,10 @@ export default function App() {
                       onPress={async () => {
                         if (nombreNuevoMiembro.trim() !== "") {
                           const nuevoId = Date.now();
-                          // ENVIAMOS AMBAS OPCIONES (minúscula y mayúscula) PARA EVITAR CUALQUIER CONFLICTO EN SUPABASE
+                          // ENVIAMOS EXCLUSIVAMENTE 'nombre' EN MINÚSCULA PARA EVITAR CONFLICTOS CON LA CACHÉ
                           const nuevoIntegranteObj = {
                             id: nuevoId,
                             nombre: nombreNuevoMiembro.trim(),
-                            Nombre: nombreNuevoMiembro.trim(),
                             rol: rolesMusicalesNuevo.join(", "),
                             rol_acceso: rolAccesoNuevo,
                             email: emailNuevoMiembro.trim() || null,

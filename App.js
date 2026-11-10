@@ -11,12 +11,12 @@ import {
 } from "react-native";
 import { createClient } from "@supabase/supabase-js";
 
-// 1. Configuración de Supabase
-const SUPABASE_URL = "https://tu-proyecto.supabase.co"; // Reemplaza con tu URL
-const SUPABASE_ANON_KEY = "tu-anon-key"; // Reemplaza con tu anon key
+// 1. Configuración real de Supabase
+const SUPABASE_URL = "https://menaeypgdctjvvubckfh.supabase.co";
+const SUPABASE_ANON_KEY = "TU_SUPABASE_ANON_KEY_AQUI"; // Pega aquí tu anon / public key de Supabase
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Palette de colores del proyecto
+// Paleta de colores original del proyecto
 const t = {
   bg: "#0D0D0D",
   cardBg: "#161616",
@@ -26,7 +26,7 @@ const t = {
   accent: "#FF6B00",
 };
 
-// 4 Sedes integradas
+// Las 4 Sedes
 const SEDES_DISPONIBLES = [
   { id: "principal", nombre: "Sede Principal" },
   { id: "norte", nombre: "Sede Norte" },
@@ -81,7 +81,7 @@ export default function App() {
     );
   }
 
-  // Vista 1: Login con selector de las 4 sedes
+  // Vista 1: Login con selector de las 4 sedes y botón de Google
   if (!sesion) {
     const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada);
     return (
@@ -120,7 +120,7 @@ export default function App() {
             </select>
           )}
 
-          {/* Botón único de Google */}
+          {/* Botón de Iniciar sesión con Google */}
           <TouchableOpacity style={styles.googleButton} onPress={iniciarSesionConGoogle}>
             <Text style={{ fontSize: 18, marginRight: 10 }}>🌐</Text>
             <Text style={styles.googleButtonText}>Iniciar sesión con Google</Text>

@@ -2076,7 +2076,7 @@ export default function App() {
                           const nuevoId = Date.now();
                           const nuevoIntegranteObj = {
                             id: nuevoId,
-                            Nombre: nombreNuevoMiembro.trim(),
+                            Nombre: nombreNuevoMiembro.trim(), // Columna corregida con 'N' mayúscula
                             rol: rolesMusicalesNuevo.join(", "),
                             rol_acceso: rolAccesoNuevo,
                             email: emailNuevoMiembro.trim() || null,

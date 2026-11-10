@@ -669,7 +669,6 @@ export default function App() {
     }
     const correoLimpio = emailAuthActual.trim().toLowerCase();
 
-    // Validar duplicado por correo
     const { data: usuarioExistente } = await supabase
       .from("integrantes")
       .select("id")

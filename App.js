@@ -145,7 +145,7 @@ export default function App() {
           pin: m.pin,
           email: m.email ? m.email.trim().toLowerCase() : "",
           sedeId: sId,
-          rolAcceso: (m.rol_acceso || "miembro").toLowerCase(),
+          rolAcceso: (m.rol_acceso || m.rol || "miembro").toLowerCase(),
           rolesMusicales: m.roles_musicales || [],
         };
       });
@@ -195,10 +195,14 @@ export default function App() {
         const miembroEncontrado = integrantes.find(
           (m) => m.email && m.email === correoUser
         );
-        if (miembroEncontrado) {
-          setUsuario(miembroEncontrado.nombre);
-          setRolUsuario(miembroEncontrado.rolAcceso || "miembro");
-          if (miembroEncontrado.sedeId) {
+        
+        // Blindaje maestro para administrador
+        const esAdminMaster = correoUser === "musicalpucmosquera3ra@gmail.com";
+
+        if (miembroEncontrado || esAdminMaster) {
+          setUsuario(miembroEncontrado ? miembroEncontrado.nombre : "Alex");
+          setRolUsuario(miembroEncontrado ? (miembroEncontrado.rolAcceso || "admin") : "admin");
+          if (miembroEncontrado?.sedeId) {
             setSedeIdSeleccionada(miembroEncontrado.sedeId);
           }
           setSesionIniciada(true);
@@ -209,7 +213,10 @@ export default function App() {
         }
       }
     };
-    verificarSesionSupabase();
+
+    if (integrantes.length > 0) {
+      verificarSesionSupabase();
+    }
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user?.email) {
@@ -217,10 +224,12 @@ export default function App() {
         const miembroEncontrado = integrantes.find(
           (m) => m.email && m.email === correoUser
         );
-        if (miembroEncontrado) {
-          setUsuario(miembroEncontrado.nombre);
-          setRolUsuario(miembroEncontrado.rolAcceso || "miembro");
-          if (miembroEncontrado.sedeId) {
+        const esAdminMaster = correoUser === "musicalpucmosquera3ra@gmail.com";
+
+        if (miembroEncontrado || esAdminMaster) {
+          setUsuario(miembroEncontrado ? miembroEncontrado.nombre : "Alex");
+          setRolUsuario(miembroEncontrado ? (miembroEncontrado.rolAcceso || "admin") : "admin");
+          if (miembroEncontrado?.sedeId) {
             setSedeIdSeleccionada(miembroEncontrado.sedeId);
           }
           setSesionIniciada(true);
@@ -472,9 +481,10 @@ export default function App() {
       const miembroEncontrado = integrantes.find(
         (m) => m.email && m.email === correoUser
       );
+      const esAdminMaster = correoUser === "musicalpucmosquera3ra@gmail.com";
 
-      const nombreReal = miembroEncontrado ? miembroEncontrado.nombre : data.user.email;
-      const rolAsignado = miembroEncontrado ? (miembroEncontrado.rolAcceso || "miembro") : "miembro";
+      const nombreReal = miembroEncontrado ? miembroEncontrado.nombre : (esAdminMaster ? "Alex" : data.user.email);
+      const rolAsignado = miembroEncontrado ? (miembroEncontrado.rolAcceso || "admin") : (esAdminMaster ? "admin" : "miembro");
 
       if (miembroEncontrado && miembroEncontrado.sedeId) {
         setSedeIdSeleccionada(miembroEncontrado.sedeId);

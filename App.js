@@ -279,7 +279,7 @@ export default function App() {
     if (data && !error) {
       const formateados = data.map((m) => ({
         id: m.id,
-        nombre: m.Nombre || m.nombre || "",
+        nombre: m.nombre || m.Nombre || "",
         email: m.email || "",
         sedeId: m.sede_id || "principal",
         rolAcceso: m.rol_acceso || m.rol || "miembro",
@@ -384,7 +384,6 @@ export default function App() {
   const tapizActual = PAPELES_TAPIZ[nombreTapiz] || PAPELES_TAPIZ.ninguno;
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
-  // AISLAMIENTO ESTRICTO DE SEDES: Cada sede ve exclusivamente sus propios registros
   const integrantesSeccionEquipo = integrantes.filter((m) => m.sedeId === sedeIdSeleccionada);
 
   const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -535,7 +534,6 @@ export default function App() {
     return () => { supabase.removeChannel(canalSub); };
   }, []);
 
-  // Repertorio estrictamente filtrado por sede actual
   const repertorioSede = repertorio.filter((c) => c.sedeId === sedeIdSeleccionada);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
@@ -801,8 +799,6 @@ export default function App() {
 
   const mesNumStr = String(mesSeleccionadoObj.mesIndex + 1).padStart(2, "0");
   const fechaActualClave = `${mesSeleccionadoObj.year}-${mesNumStr}-${diaSeleccionado < 10 ? "0" + diaSeleccionado : diaSeleccionado}`;
-  
-  // Servicios filtrados estrictamente por la sede seleccionada
   const serviciosDelDia = servicios.filter((s) => s.fecha === fechaActualClave && s.sedeId === sedeIdSeleccionada);
 
   const usuarioEstaPostuladoEnFecha = (fechaStr) => {
@@ -2103,13 +2099,15 @@ export default function App() {
                       onPress={async () => {
                         if (nombreNuevoMiembro.trim() !== "") {
                           const nuevoId = Date.now();
+                          // ENVIAMOS AMBAS OPCIONES (minúscula y mayúscula) PARA EVITAR CUALQUIER CONFLICTO EN SUPABASE
                           const nuevoIntegranteObj = {
                             id: nuevoId,
+                            nombre: nombreNuevoMiembro.trim(),
                             Nombre: nombreNuevoMiembro.trim(),
                             rol: rolesMusicalesNuevo.join(", "),
                             rol_acceso: rolAccesoNuevo,
                             email: emailNuevoMiembro.trim() || null,
-                            sede_id: sedeIdSeleccionada, // Asignado estrictamente a la sede actual
+                            sede_id: sedeIdSeleccionada,
                           };
                           const { error } = await supabase.from("integrantes").insert([nuevoIntegranteObj]);
                           if (!error) {

@@ -2098,22 +2098,41 @@ export default function App() {
                       style={[styles.loginButton, { flex: 1, backgroundColor: t.primary, padding: 10 }]}
                       onPress={async () => {
                         if (nombreNuevoMiembro.trim() !== "") {
-                          const nuevoId = Date.now();
-                          const nuevoIntegranteObj = {
-                            id: nuevoId,
-                            nombre: nombreNuevoMiembro.trim(),
-                            rol: rolesMusicalesNuevo.join(", "),
-                            rol_acceso: rolAccesoNuevo,
-                            email: emailNuevoMiembro.trim() || null,
-                            sede_id: sedeIdSeleccionada,
-                            pin: "1234",
-                          };
-                          const { error } = await supabase.from("integrantes").insert([nuevoIntegranteObj]);
-                          if (!error) {
-                            alert(`✅ Miembro agregado con éxito a ${sedeActual.nombre}.`);
-                            await cargarIntegrantesSupabase();
-                            setModalMiembroVisible(false);
-                          } else { alert(`⚠️ Error al guardar: ${error.message}`); }
+                          if (idMiembroEditando !== null) {
+                            const miembroActualizado = {
+                              nombre: nombreNuevoMiembro.trim(),
+                              rol: rolesMusicalesNuevo.join(", "),
+                              rol_acceso: rolAccesoNuevo,
+                              email: emailNuevoMiembro.trim() || null,
+                              sede_id: sedeIdSeleccionada,
+                            };
+                            const { error } = await supabase.from("integrantes").update(miembroActualizado).eq("id", idMiembroEditando);
+                            if (!error) {
+                              alert("✅ Miembro actualizado con éxito.");
+                              await cargarIntegrantesSupabase();
+                              setModalMiembroVisible(false);
+                              setIdMiembroEditando(null);
+                            } else {
+                              alert(`⚠️ Error al actualizar: ${error.message}`);
+                            }
+                          } else {
+                            const nuevoId = Date.now();
+                            const nuevoIntegranteObj = {
+                              id: nuevoId,
+                              nombre: nombreNuevoMiembro.trim(),
+                              rol: rolesMusicalesNuevo.join(", "),
+                              rol_acceso: rolAccesoNuevo,
+                              email: emailNuevoMiembro.trim() || null,
+                              sede_id: sedeIdSeleccionada,
+                              pin: "1234",
+                            };
+                            const { error } = await supabase.from("integrantes").insert([nuevoIntegranteObj]);
+                            if (!error) {
+                              alert(`✅ Miembro agregado con éxito a ${sedeActual.nombre}.`);
+                              await cargarIntegrantesSupabase();
+                              setModalMiembroVisible(false);
+                            } else { alert(`⚠️ Error al guardar: ${error.message}`); }
+                          }
                         } else { alert("⚠️ Ingresa el nombre del integrante."); }
                       }}
                     >
@@ -2135,15 +2154,31 @@ export default function App() {
                     <Text style={[styles.memberTitle, { color: t.textMain }]}>
                       👤 {int.nombre}
                     </Text>
-                    <TouchableOpacity
-                      style={{ backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
-                      onPress={async () => {
-                        setIntegrantes(integrantes.filter((item) => item.id !== int.id));
-                        await supabase.from("integrantes").delete().eq("id", int.id);
-                      }}
-                    >
-                      <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>🗑️ Eliminar</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: "row", gap: 6 }}>
+                      <TouchableOpacity
+                        style={{ backgroundColor: "#3B82F6", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
+                        onPress={() => {
+                          setIdMiembroEditando(int.id);
+                          setNombreNuevoMiembro(int.nombre);
+                          setEmailNuevoMiembro(int.email || "");
+                          setRolAccesoNuevo(int.rolAcceso || "miembro");
+                          setRolesMusicalesNuevo(int.rolesMusicales || []);
+                          setModalMiembroVisible(true);
+                        }}
+                      >
+                        <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>✏️ Editar</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{ backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
+                        onPress={async () => {
+                          setIntegrantes(integrantes.filter((item) => item.id !== int.id));
+                          await supabase.from("integrantes").delete().eq("id", int.id);
+                        }}
+                      >
+                        <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>🗑️ Eliminar</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                   <Text style={{ color: t.primary, fontSize: 12, marginBottom: 2 }}>
                     🎵 Roles: {int.rolesMusicales ? int.rolesMusicales.join(", ") : "Sin rol musical"}

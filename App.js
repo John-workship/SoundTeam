@@ -2552,7 +2552,7 @@ export default function App() {
               )}
             </>
           )}
-        </div>
+        </View>
       </ScrollView>
 
       <View style={[styles.tabBar, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>

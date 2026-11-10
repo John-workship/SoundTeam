@@ -667,11 +667,25 @@ export default function App() {
       alert("⚠️ Por favor ingresa tu nombre.");
       return;
     }
+    const correoLimpio = emailAuthActual.trim().toLowerCase();
+
+    // Validar duplicado por correo
+    const { data: usuarioExistente } = await supabase
+      .from("integrantes")
+      .select("id")
+      .eq("email", correoLimpio)
+      .maybeSingle();
+
+    if (usuarioExistente) {
+      alert("⚠️ Este correo ya se encuentra registrado en el sistema.");
+      return;
+    }
+
     const nuevoId = Date.now();
     const nuevoIntegranteObj = {
       id: nuevoId,
       nombre: nombreRegistroInput.trim(),
-      email: emailAuthActual.trim(),
+      email: correoLimpio,
       sede_id: sedeRegistroInput,
       rol_acceso: "miembro",
       rol: "Miembro General",
@@ -2158,12 +2172,27 @@ export default function App() {
                       style={[styles.loginButton, { flex: 1, backgroundColor: t.primary, padding: 10 }]}
                       onPress={async () => {
                         if (nombreNuevoMiembro.trim() !== "") {
+                          const correoLimpio = emailNuevoMiembro.trim().toLowerCase();
+
+                          if (correoLimpio) {
+                            const querySupabase = supabase.from("integrantes").select("id").eq("email", correoLimpio);
+                            if (idMiembroEditando !== null) {
+                              querySupabase.neq("id", idMiembroEditando);
+                            }
+                            const { data: existente } = await querySupabase.maybeSingle();
+
+                            if (existente) {
+                              alert("⚠️ Este correo ya está registrado en otra cuenta del sistema.");
+                              return;
+                            }
+                          }
+
                           if (idMiembroEditando !== null) {
                             const miembroActualizado = {
                               nombre: nombreNuevoMiembro.trim(),
                               rol: rolesMusicalesNuevo.join(", "),
                               rol_acceso: rolAccesoNuevo,
-                              email: emailNuevoMiembro.trim() || null,
+                              email: correoLimpio || null,
                               sede_id: sedeIdSeleccionada,
                             };
                             const { error } = await supabase.from("integrantes").update(miembroActualizado).eq("id", idMiembroEditando);
@@ -2182,7 +2211,7 @@ export default function App() {
                               nombre: nombreNuevoMiembro.trim(),
                               rol: rolesMusicalesNuevo.join(", "),
                               rol_acceso: rolAccesoNuevo,
-                              email: emailNuevoMiembro.trim() || null,
+                              email: correoLimpio || null,
                               sede_id: sedeIdSeleccionada,
                               pin: "1234",
                             };
@@ -2524,7 +2553,7 @@ export default function App() {
               )}
             </>
           )}
-        </View>
+        </div>
       </ScrollView>
 
       <View style={[styles.tabBar, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>

@@ -2646,7 +2646,7 @@ const styles = StyleSheet.create({
   postulateRoleOption: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, alignItems: "center" },
   smallButton: { width: 30, height: 30, borderRadius: 6, borderWidth: 1, justifyContent: "center", alignItems: "center" },
   smallButtonText: { fontSize: 11, fontWeight: "bold" },
-  teleprompterContainer: { flex: 1, width: "100%", height: "100%", minHeight: "100vh", padding: 12 },
+  teleprompterContainer: { flex: 1, width: "100%", minHeight: "100vh", padding: 12 },
   teleprompterTopBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, borderBottomWidth: 1, borderBottomColor: "#1E293B", paddingBottom: 10, width: "100%" },
   teleprompterExitBtn: { backgroundColor: "#1E293B", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
   teleprompterScrollContent: { paddingBottom: 60, alignItems: "center", width: "100%" },

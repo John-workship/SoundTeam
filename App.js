@@ -143,7 +143,7 @@ export default function App() {
           id: m.id,
           nombre: m.nombre,
           pin: m.pin,
-          email: m.email || "",
+          email: m.email ? m.email.trim().toLowerCase() : "",
           sedeId: sId,
           rolAcceso: (m.rol_acceso || "miembro").toLowerCase(),
           rolesMusicales: m.roles_musicales || [],
@@ -193,7 +193,7 @@ export default function App() {
       if (session?.user?.email) {
         const correoUser = session.user.email.trim().toLowerCase();
         const miembroEncontrado = integrantes.find(
-          (m) => m.email && m.email.trim().toLowerCase() === correoUser
+          (m) => m.email && m.email === correoUser
         );
         if (miembroEncontrado) {
           setUsuario(miembroEncontrado.nombre);
@@ -215,7 +215,7 @@ export default function App() {
       if (session?.user?.email) {
         const correoUser = session.user.email.trim().toLowerCase();
         const miembroEncontrado = integrantes.find(
-          (m) => m.email && m.email.trim().toLowerCase() === correoUser
+          (m) => m.email && m.email === correoUser
         );
         if (miembroEncontrado) {
           setUsuario(miembroEncontrado.nombre);
@@ -470,7 +470,7 @@ export default function App() {
     if (data?.user) {
       const correoUser = data.user.email.trim().toLowerCase();
       const miembroEncontrado = integrantes.find(
-        (m) => m.email && m.email.trim().toLowerCase() === correoUser
+        (m) => m.email && m.email === correoUser
       );
 
       const nombreReal = miembroEncontrado ? miembroEncontrado.nombre : data.user.email;
@@ -1328,7 +1328,7 @@ export default function App() {
                               id: nuevoId,
                               nombre: nombreNuevoMiembro.trim(),
                               pin: pinNuevoMiembro.trim() || "1234",
-                              email: emailNuevoMiembro.trim() || "",
+                              email: emailNuevoMiembro.trim().toLowerCase() || "",
                               sede_id: sedeIdSeleccionada,
                               rol_acceso: rolAccesoNuevo,
                               roles_musicales: rolesMusicalesNuevo,

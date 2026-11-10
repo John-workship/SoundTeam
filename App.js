@@ -306,7 +306,6 @@ export default function App() {
       setSesionIniciada(true);
       setRequiereRegistroPerfil(false);
     } else {
-      // Usuario nuevo que no está registrado en la tabla integrantes: pedir nombre y sede
       setRequiereRegistroPerfil(true);
       setSesionIniciada(true);
     }
@@ -1240,7 +1239,6 @@ export default function App() {
         </View>
 
         <View style={{ marginTop: 8 }}>
-          {/* Selector de sede solo visible para administradores y líderes */}
           {esAdminOLider && Platform.OS === "web" ? (
             <select
               value={sedeIdSeleccionada}

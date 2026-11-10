@@ -45,6 +45,69 @@ const TEMAS = {
     selectedDay: "#8B5CF6",
     nombre: "🌙 Oscuro",
   },
+  rosado: {
+    bg: "#1F121A",
+    cardBg: "#2D1B26",
+    border: "#582B46",
+    primary: "#EC4899",
+    textMain: "#FFFFFF",
+    textSub: "#F472B6",
+    banner: "#DB2777",
+    selectedDay: "#DB2777",
+    nombre: "🌸 Rosado",
+  },
+  morado: {
+    bg: "#141124",
+    cardBg: "#1F1A3A",
+    border: "#3E356D",
+    primary: "#8B5CF6",
+    textMain: "#FFFFFF",
+    textSub: "#C4B5FD",
+    banner: "#7C3AED",
+    selectedDay: "#7C3AED",
+    nombre: "🟣 Morado",
+  },
+  esmeralda: {
+    bg: "#061A14",
+    cardBg: "#0B2E25",
+    border: "#134E3F",
+    primary: "#10B981",
+    textMain: "#FFFFFF",
+    textSub: "#6EE7B7",
+    banner: "#047857",
+    selectedDay: "#059669",
+    nombre: "🟢 Esmeralda",
+  },
+  sunset: {
+    bg: "#1A0F0A",
+    cardBg: "#2D1911",
+    border: "#522C1E",
+    primary: "#F97316",
+    textMain: "#FFFFFF",
+    textSub: "#FDBA74",
+    banner: "#C2410C",
+    selectedDay: "#EA580C",
+    nombre: "🌅 Sunset",
+  },
+  minimal: {
+    bg: "#121212",
+    cardBg: "#1E1E1E",
+    border: "#333333",
+    primary: "#A3A3A3",
+    textMain: "#E5E5E5",
+    textSub: "#737373",
+    banner: "#525252",
+    selectedDay: "#737373",
+    nombre: "⬛ Minimal",
+  },
+};
+
+const PAPELES_TAPIZ = {
+  ninguno: { nombre: "🎨 Liso", css: {} },
+  ipuc: { nombre: "⛪ IPUC", css: Platform.OS === "web" ? { backgroundColor: "#0f172a" } : {} },
+  patronMusical: { nombre: "🎵 Notas Musicales", css: Platform.OS === "web" ? { backgroundColor: "#1e1b4b" } : {} },
+  eventos: { nombre: "📷 Eventos", css: Platform.OS === "web" ? { backgroundColor: "#311026" } : {} },
+  maderaAcustica: { nombre: "🪵 Madera Estudio", css: Platform.OS === "web" ? { backgroundColor: "#1c1917" } : {} },
 };
 
 const SEDES_DISPONIBLES = [
@@ -61,13 +124,13 @@ export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [integrantes, setIntegrantes] = useState([]);
   const [repertorio, setRepertorio] = useState([]);
+  const [servicios, setServicios] = useState([]);
+  const [mensajesChat, setMensajesChat] = useState([]);
+
+  // Acceso maestro admin incondicional
   const [usuario, setUsuario] = useState("Alex");
   const [rolUsuario, setRolUsuario] = useState("admin");
   const [sesionIniciada, setSesionIniciada] = useState(true);
-
-  const [emailInput, setEmailInput] = useState("");
-  const [passwordInput, setPasswordInput] = useState("");
-  const [cargandoAuth, setCargandoAuth] = useState(false);
 
   const sincronizarDatosApp = async () => {
     const { data: dataInt } = await supabase.from("integrantes").select("*");
@@ -94,6 +157,20 @@ export default function App() {
         sedeId: c.sede_id,
       })));
     }
+
+    const { data: dataServ } = await supabase.from("servicios").select("*").eq("sede_id", sedeIdSeleccionada);
+    if (dataServ) {
+      setServicios(dataServ.map(s => ({
+        id: s.id,
+        fecha: s.fecha,
+        titulo: s.titulo,
+        observaciones: s.observaciones || "Sin observaciones",
+        setlist: s.setlist || [],
+        voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
+        instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
+        sedeId: s.sede_id,
+      })));
+    }
   };
 
   useEffect(() => {
@@ -102,7 +179,11 @@ export default function App() {
 
   const [pestana, setPestana] = useState("inicio");
   const [nombreTema, setNombreTema] = useState("azul");
+  const [nombreTapiz, setNombreTapiz] = useState("ninguno");
+  const [mostrarMenuPersonalizacion, setMostrarMenuPersonalizacion] = useState(false);
+
   const t = TEMAS[nombreTema];
+  const tapizActual = PAPELES_TAPIZ[nombreTapiz] || PAPELES_TAPIZ.ninguno;
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
   const integrantesSeccionEquipo = integrantes.filter((m) => {
@@ -110,7 +191,7 @@ export default function App() {
     return m.sedeId === sedeIdSeleccionada;
   });
 
-  // Estados de Miembros (Crear / Modificar)
+  // Gestión de Miembros
   const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
   const [idMiembroEditando, setIdMiembroEditando] = useState(null);
   const [nombreNuevoMiembro, setNombreNuevoMiembro] = useState("");
@@ -136,13 +217,11 @@ export default function App() {
     }
 
     setModalMiembroVisible(false);
-    setNombreNuevoMiembro("");
-    setEmailNuevoMiembro("");
-    setIdMiembroEditando(null);
+    setNombreNuevoMiembro(""); setEmailNuevoMiembro(""); setIdMiembroEditando(null);
     await sincronizarDatosApp();
   };
 
-  // Estados de Repertorio (Crear / Modificar / Transponer)
+  // Gestión de Repertorio y Transpositor
   const [modalCancionVisible, setModalCancionVisible] = useState(false);
   const [idCancionEditando, setIdCancionEditando] = useState(null);
   const [tituloCancion, setTituloCancion] = useState("");
@@ -204,41 +283,10 @@ export default function App() {
     });
   };
 
-  const handleLogin = async () => {
-    const inputClean = emailInput.trim().toLowerCase();
-    if ((inputClean === "admin" || inputClean === "musicalpucmosquera3ra@gmail.com") && passwordInput === "1234") {
-      setUsuario("Alex");
-      setRolUsuario("admin");
-      setSesionIniciada(true);
-      return;
-    }
-    setCargandoAuth(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: inputClean, password: passwordInput });
-    setCargandoAuth(false);
-    if (error) { alert(`⚠️ Error: ${error.message}`); return; }
-    setSesionIniciada(true);
-  };
-
-  const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
-
-  if (!sesionIniciada) {
-    return (
-      <View style={[styles.loginContainer, { backgroundColor: t.bg }]}>
-        <View style={[styles.loginCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-          <Text style={[styles.loginTitle, { color: t.textMain }]}>SoundTeam</Text>
-          <Text style={[styles.loginSubtitle, { color: t.textSub }]}>Inicio de Sesión</Text>
-          <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]} placeholder="Admin o correo" placeholderTextColor={t.textSub} autoCapitalize="none" value={emailInput} onChangeText={setEmailInput} />
-          <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]} placeholder="1234" placeholderTextColor={t.textSub} secureTextEntry value={passwordInput} onChangeText={setPasswordInput} />
-          <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary }]} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>{cargandoAuth ? "Cargando..." : "Entrar"}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  const esAdminOLider = true;
 
   return (
-    <View style={[styles.container, { backgroundColor: t.bg }]}>
+    <View style={[styles.container, { backgroundColor: t.bg }, tapizActual.css]}>
       <View style={[styles.header, { backgroundColor: t.cardBg, borderBottomColor: t.border }]}>
         <View style={styles.headerTopRow}>
           <View style={{ flex: 1 }}>
@@ -250,23 +298,51 @@ export default function App() {
           </TouchableOpacity>
         </View>
 
-        {esAdminOLider && Platform.OS === "web" && (
-          <select value={sedeIdSeleccionada} onChange={(e) => setSedeIdSeleccionada(e.target.value)} style={{ backgroundColor: t.bg, color: t.textMain, borderColor: t.border, borderWidth: "1px", borderRadius: "6px", padding: "6px", marginTop: "8px", width: "100%", outline: "none", cursor: "pointer" }}>
-            {SEDES_DISPONIBLES.map((s) => (<option key={s.id} value={s.id}>🏛️ Sede: {s.nombre}</option>))}
-          </select>
-        )}
+        <View style={{ marginTop: 8 }}>
+          {Platform.OS === "web" && (
+            <select value={sedeIdSeleccionada} onChange={(e) => setSedeIdSeleccionada(e.target.value)} style={{ backgroundColor: t.bg, color: t.textMain, borderColor: t.border, borderWidth: "1px", borderRadius: "6px", padding: "6px", marginBottom: "8px", width: "100%", outline: "none", cursor: "pointer" }}>
+              {SEDES_DISPONIBLES.map((s) => (<option key={s.id} value={s.id}>🏛️ Sede: {s.nombre}</option>))}
+            </select>
+          )}
+
+          <TouchableOpacity style={{ backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 6, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }} onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}>
+            <Text style={{ fontSize: 11, color: t.textMain, fontWeight: "bold" }}>🎨 Tema: {t.nombre} | Tapiz: {tapizActual.nombre}</Text>
+            <Text style={{ fontSize: 11, color: t.primary, fontWeight: "bold" }}>{mostrarMenuPersonalizacion ? "▲ Ocultar" : "▼ Personalizar"}</Text>
+          </TouchableOpacity>
+
+          {mostrarMenuPersonalizacion && (
+            <View style={{ marginTop: 6, backgroundColor: t.cardBg, borderRadius: 6, borderWidth: 1, borderColor: t.border, padding: 8, gap: 8 }}>
+              <Text style={{ fontSize: 11, color: t.textSub, fontWeight: "bold" }}>Temas:</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+                {Object.keys(TEMAS).map((keyTema) => (
+                  <TouchableOpacity key={keyTema} style={{ paddingVertical: 4, paddingHorizontal: 6, borderRadius: 4, backgroundColor: nombreTema === keyTema ? t.primary : t.bg, borderWidth: 1, borderColor: t.border }} onPress={() => setNombreTema(keyTema)}>
+                    <Text style={{ fontSize: 10, color: nombreTema === keyTema ? "#FFFFFF" : t.textMain }}>{TEMAS[keyTema].nombre}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={{ fontSize: 11, color: t.textSub, fontWeight: "bold", marginTop: 4 }}>Tapiz:</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+                {Object.keys(PAPELES_TAPIZ).map((keyTapiz) => (
+                  <TouchableOpacity key={keyTapiz} style={{ paddingVertical: 4, paddingHorizontal: 6, borderRadius: 4, backgroundColor: nombreTapiz === keyTapiz ? t.primary : t.bg, borderWidth: 1, borderColor: t.border }} onPress={() => setNombreTapiz(keyTapiz)}>
+                    <Text style={{ fontSize: 10, color: nombreTapiz === keyTapiz ? "#FFFFFF" : t.textMain }}>{PAPELES_TAPIZ[keyTapiz].nombre}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
         <View style={styles.mainWrapper}>
           {pestana === "inicio" && (
             <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-              <Text style={[styles.cardTitle, { color: t.textMain }]}>✨ Panel Principal</Text>
-              <Text style={{ color: t.textSub, fontSize: 13 }}>Bienvenido a SoundTeam. Usa la barra inferior para navegar entre Eventos, Equipo y Repertorio.</Text>
+              <Text style={[styles.cardTitle, { color: t.textMain }]}>✨ Panel Principal de Administrador</Text>
+              <Text style={{ color: t.textSub, fontSize: 13 }}>Bienvenido Alex. Tienes control total de sedes, miembros, eventos y repertorio con transposición de notas en vivo.</Text>
             </View>
           )}
 
-          {pestana === "equipo" && esAdminOLider && (
+          {pestana === "equipo" && (
             <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>👥 Miembros ({integrantesSeccionEquipo.length})</Text>
@@ -315,7 +391,7 @@ export default function App() {
                     <TouchableOpacity style={{ backgroundColor: t.bg, padding: 6, borderRadius: 6, borderWidth: 1, borderColor: t.border }} onPress={() => setCancionSeleccionadaDetalle(null)}>
                       <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "bold" }}>← Volver</Text>
                     </TouchableOpacity>
-                    <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+                    <View style={{ flexDirection: "row", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
                       <Text style={{ color: t.textSub, fontSize: 11 }}>Tono:</Text>
                       {NOTAS_ESCALA.slice(0, 7).map((nota) => {
                         const tonoActual = tonoTransposicion || cancionSeleccionadaDetalle.tono;
@@ -342,11 +418,9 @@ export default function App() {
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>Repertorio ({repertorio.length})</Text>
-                    {esAdminOLider && (
-                      <TouchableOpacity style={[styles.programBtn, { backgroundColor: t.primary }]} onPress={() => { setIdCancionEditando(null); setTituloCancion(""); setArtistaCancion(""); setTonoCancion("C"); setBpmCancion("120"); setLetraCancion(""); setModalCancionVisible(true); }}>
-                        <Text style={styles.programBtnText}>+ Nueva Canción</Text>
-                      </TouchableOpacity>
-                    )}
+                    <TouchableOpacity style={[styles.programBtn, { backgroundColor: t.primary }]} onPress={() => { setIdCancionEditando(null); setTituloCancion(""); setArtistaCancion(""); setTonoCancion("C"); setBpmCancion("120"); setLetraCancion(""); setModalCancionVisible(true); }}>
+                      <Text style={styles.programBtnText}>+ Nueva Canción</Text>
+                    </TouchableOpacity>
                   </View>
 
                   <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, padding: 8, fontSize: 13 }]} placeholder="🔍 Buscar canción..." placeholderTextColor={t.textSub} value={busquedaRepertorio} onChangeText={setBusquedaRepertorio} />
@@ -376,11 +450,9 @@ export default function App() {
                         <TouchableOpacity style={{ backgroundColor: t.primary, width: 30, height: 30, borderRadius: 6, justifyContent: "center", alignItems: "center" }} onPress={() => { setCancionSeleccionadaDetalle(c); setTonoTransposicion(null); }}>
                           <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>{c.tono}</Text>
                         </TouchableOpacity>
-                        {esAdminOLider && (
-                          <TouchableOpacity style={{ backgroundColor: "#3B82F6", padding: 6, borderRadius: 6 }} onPress={() => { setIdCancionEditando(c.id); setTituloCancion(c.titulo); setArtistaCancion(c.artista); setTonoCancion(c.tono); setBpmCancion(c.bpm); setLetraCancion(c.letra); setModalCancionVisible(true); }}>
-                            <Text style={{ color: "#FFF", fontSize: 10, fontWeight: "bold" }}>✏️</Text>
-                          </TouchableOpacity>
-                        )}
+                        <TouchableOpacity style={{ backgroundColor: "#3B82F6", padding: 6, borderRadius: 6 }} onPress={() => { setIdCancionEditando(c.id); setTituloCancion(c.titulo); setArtistaCancion(c.artista); setTonoCancion(c.tono); setBpmCancion(c.bpm); setLetraCancion(c.letra); setModalCancionVisible(true); }}>
+                          <Text style={{ color: "#FFF", fontSize: 10, fontWeight: "bold" }}>✏️</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   ))}
@@ -404,13 +476,6 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, width: "100%", height: "100%", minHeight: "100vh" },
-  loginContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, width: "100%", minHeight: "100vh" },
-  loginCard: { width: "100%", maxWidth: 400, padding: 24, borderRadius: 12, borderWidth: 1 },
-  loginTitle: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 8 },
-  loginSubtitle: { fontSize: 13, textAlign: "center", marginBottom: 20 },
-  loginInput: { borderWidth: 1, padding: 12, borderRadius: 8, marginBottom: 14, fontSize: 15 },
-  loginButton: { padding: 14, borderRadius: 8, alignItems: "center" },
-  loginButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 16 },
   header: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 10, borderBottomWidth: 1, width: "100%" },
   headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
@@ -419,7 +484,6 @@ const styles = StyleSheet.create({
   mainWrapper: { width: "100%", maxWidth: 650 },
   card: { padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 14, width: "100%" },
   cardTitle: { fontSize: 15, fontWeight: "bold", marginBottom: 10 },
-  inputLabel: { fontSize: 11, marginBottom: 4, fontWeight: "500" },
   programBtn: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 },
   programBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
   tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1, width: "100%" },
@@ -429,4 +493,7 @@ const styles = StyleSheet.create({
   memberHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   memberTitle: { fontSize: 14, fontWeight: "bold" },
   repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
+  loginInput: { borderWidth: 1, padding: 12, borderRadius: 8, marginBottom: 14, fontSize: 15 },
+  loginButton: { padding: 12, borderRadius: 8, alignItems: "center" },
+  loginButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
 });

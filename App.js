@@ -261,9 +261,9 @@ const procesarLetraRepertorio = (texto, tonalidadActual, semitonos, modoVista) =
 export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState(() => {
     if (Platform.OS === "web") {
-      try { return localStorage.getItem("soundteam_sede_activa") || "general"; } catch (e) { return "general"; }
+      try { return localStorage.getItem("soundteam_sede_activa") || "principal"; } catch (e) { return "principal"; }
     }
-    return "general";
+    return "principal";
   });
 
   useEffect(() => {
@@ -276,12 +276,12 @@ export default function App() {
 
   const cargarIntegrantesSupabase = async () => {
     const { data, error } = await supabase.from("integrantes").select("*");
-    if (data && !error && data.length > 0) {
+    if (data && !error) {
       const formateados = data.map((m) => ({
         id: m.id,
-        nombre: m.Nombre || m.nombre,
+        nombre: m.Nombre || m.nombre || "",
         email: m.email || "",
-        sedeId: m.sede_id || "general",
+        sedeId: m.sede_id || "principal",
         rolAcceso: m.rol_acceso || m.rol || "miembro",
         rolesMusicales: m.rol ? m.rol.split(",").map(r => r.trim()) : [],
       }));
@@ -295,7 +295,6 @@ export default function App() {
     if (emailUsuario.trim().toLowerCase() === "musicaipucmosquera3ra@gmail.com") {
       setUsuario("Alex (Admin)");
       setRolUsuario("admin");
-      setSedeIdSeleccionada("general");
       setSesionIniciada(true);
       return;
     }
@@ -385,10 +384,8 @@ export default function App() {
   const tapizActual = PAPELES_TAPIZ[nombreTapiz] || PAPELES_TAPIZ.ninguno;
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
-  const integrantesSeccionEquipo = integrantes.filter((m) => {
-    if (sedeIdSeleccionada === "general") return true;
-    return m.sedeId === sedeIdSeleccionada || m.sedeId === "general";
-  });
+  // AISLAMIENTO ESTRICTO DE SEDES: Cada sede ve exclusivamente sus propios registros
+  const integrantesSeccionEquipo = integrantes.filter((m) => m.sedeId === sedeIdSeleccionada);
 
   const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const fechaActualObj = new Date();
@@ -445,7 +442,7 @@ export default function App() {
         paletaSeleccionada: s.paleta_seleccionada || null,
         voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
         instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
-        sedeId: s.sede_id || "general",
+        sedeId: s.sede_id || "principal",
       }));
       setServicios(formateados);
     } else {
@@ -521,7 +518,7 @@ export default function App() {
         tipoSet: (c.tipo_set || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida")).toLowerCase(),
         etiquetas: c.etiquetas || [],
         letra: c.letra || "",
-        sedeId: c.sede_id || "general",
+        sedeId: c.sede_id || "principal",
       }));
       setRepertorio(formateados);
     } else {
@@ -537,6 +534,9 @@ export default function App() {
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
   }, []);
+
+  // Repertorio estrictamente filtrado por sede actual
+  const repertorioSede = repertorio.filter((c) => c.sedeId === sedeIdSeleccionada);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [semitonosTransposicion, setSemitonosTransposicion] = useState(0);
@@ -601,6 +601,7 @@ export default function App() {
       .from("mensajes")
       .select("*")
       .eq("canal", canalChatActivo)
+      .eq("sede", sedeIdSeleccionada)
       .order("created_at", { ascending: true });
 
     if (data && !error) { setMensajesChat(data); } else { setMensajesChat([]); }
@@ -609,11 +610,11 @@ export default function App() {
   useEffect(() => {
     cargarMensajesSupabase();
     const canalSub = supabase
-      .channel(`chat-realtime-${canalChatActivo}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "mensajes", filter: `canal=eq.${canalChatActivo}` }, () => { cargarMensajesSupabase(); })
+      .channel(`chat-realtime-${canalChatActivo}-${sedeIdSeleccionada}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "mensajes", filter: `sede=eq.${sedeIdSeleccionada}` }, () => { cargarMensajesSupabase(); })
       .subscribe();
     return () => { supabase.removeChannel(canalSub); };
-  }, [canalChatActivo]);
+  }, [canalChatActivo, sedeIdSeleccionada]);
 
   const handleLogin = async () => {
     if (emailInput.trim() === "" || passwordInput.trim() === "") {
@@ -721,8 +722,8 @@ export default function App() {
 
   const limpiarHistorialChat = async () => {
     if (!esAdminOLider) { alert("⚠️ Solo Administradores y Líderes pueden limpiar el chat."); return; }
-    if (confirm(`¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()}?`)) {
-      const { error } = await supabase.from("mensajes").delete().eq("canal", canalChatActivo);
+    if (confirm(`¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} en esta sede?`)) {
+      const { error } = await supabase.from("mensajes").delete().eq("canal", canalChatActivo).eq("sede", sedeIdSeleccionada);
       if (!error) { setMensajesChat([]); alert("🧹 Chat limpiado con éxito."); } else { alert("⚠️ No se pudo limpiar el chat."); }
     }
   };
@@ -800,10 +801,12 @@ export default function App() {
 
   const mesNumStr = String(mesSeleccionadoObj.mesIndex + 1).padStart(2, "0");
   const fechaActualClave = `${mesSeleccionadoObj.year}-${mesNumStr}-${diaSeleccionado < 10 ? "0" + diaSeleccionado : diaSeleccionado}`;
-  const serviciosDelDia = servicios.filter((s) => s.fecha === fechaActualClave);
+  
+  // Servicios filtrados estrictamente por la sede seleccionada
+  const serviciosDelDia = servicios.filter((s) => s.fecha === fechaActualClave && s.sedeId === sedeIdSeleccionada);
 
   const usuarioEstaPostuladoEnFecha = (fechaStr) => {
-    const servs = servicios.filter((s) => s.fecha === fechaStr);
+    const servs = servicios.filter((s) => s.fecha === fechaStr && s.sedeId === sedeIdSeleccionada);
     for (const serv of servs) {
       const vp = serv.voces?.principal;
       const coros = serv.voces?.coros || "";
@@ -834,13 +837,13 @@ export default function App() {
   };
 
   const enviarPorWhatsApp = (servicio) => {
-    let texto = `🎵 *Setlist - ${servicio.titulo}* (${diaSeleccionado} de ${mesSeleccionadoObj.nombre} ${mesSeleccionadoObj.year})\n\n`;
+    let texto = `🎵 *Setlist - ${servicio.titulo}* (${diaSeleccionado} de ${mesSeleccionadoObj.nombre} ${mesSeleccionadoObj.year} - ${sedeActual.nombre})\n\n`;
     if (servicio.setlist && servicio.setlist.length > 0) {
       const lentas = [];
       const rapidas = [];
 
       servicio.setlist.forEach((s) => {
-        const obj = repertorio.find(
+        const obj = repertorioSede.find(
           (r) => r.titulo && s.titulo && r.titulo.toLowerCase() === s.titulo.toLowerCase()
         ) || {};
         const tSet = (
@@ -1023,7 +1026,7 @@ export default function App() {
 
   if (modoEnVivoActivo) {
     const cancionActualEnVivo = setlistEnVivoActual[indiceCancionEnVivo] || {};
-    const objetoRepertorioEnVivo = repertorio.find(r => r.titulo && cancionActualEnVivo.titulo && r.titulo.toLowerCase() === cancionActualEnVivo.titulo.toLowerCase()) || {};
+    const objetoRepertorioEnVivo = repertorioSede.find(r => r.titulo && cancionActualEnVivo.titulo && r.titulo.toLowerCase() === cancionActualEnVivo.titulo.toLowerCase()) || {};
     const letraMostrar = objetoRepertorioEnVivo.letra || cancionActualEnVivo.letra || "[INTRO]\nLetra no disponible en biblioteca.";
     const bpmActual = objetoRepertorioEnVivo.bpm || cancionActualEnVivo.bpm || "120";
 
@@ -1180,6 +1183,32 @@ export default function App() {
         </View>
 
         <View style={{ marginTop: 8 }}>
+          {Platform.OS === "web" ? (
+            <select
+              value={sedeIdSeleccionada}
+              onChange={(e) => setSedeIdSeleccionada(e.target.value)}
+              style={{
+                backgroundColor: t.bg,
+                color: t.textMain,
+                borderColor: t.border,
+                borderWidth: "1px",
+                borderRadius: "6px",
+                padding: "8px",
+                fontSize: "13px",
+                marginBottom: "8px",
+                width: "100%",
+                outline: "none",
+                cursor: "pointer",
+              }}
+            >
+              {SEDES_DISPONIBLES.map((s) => (
+                <option key={s.id} value={s.id} style={{ backgroundColor: t.cardBg, color: t.textMain }}>
+                  🏛️ Sede: {s.nombre}
+                </option>
+              ))}
+            </select>
+          ) : null}
+
           <TouchableOpacity
             style={{
               backgroundColor: t.bg,
@@ -1257,13 +1286,13 @@ export default function App() {
           {pestana === "inicio" && (
             <View style={{ width: "100%" }}>
               <View style={[styles.welcomeBanner, { backgroundColor: t.banner }]}>
-                <Text style={styles.welcomeTitle}>✨ Colosenses 3:23</Text>
+                <Text style={styles.welcomeTitle}>✨ Colosenses 3:23 ({sedeActual.nombre})</Text>
                 <Text style={styles.welcomeBannerText}>"Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."</Text>
               </View>
 
               <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>💬 Chat General</Text>
+                  <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>💬 Chat de Sede ({sedeActual.nombre})</Text>
                   {esAdminOLider && (
                     <TouchableOpacity style={{ backgroundColor: "#EF4444", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }} onPress={limpiarHistorialChat}>
                       <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}>🗑️ Limpiar</Text>
@@ -1392,7 +1421,7 @@ export default function App() {
 
               <View style={[styles.calendarCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                 <Text style={[styles.calendarHeaderTitle, { color: t.textMain }]}>
-                  {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}
+                  {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year} - {sedeActual.nombre}
                 </Text>
 
                 <View style={styles.weekHeaderRow}>
@@ -1423,7 +1452,7 @@ export default function App() {
 
               <View style={styles.serviceSectionHeader}>
                 <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>
-                  Servicios - Día {diaSeleccionado} de {mesSeleccionadoObj.nombre} ({serviciosDelDia.length})
+                  Servicios - Día {diaSeleccionado} ({serviciosDelDia.length})
                 </Text>
 
                 {esAdminOLider && (
@@ -1448,7 +1477,7 @@ export default function App() {
               {modalProgramarVisible && (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.primary, borderWidth: 2 }]}>
                   <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 17, marginBottom: 12 }]}>
-                    {idServicioEditando !== null ? "✏️ Modificar Servicio" : "➕ Nuevo Servicio"}
+                    {idServicioEditando !== null ? "✏️ Modificar Servicio" : "➕ Nuevo Servicio"} ({sedeActual.nombre})
                   </Text>
 
                   <Text style={[styles.inputLabel, { color: t.textMain }]}>Nombre del evento / servicio</Text>
@@ -1584,7 +1613,7 @@ export default function App() {
 
                   {(() => {
                     const titulosEnSetlist = setlistActivo.map(s => s.titulo ? s.titulo.toLowerCase() : "");
-                    const cancionesDisponibles = repertorio
+                    const cancionesDisponibles = repertorioSede
                       .filter(c => c.titulo && !titulosEnSetlist.includes(c.titulo.toLowerCase()))
                       .sort((a, b) => a.titulo.localeCompare(b.titulo));
 
@@ -1601,9 +1630,9 @@ export default function App() {
                     return (
                       <View style={{ marginTop: 10, gap: 10 }}>
                         <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
-                          <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>🕯️ Set Lentas:</Text>
+                          <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>🕯️ Set Lentas ({sedeActual.nombre}):</Text>
                           {lentasDisponibles.length === 0 ? (
-                            <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones lentas disponibles.</Text>
+                            <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones lentas en esta sede.</Text>
                           ) : (
                             <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                               {Platform.OS === "web" ? (
@@ -1647,7 +1676,7 @@ export default function App() {
                                   let target = cancionLentaSeleccionada;
                                   if (!target && lentasDisponibles.length > 0) target = lentasDisponibles[0].titulo;
                                   if (target) {
-                                    const obj = repertorio.find(r => r.titulo && target && r.titulo.toLowerCase() === target.toLowerCase());
+                                    const obj = repertorioSede.find(r => r.titulo && target && r.titulo.toLowerCase() === target.toLowerCase());
                                     setSetlistActivo([...setlistActivo, { titulo: target, tono: obj ? obj.tono : "C", bpm: obj ? (obj.bpm || "90") : "90" }]);
                                     setCancionLentaSeleccionada("");
                                   } else {
@@ -1662,9 +1691,9 @@ export default function App() {
                         </View>
 
                         <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
-                          <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>⚡ Set Rápidas:</Text>
+                          <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>⚡ Set Rápidas ({sedeActual.nombre}):</Text>
                           {rapidasDisponibles.length === 0 ? (
-                            <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones rápidas disponibles.</Text>
+                            <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones rápidas en esta sede.</Text>
                           ) : (
                             <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                               {Platform.OS === "web" ? (
@@ -1708,7 +1737,7 @@ export default function App() {
                                   let target = cancionRapidaSeleccionada;
                                   if (!target && rapidasDisponibles.length > 0) target = rapidasDisponibles[0].titulo;
                                   if (target) {
-                                    const obj = repertorio.find(r => r.titulo && target && r.titulo.toLowerCase() === target.toLowerCase());
+                                    const obj = repertorioSede.find(r => r.titulo && target && r.titulo.toLowerCase() === target.toLowerCase());
                                     setSetlistActivo([...setlistActivo, { titulo: target, tono: obj ? obj.tono : "C", bpm: obj ? (obj.bpm || "120") : "120" }]);
                                     setCancionRapidaSeleccionada("");
                                   } else {
@@ -1773,7 +1802,7 @@ export default function App() {
                               instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
                               sede_id: sedeIdSeleccionada,
                             }]);
-                            alert(`✅ Nuevo servicio programado.`);
+                            alert(`✅ Nuevo servicio programado en ${sedeActual.nombre}.`);
                           }
                           setModalProgramarVisible(false);
                           setIdServicioEditando(null);
@@ -1966,7 +1995,7 @@ export default function App() {
                 })
               ) : (
                 <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día.</Text>
+                  <Text style={{ color: t.textSub, textAlign: "center", padding: 10 }}>No hay servicios programados para este día en {sedeActual.nombre}.</Text>
                 </View>
               )}
             </>
@@ -1976,7 +2005,7 @@ export default function App() {
             <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>
-                  👥 Miembros ({integrantesSeccionEquipo.length})
+                  👥 Miembros en {sedeActual.nombre} ({integrantesSeccionEquipo.length})
                 </Text>
                 <TouchableOpacity
                   style={[styles.programBtn, { backgroundColor: t.primary }]}
@@ -1996,7 +2025,7 @@ export default function App() {
               {modalMiembroVisible && (
                 <View style={[styles.card, { backgroundColor: t.bg, borderColor: t.primary, borderWidth: 2, marginBottom: 14 }]}>
                   <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16 }]}>
-                    {idMiembroEditando !== null ? "✏️ Modificar Miembro" : "➕ Nuevo Miembro"}
+                    {idMiembroEditando !== null ? "✏️ Modificar Miembro" : `➕ Nuevo Miembro (${sedeActual.nombre})`}
                   </Text>
 
                   <Text style={[styles.inputLabel, { color: t.textMain }]}>Nombre del integrante</Text>
@@ -2076,15 +2105,15 @@ export default function App() {
                           const nuevoId = Date.now();
                           const nuevoIntegranteObj = {
                             id: nuevoId,
-                            Nombre: nombreNuevoMiembro.trim(), // Columna corregida con 'N' mayúscula
+                            Nombre: nombreNuevoMiembro.trim(),
                             rol: rolesMusicalesNuevo.join(", "),
                             rol_acceso: rolAccesoNuevo,
                             email: emailNuevoMiembro.trim() || null,
-                            sede_id: "general",
+                            sede_id: sedeIdSeleccionada, // Asignado estrictamente a la sede actual
                           };
                           const { error } = await supabase.from("integrantes").insert([nuevoIntegranteObj]);
                           if (!error) {
-                            alert("✅ Miembro agregado con éxito.");
+                            alert(`✅ Miembro agregado con éxito a ${sedeActual.nombre}.`);
                             await cargarIntegrantesSupabase();
                             setModalMiembroVisible(false);
                           } else { alert(`⚠️ Error al guardar: ${error.message}`); }
@@ -2310,7 +2339,7 @@ export default function App() {
                 <>
                   {puedeControlarRepertorio && (
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 10 }]}>➕ Agregar Nueva Canción</Text>
+                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 10 }]}>➕ Agregar Nueva Canción ({sedeActual.nombre})</Text>
                       <View style={{ gap: 8 }}>
                         <TextInput
                           style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
@@ -2382,8 +2411,8 @@ export default function App() {
                   )}
 
                   <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio ({repertorio.length})</Text>
-                    {repertorio.map((c) => (
+                    <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorioSede.length})</Text>
+                    {repertorioSede.map((c) => (
                       <TouchableOpacity
                         key={c.id}
                         style={[styles.repertorioItemRowPro, { borderBottomColor: t.border, backgroundColor: t.bg }]}

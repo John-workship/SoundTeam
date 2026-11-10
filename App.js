@@ -120,9 +120,9 @@ const SEDES_DISPONIBLES = [
 export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [integrantes, setIntegrantes] = useState([]);
-  const [usuario, setUsuario] = useState("");
-  const [rolUsuario, setRolUsuario] = useState("miembro");
-  const [sesionIniciada, setSesionIniciada] = useState(false);
+  const [usuario, setUsuario] = useState("Alex");
+  const [rolUsuario, setRolUsuario] = useState("admin");
+  const [sesionIniciada, setSesionIniciada] = useState(true); // Directo para el Admin
 
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
@@ -142,35 +142,8 @@ export default function App() {
     }
   };
 
-  const verificarSesionActiva = async () => {
-    await sincronizarDatosApp();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.user?.email) {
-      const correoUser = session.user.email.trim().toLowerCase();
-      
-      if (correoUser === "musicalpucmosquera3ra@gmail.com") {
-        setUsuario("Alex");
-        setRolUsuario("admin");
-        setSesionIniciada(true);
-      } else {
-        setUsuario(session.user.email);
-        setRolUsuario("miembro");
-        setSesionIniciada(true);
-      }
-    }
-  };
-
   useEffect(() => {
-    verificarSesionActiva();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async () => {
-      verificarSesionActiva();
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    sincronizarDatosApp();
   }, []);
 
   const [pestana, setPestana] = useState("inicio");
@@ -206,7 +179,6 @@ export default function App() {
   const esDomingoSeleccionado = new Date(mesSeleccionadoObj.year, mesSeleccionadoObj.mesIndex, diaSeleccionado).getDay() === 0;
 
   const [servicios, setServicios] = useState([]);
-
   const cargarServiciosSupabase = async () => {
     const { data } = await supabase.from("servicios").select("*").eq("sede_id", sedeIdSeleccionada);
     if (data) {
@@ -225,9 +197,7 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    cargarServiciosSupabase();
-  }, [sedeIdSeleccionada]);
+  useEffect(() => { cargarServiciosSupabase(); }, [sedeIdSeleccionada]);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
@@ -253,6 +223,13 @@ export default function App() {
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
   const [repertorio, setRepertorio] = useState([]);
+  const [busquedaRepertorio, setBusquedaRepertorio] = useState("");
+  const [modalCancionVisible, setModalCancionVisible] = useState(false);
+  const [tituloNuevaCancion, setTituloNuevaCancion] = useState("");
+  const [artistaNuevaCancion, setArtistaNuevaCancion] = useState("");
+  const [tonoNuevaCancion, setTonoNuevaCancion] = useState("C");
+  const [bpmNuevaCancion, setBpmNuevaCancion] = useState("120");
+  const [letraNuevaCancion, setLetraNuevaCancion] = useState("");
 
   const cargarRepertorioSupabase = async () => {
     const { data } = await supabase.from("repertorio").select("*").eq("sede_id", sedeIdSeleccionada);
@@ -271,9 +248,7 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    cargarRepertorioSupabase();
-  }, [sedeIdSeleccionada]);
+  useEffect(() => { cargarRepertorioSupabase(); }, [sedeIdSeleccionada]);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
@@ -291,47 +266,35 @@ export default function App() {
     if (data) { setMensajesChat(data); } else { setMensajesChat([]); }
   };
 
-  useEffect(() => {
-    cargarMensajesSupabase();
-  }, [canalChatActivo, sedeIdSeleccionada]);
+  useEffect(() => { cargarMensajesSupabase(); }, [canalChatActivo, sedeIdSeleccionada]);
 
   const handleLogin = async () => {
     const inputClean = emailInput.trim().toLowerCase();
-    
-    // ACCESO RÁPIDO MAESTRO POR CREDENCIALES DE TEXTO DIRECTO
     if ((inputClean === "admin" || inputClean === "musicalpucmosquera3ra@gmail.com") && passwordInput === "1234") {
       setUsuario("Alex");
       setRolUsuario("admin");
       setSesionIniciada(true);
       return;
     }
-
     if (inputClean === "" || passwordInput.trim() === "") {
-      alert("⚠️ Ingresa tu usuario/correo y contraseña.");
+      alert("⚠️ Ingresa usuario y contraseña (o usa Admin / 1234).");
       return;
     }
-
     setCargandoAuth(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: inputClean,
-      password: passwordInput,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email: inputClean, password: passwordInput });
     setCargandoAuth(false);
-
     if (error) {
-      alert(`⚠️ Error de acceso: ${error.message} (Usa 'Admin' y '1234' para acceso rápido).`);
+      alert(`⚠️ Error: ${error.message} (Usa 'Admin' y '1234' para acceso rápido).`);
       return;
     }
-    await verificarSesionActiva();
+    setSesionIniciada(true);
   };
 
   const handleGoogleLogin = async () => {
     setCargandoAuth(true);
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
-      },
+      options: { redirectTo: Platform.OS === 'web' ? window.location.origin : undefined },
     });
     setCargandoAuth(false);
   };
@@ -344,19 +307,14 @@ export default function App() {
     setPasswordInput("");
     setRolUsuario("miembro");
     setPestana("inicio");
-    if (Platform.OS === "web") {
-      try { localStorage.clear(); } catch (e) {}
-    }
   };
 
   const recargarDatosApp = async () => {
-    await verificarSesionActiva();
+    await sincronizarDatosApp();
     await cargarServiciosSupabase();
     await cargarRepertorioSupabase();
     await cargarMensajesSupabase();
-    if (Platform.OS === "web") {
-      window.location.reload(true);
-    }
+    if (Platform.OS === "web") { window.location.reload(true); }
   };
 
   const esAdmin = rolUsuario === "admin";
@@ -366,20 +324,12 @@ export default function App() {
     if (nuevoMensajeTexto.trim() !== "") {
       const horaActual = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       if (idMensajeEditando !== null) {
-        const { error } = await supabase.from("mensajes").update({ texto: nuevoMensajeTexto.trim(), editado: true }).eq("id", Number(idMensajeEditando));
-        if (error) { alert(`⚠️ No se pudo corregir el mensaje.`); return; }
+        await supabase.from("mensajes").update({ texto: nuevoMensajeTexto.trim(), editado: true }).eq("id", Number(idMensajeEditando));
         setIdMensajeEditando(null);
         setNuevoMensajeTexto("");
         await cargarMensajesSupabase();
       } else {
-        const mensaje = {
-          autor: usuario,
-          texto: nuevoMensajeTexto.trim(),
-          hora: horaActual,
-          canal: canalChatActivo,
-          sede: sedeIdSeleccionada,
-          editado: false,
-        };
+        const mensaje = { autor: usuario, texto: nuevoMensajeTexto.trim(), hora: horaActual, canal: canalChatActivo, sede: sedeIdSeleccionada, editado: false };
         setNuevoMensajeTexto("");
         await supabase.from("mensajes").insert([mensaje]);
         await cargarMensajesSupabase();
@@ -390,8 +340,9 @@ export default function App() {
   const limpiarHistorialChat = async () => {
     if (!esAdminOLider) { alert("⚠️ Solo Administradores y Líderes pueden limpiar el chat."); return; }
     if (confirm(`¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} para esta sede (${sedeActual.nombre})?`)) {
-      const { error } = await supabase.from("mensajes").delete().eq("canal", canalChatActivo).eq("sede", sedeIdSeleccionada);
-      if (!error) { setMensajesChat([]); alert("🧹 Chat de la sede limpiado con éxito."); }
+      await supabase.from("mensajes").delete().eq("canal", canalChatActivo).eq("sede", sedeIdSeleccionada);
+      setMensajesChat([]);
+      alert("🧹 Chat limpiado con éxito.");
     }
   };
 
@@ -433,9 +384,7 @@ export default function App() {
   const enviarPorWhatsApp = (servicio) => {
     let texto = `🎵 *Setlist - ${servicio.titulo}* (${diaSeleccionado} de ${mesSeleccionadoObj.nombre} ${mesSeleccionadoObj.year})\n\n`;
     if (servicio.setlist && servicio.setlist.length > 0) {
-      servicio.setlist.forEach((s, i) => {
-        texto += `${i + 1}. ${s.titulo} (Tono: ${s.tono} | ${s.bpm || "120"} BPM)\n`;
-      });
+      servicio.setlist.forEach((s, i) => { texto += `${i + 1}. ${s.titulo} (Tono: ${s.tono} | ${s.bpm || "120"} BPM)\n`; });
     } else {
       texto += `Sin canciones asignadas.\n`;
     }
@@ -1190,22 +1139,88 @@ export default function App() {
                     </View>
                   ) : (
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
-                      {repertorio.map((c) => (
-                        <TouchableOpacity
-                          key={c.id}
-                          style={[styles.repertorioItemRowPro, { borderBottomColor: t.border, backgroundColor: t.bg }]}
-                          onPress={() => setCancionSeleccionadaDetalle(c)}
-                        >
-                          <View style={{ flex: 1, paddingVertical: 4 }}>
-                            <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "bold", marginBottom: 2 }}>{c.titulo}</Text>
-                            <Text style={{ color: t.textSub, fontSize: 12 }}>{c.artista || "Sin artista"}</Text>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                        <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
+                        {esAdminOLider && (
+                          <TouchableOpacity
+                            style={[styles.programBtn, { backgroundColor: t.primary }]}
+                            onPress={() => {
+                              setTituloNuevaCancion("");
+                              setArtistaNuevaCancion("");
+                              setTonoNuevaCancion("C");
+                              setBpmNuevaCancion("120");
+                              setLetraNuevaCancion("");
+                              setModalCancionVisible(true);
+                            }}
+                          >
+                            <Text style={styles.programBtnText}>+ Nueva Canción</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+
+                      <TextInput
+                        style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, padding: 8, fontSize: 13 }]}
+                        placeholder="🔍 Buscar canción o artista..."
+                        placeholderTextColor={t.textSub}
+                        value={busquedaRepertorio}
+                        onChangeText={setBusquedaRepertorio}
+                      />
+
+                      {modalCancionVisible && (
+                        <View style={[styles.card, { backgroundColor: t.bg, borderColor: t.primary, borderWidth: 2, marginBottom: 12 }]}>
+                          <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 15 }]}>➕ Agregar Canción</Text>
+                          <TextInput style={[styles.loginInput, { backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain }]} placeholder="Título" placeholderTextColor={t.textSub} value={tituloNuevaCancion} onChangeText={setTituloNuevaCancion} />
+                          <TextInput style={[styles.loginInput, { backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain }]} placeholder="Artista" placeholderTextColor={t.textSub} value={artistaNuevaCancion} onChangeText={setArtistaNuevaCancion} />
+                          <TextInput style={[styles.loginInput, { backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain }]} placeholder="Tono (Ej. C, G)" placeholderTextColor={t.textSub} value={tonoNuevaCancion} onChangeText={setTonoNuevaCancion} />
+                          <TextInput style={[styles.loginInput, { backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain }]} placeholder="BPM (Ej. 120)" placeholderTextColor={t.textSub} value={bpmNuevaCancion} onChangeText={setBpmNuevaCancion} />
+                          <TextInput style={[styles.loginInput, { backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain, height: 70 }]} placeholder="Letra (con acordes [C], [G]...)" placeholderTextColor={t.textSub} multiline value={letraNuevaCancion} onChangeText={setLetraNuevaCancion} />
+                          
+                          <View style={{ flexDirection: "row", gap: 6 }}>
+                            <TouchableOpacity
+                              style={[styles.loginButton, { flex: 1, backgroundColor: t.primary, padding: 10 }]}
+                              onPress={async () => {
+                                if (tituloNuevaCancion.trim() !== "") {
+                                  const cObj = {
+                                    id: Date.now(),
+                                    titulo: tituloNuevaCancion.trim(),
+                                    artista: artistaNuevaCancion.trim() || "Sin artista",
+                                    tono: tonoNuevaCancion.trim() || "C",
+                                    bpm: bpmNuevaCancion.trim() || "120",
+                                    letra: letraNuevaCancion.trim(),
+                                    sede_id: sedeIdSeleccionada,
+                                  };
+                                  setRepertorio([...repertorio, cObj]);
+                                  await supabase.from("repertorio").insert([cObj]);
+                                  setModalCancionVisible(false);
+                                } else { alert("⚠️ Ingresa el título de la canción."); }
+                              }}
+                            >
+                              <Text style={styles.loginButtonText}>Guardar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.loginButton, { flex: 1, backgroundColor: "#EF4444", padding: 10 }]} onPress={() => setModalCancionVisible(false)}>
+                              <Text style={styles.loginButtonText}>Cancelar</Text>
+                            </TouchableOpacity>
                           </View>
-                          <View style={{ backgroundColor: t.primary, width: 34, height: 34, borderRadius: 6, justifyContent: "center", alignItems: "center" }}>
-                            <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 13 }}>{c.tono || "C"}</Text>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
+                        </View>
+                      )}
+
+                      {repertorio
+                        .filter((c) => c.titulo.toLowerCase().includes(busquedaRepertorio.toLowerCase()) || (c.artista && c.artista.toLowerCase().includes(busquedaRepertorio.toLowerCase())))
+                        .map((c) => (
+                          <TouchableOpacity
+                            key={c.id}
+                            style={[styles.repertorioItemRowPro, { borderBottomColor: t.border, backgroundColor: t.bg }]}
+                            onPress={() => setCancionSeleccionadaDetalle(c)}
+                          >
+                            <View style={{ flex: 1, paddingVertical: 4 }}>
+                              <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "bold", marginBottom: 2 }}>{c.titulo}</Text>
+                              <Text style={{ color: t.textSub, fontSize: 12 }}>{c.artista || "Sin artista"}</Text>
+                            </View>
+                            <View style={{ backgroundColor: t.primary, width: 34, height: 34, borderRadius: 6, justifyContent: "center", alignItems: "center" }}>
+                              <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 13 }}>{c.tono || "C"}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
                     </View>
                   )}
                 </>
@@ -1282,8 +1297,8 @@ const styles = StyleSheet.create({
   programBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
   eventCardHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   eventMainTitle: { fontSize: 15, fontWeight: "bold" },
-  editServiceBtn: { backgroundColor: "#3B82F6", paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
-  deleteServiceBtn: { backgroundColor: "#EF4444", paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
+  editServiceBtn: { backgroundColor: "#3B82F6", paddingVertical: 3, paddingHorizontal: 6, borderRadius: 4 },
+  deleteServiceBtn: { backgroundColor: "#EF4444", paddingVertical: 3, paddingHorizontal: 6, borderRadius: 4 },
   repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
   tabBar: { flexDirection: "row", height: 55, borderTopWidth: 1, width: "100%" },
   tabItem: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 2 },

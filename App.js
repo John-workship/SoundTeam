@@ -13,8 +13,14 @@ import { createClient } from "@supabase/supabase-js";
 
 // 1. Configuración real de Supabase
 const SUPABASE_URL = "https://menaeypgdctjvvubckfh.supabase.co";
-const SUPABASE_ANON_KEY = "TU_SUPABASE_ANON_KEY_AQUI"; // Pega aquí tu anon / public key de Supabase
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_ANON_KEY = "TU_SUPABASE_ANON_KEY_AQUI"; // Reemplaza si lo necesitas
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: Platform.OS === "web",
+  },
+});
 
 // Paleta de colores original del proyecto
 const t = {
@@ -40,11 +46,13 @@ export default function App() {
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("principal");
 
   useEffect(() => {
+    // 1. Obtener la sesión actual al cargar
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSesion(session);
       setCargando(false);
     });
 
+    // 2. Escuchar cambios de autenticación en tiempo real
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -61,6 +69,10 @@ export default function App() {
         provider: "google",
         options: {
           redirectTo: Platform.OS === "web" ? window.location.origin : undefined,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
       if (error) alert("Error al conectar con Google: " + error.message);
@@ -71,11 +83,12 @@ export default function App() {
 
   const cerrarSesion = async () => {
     await supabase.auth.signOut();
+    setSesion(null);
   };
 
   if (cargando) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center", backgroundColor: t.bg }]}>
         <ActivityIndicator size="large" color={t.accent} />
       </View>
     );
@@ -149,7 +162,7 @@ export default function App() {
           ¡Bienvenido al panel de SoundTeam!
         </Text>
         <Text style={{ color: t.textSub, marginTop: 8, textAlign: "center" }}>
-          Has accedido correctamente con tu cuenta de Google.
+          Has accedido correctamente con tu cuenta de Google. Sede seleccionada: {sedeIdSeleccionada.toUpperCase()}.
         </Text>
       </View>
     </SafeAreaView>

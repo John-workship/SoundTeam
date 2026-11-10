@@ -136,15 +136,19 @@ export default function App() {
   const cargarIntegrantesSupabase = async () => {
     const { data, error } = await supabase.from("integrantes").select("*");
     if (data && !error && data.length > 0) {
-      const formateados = data.map((m) => ({
-        id: m.id,
-        nombre: m.nombre,
-        pin: m.pin,
-        email: m.email || "",
-        sedeId: m.sede_id,
-        rolAcceso: m.rol_acceso,
-        rolesMusicales: m.roles_musicales || [],
-      }));
+      const formateados = data.map((m) => {
+        let sId = (m.sede_id || "general").toLowerCase();
+        if (sId === "principal") sId = "general";
+        return {
+          id: m.id,
+          nombre: m.nombre,
+          pin: m.pin,
+          email: m.email || "",
+          sedeId: sId,
+          rolAcceso: (m.rol_acceso || "miembro").toLowerCase(),
+          rolesMusicales: m.roles_musicales || [],
+        };
+      });
       setIntegrantes(formateados);
     }
   };
@@ -198,7 +202,7 @@ export default function App() {
             setSedeIdSeleccionada(miembroEncontrado.sedeId);
           }
           setSesionIniciada(true);
-        } else {
+        } else if (integrantes.length > 0) {
           setUsuario(session.user.email);
           setRolUsuario("miembro");
           setSesionIniciada(true);
@@ -220,7 +224,7 @@ export default function App() {
             setSedeIdSeleccionada(miembroEncontrado.sedeId);
           }
           setSesionIniciada(true);
-        } else {
+        } else if (integrantes.length > 0) {
           setUsuario(session.user.email);
           setRolUsuario("miembro");
           setSesionIniciada(true);

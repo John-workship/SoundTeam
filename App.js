@@ -299,8 +299,17 @@ export default function App() {
       return;
     }
 
-    setUsuario(emailUsuario.split("@")[0]);
-    setRolUsuario("miembro");
+    const integranteEncontrado = integrantes.find(i => i.email && i.email.trim().toLowerCase() === emailUsuario.trim().toLowerCase());
+    if (integranteEncontrado) {
+      setUsuario(integranteEncontrado.nombre);
+      setRolUsuario(integranteEncontrado.rolAcceso || "miembro");
+      if (integranteEncontrado.sedeId) {
+        setSedeIdSeleccionada(integranteEncontrado.sedeId);
+      }
+    } else {
+      setUsuario(emailUsuario.split("@")[0]);
+      setRolUsuario("miembro");
+    }
     setSesionIniciada(true);
   };
 

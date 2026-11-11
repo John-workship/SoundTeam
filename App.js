@@ -190,6 +190,7 @@ export default function App() {
   const [usuario, setUsuario] = useState("");
   const [usuarioId, setUsuarioId] = useState(null);
   const [rolUsuario, setRolUsuario] = useState("miembro");
+  const [rolesMusicalesUsuario, setRolesMusicalesUsuario] = useState([]);
   const [sesionIniciada, setSesionIniciada] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
@@ -638,7 +639,8 @@ export default function App() {
     setUsuarioId(null);
     setEmailInput("");
     setPasswordInput("");
-    setRolUsuario("miembro");
+    setRolUsuario((perfil.rol_acceso || "miembro").toLowerCase());
+    setRolesMusicalesUsuario(Array.isArray(perfil.roles_musicales) ? perfil.roles_musicales : []);
     setPestana("inicio");
     setErrorAuth("");
     setErrorDatos("");
@@ -656,6 +658,7 @@ export default function App() {
 
   const esAdmin = rolUsuario === "admin";
   const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
+  const puedeGestionarRepertorio = esAdminOLider || rolesMusicalesUsuario.some(r => ["piano", "guitarra", "bajo", "bateria"].includes(String(r).toLowerCase()));
 
   const enviarOActualizarMensajeChat = async () => {
     if (nuevoMensajeTexto.trim() !== "") {
@@ -695,7 +698,7 @@ export default function App() {
 
 
   const guardarOActualizarCancion = async () => {
-    if (!esAdminOLider) {
+    if (!puedeGestionarRepertorio) {
       alert("No tienes permisos para modificar el repertorio.");
       return;
     }
@@ -746,7 +749,7 @@ export default function App() {
   };
 
   const eliminarCancionRepertorio = async (id) => {
-    if (!esAdminOLider) {
+    if (!puedeGestionarRepertorio) {
       alert("No tienes permisos para eliminar canciones.");
       return;
     }
@@ -1943,7 +1946,7 @@ export default function App() {
                       >
                         <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>← Volver al repertorio</Text>
                       </TouchableOpacity>
-                      {esAdminOLider && (
+                      {puedeGestionarRepertorio && (
                         <TouchableOpacity
                           style={{ backgroundColor: t.primary, padding: 9, borderRadius: 6, marginBottom: 12, alignSelf: "flex-start" }}
                           onPress={() => {
@@ -1963,7 +1966,7 @@ export default function App() {
                           <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}>✏️ Editar canción</Text>
                         </TouchableOpacity>
                       )}
-                      {esAdminOLider && (
+                      {puedeGestionarRepertorio && (
                         <TouchableOpacity
                           style={{ backgroundColor: "#B91C1C", padding: 9, borderRadius: 6, marginBottom: 12, alignSelf: "flex-start" }}
                           onPress={() => eliminarCancionRepertorio(cancionSeleccionadaDetalle.id)}
@@ -1999,7 +2002,7 @@ export default function App() {
                     </View>
                   ) : (
                     <>
-                    {esAdminOLider && (
+                    {puedeGestionarRepertorio && (
                       <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 12 }]}>
                         <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 12 }]}>{modoEdicionCancion ? "✏️ Editar canción" : "➕ Agregar nueva canción"}</Text>
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 8 }]} placeholder="Título de la canción" placeholderTextColor={t.textSub} value={nuevoTituloCancion} onChangeText={setNuevoTituloCancion} />

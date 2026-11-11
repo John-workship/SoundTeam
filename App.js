@@ -117,7 +117,74 @@ const SEDES_DISPONIBLES = [
   { id: "occidente", nombre: "Sede Occidente" },
 ];
 
+
+const NOTAS_CROMATICAS = [
+  "C", "C#", "D", "D#", "E", "F",
+  "F#", "G", "G#", "A", "A#", "B"
+];
+
+const obtenerNota = (nota, semitonos = 0) => {
+  const equivalencias = { Db: 1, Eb: 3, Gb: 6, Ab: 8, Bb: 10 };
+  const indice = equivalencias[nota] !== undefined
+    ? equivalencias[nota]
+    : NOTAS_CROMATICAS.indexOf(nota);
+
+  if (indice < 0) return nota;
+  return NOTAS_CROMATICAS[(indice + semitonos + 120) % 12];
+};
+
+const transponerAcorde = (acorde, semitonos) => {
+  return acorde.split("/").map(parte => {
+    const coincidencia = parte.match(/^([A-G](?:#|b)?)(.*)$/);
+    if (!coincidencia) return parte;
+    return obtenerNota(coincidencia[1], semitonos) + coincidencia[2];
+  }).join("/");
+};
+
+const transponerLetra = (letra, semitonos) => {
+  if (!letra || semitonos === 0) return letra || "";
+  return letra.replace(/\[([^\]]+)\]/g, (completo, acorde) =>
+    `[${transponerAcorde(acorde, semitonos)}]`
+  );
+};
+
+const transponerTono = (tono, semitonos) => {
+  const coincidencia = (tono || "C").match(/^([A-G](?:#|b)?)(.*)$/);
+  if (!coincidencia) return tono || "C";
+  return obtenerNota(coincidencia[1], semitonos) + coincidencia[2];
+};
+
+const convertirANashville = (letra, tono) => {
+  if (!letra) return "";
+
+  const notas = {
+    C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3,
+    E: 4, F: 5, "F#": 6, Gb: 6, G: 7,
+    "G#": 8, Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11
+  };
+
+  const grados = ["1", "b2", "2", "b3", "3", "4",
+    "b5", "5", "b6", "6", "b7", "7"];
+
+  const coincidencia = (tono || "C").match(/^([A-G](?:#|b)?)/);
+  const base = coincidencia && notas[coincidencia[1]] !== undefined
+    ? notas[coincidencia[1]] : 0;
+
+  const convertirAcorde = acorde => acorde.split("/").map(parte => {
+    const match = parte.match(/^([A-G](?:#|b)?)(.*)$/);
+    if (!match || notas[match[1]] === undefined) return parte;
+    const intervalo = (notas[match[1]] - base + 12) % 12;
+    return grados[intervalo] + match[2];
+  }).join("/");
+
+  return letra.replace(/\[([^\]]+)\]/g, (completo, acorde) =>
+    `[${convertirAcorde(acorde)}]`
+  );
+};
+
 export default function App() {
+  const [semitonos, setSemitonos] = useState(0);
+  const [modoNashville, setModoNashville] = useState(false);
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [integrantes, setIntegrantes] = useState([]);
   const [usuario, setUsuario] = useState("");
@@ -304,6 +371,14 @@ export default function App() {
   const [metronomoActivo, setMetronomoActivo] = useState(false);
   const [pulsoActivo, setPulsoActivo] = useState(false);
   const [avanceAutomaticoActivo, setAvanceAutomaticoActivo] = useState(false);
+  const [semitonosEnVivo, setSemitonosEnVivo] = useState(0);
+  const [modoNashvilleEnVivo, setModoNashvilleEnVivo] = useState(false);
+
+  useEffect(() => {
+    setSemitonosEnVivo(0);
+    setModoNashvilleEnVivo(false);
+  }, [indiceCancionEnVivo]);
+
 
   const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
   const [idMiembroEditando, setIdMiembroEditando] = useState(null);
@@ -616,9 +691,24 @@ export default function App() {
                 </View>
                 <View style={styles.teleprompterToneBox}>
                   <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "bold" }}>
-                    Tono: {(setlistEnVivoActual[indiceCancionEnVivo] || {}).tono || "C"}
+                    Tono: {transponerTono((setlistEnVivoActual[indiceCancionEnVivo] || {}).tono || "C", semitonosEnVivo)}
                   </Text>
                 </View>
+              </View>
+
+              <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginBottom: 12 }}>
+                <TouchableOpacity onPress={() => setSemitonosEnVivo(v => v - 1)} style={{ backgroundColor: "#1E293B", padding: 10, borderRadius: 7, margin: 3 }}>
+                  <Text style={{ color: "#FFFFFF", fontWeight: "bold" }}>− Tono</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setSemitonosEnVivo(v => v + 1)} style={{ backgroundColor: "#1E293B", padding: 10, borderRadius: 7, margin: 3 }}>
+                  <Text style={{ color: "#FFFFFF", fontWeight: "bold" }}>+ Tono</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setModoNashvilleEnVivo(v => !v)} style={{ backgroundColor: "#1D4ED8", padding: 10, borderRadius: 7, margin: 3 }}>
+                  <Text style={{ color: "#FFFFFF", fontWeight: "bold" }}>{modoNashvilleEnVivo ? "Ver acordes" : "Nashville"}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setSemitonosEnVivo(0); setModoNashvilleEnVivo(false); }} style={{ backgroundColor: "#475569", padding: 10, borderRadius: 7, margin: 3 }}>
+                  <Text style={{ color: "#FFFFFF", fontWeight: "bold" }}>Original</Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.teleprompterControlsRow}>
@@ -656,7 +746,12 @@ export default function App() {
                 {(() => {
                   const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
                   const objetoRepo = repertorio.find(r => r.titulo && cancionActual.titulo && r.titulo.toLowerCase() === cancionActual.titulo.toLowerCase()) || {};
-                  return objetoRepo.letra || cancionActual.letra || "[INTRO]\nLetra no disponible en biblioteca.";
+                  const letraBase = objetoRepo.letra || cancionActual.letra || "[INTRO]\\nLetra no disponible en biblioteca.";
+                    const tonoActual = transponerTono(cancionActual.tono || objetoRepo.tono || "C", semitonosEnVivo);
+                    const letraTranspuesta = transponerLetra(letraBase, semitonosEnVivo);
+                    return modoNashvilleEnVivo
+                      ? convertirANashville(letraTranspuesta, tonoActual)
+                      : letraTranspuesta;
                 })()}
               </Text>
             </View>
@@ -1109,6 +1204,8 @@ export default function App() {
                             onPress={() => {
                               setSetlistEnVivoActual(serv.setlist);
                               setIndiceCancionEnVivo(0);
+                               setSemitonosEnVivo(0);
+                               setModoNashvilleEnVivo(false);
                               setModoEnVivoActivo(true);
                               setMetronomoActivo(false);
                               setAvanceAutomaticoActivo(false);
@@ -1242,14 +1339,34 @@ export default function App() {
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                       <TouchableOpacity
                         style={{ backgroundColor: t.bg, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: t.border, marginBottom: 12, alignSelf: "flex-start" }}
-                        onPress={() => setCancionSeleccionadaDetalle(null)}
+                        onPress={() => { setSemitonos(0); setModoNashville(false); setCancionSeleccionadaDetalle(null); }}
                       >
                         <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>← Volver al repertorio</Text>
                       </TouchableOpacity>
                       <Text style={{ fontSize: 22, fontWeight: "bold", color: t.textMain, marginBottom: 4 }}>{cancionSeleccionadaDetalle.titulo}</Text>
-                      <Text style={{ color: t.textSub, fontSize: 13, marginBottom: 12 }}>{cancionSeleccionadaDetalle.artista} • Tono: {cancionSeleccionadaDetalle.tono}</Text>
+                      <Text style={{ color: t.textSub, fontSize: 13, marginBottom: 12 }}>{cancionSeleccionadaDetalle.artista} • Tono: {transponerTono(cancionSeleccionadaDetalle.tono, semitonos)}</Text>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 12 }}>
+                        <TouchableOpacity onPress={() => setSemitonos(v => v - 1)} style={{ backgroundColor: t.bg, padding: 9, borderRadius: 6, borderWidth: 1, borderColor: t.border, marginRight: 8, marginBottom: 8 }}>
+                          <Text style={{ color: t.textMain, fontWeight: "bold" }}>− Tono</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setSemitonos(v => v + 1)} style={{ backgroundColor: t.bg, padding: 9, borderRadius: 6, borderWidth: 1, borderColor: t.border, marginRight: 8, marginBottom: 8 }}>
+                          <Text style={{ color: t.textMain, fontWeight: "bold" }}>+ Tono</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setModoNashville(v => !v)} style={{ backgroundColor: t.bg, padding: 9, borderRadius: 6, borderWidth: 1, borderColor: t.border, marginRight: 8, marginBottom: 8 }}>
+                          <Text style={{ color: t.textMain, fontWeight: "bold" }}>{modoNashville ? "Ver acordes" : "Nashville"}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => { setSemitonos(0); setModoNashville(false); }} style={{ backgroundColor: t.bg, padding: 9, borderRadius: 6, borderWidth: 1, borderColor: t.border, marginBottom: 8 }}>
+                          <Text style={{ color: t.textMain, fontWeight: "bold" }}>Original</Text>
+                        </TouchableOpacity>
+                      </View>
                       <View style={{ backgroundColor: t.bg, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
-                        <Text style={{ color: t.textMain, fontSize: 14, lineHeight: 22 }}>{cancionSeleccionadaDetalle.letra || "Sin letra registrada."}</Text>
+                        <Text style={{ color: t.textMain, fontSize: 14, lineHeight: 22 }}>{modoNashville
+                          ? convertirANashville(
+                              transponerLetra(cancionSeleccionadaDetalle.letra || "", semitonos),
+                              transponerTono(cancionSeleccionadaDetalle.tono, semitonos)
+                            )
+                          : transponerLetra(cancionSeleccionadaDetalle.letra || "", semitonos)
+                        }</Text>
                       </View>
                     </View>
                   ) : (
@@ -1259,7 +1376,7 @@ export default function App() {
                         <TouchableOpacity
                           key={c.id}
                           style={[styles.repertorioItemRowPro, { borderBottomColor: t.border, backgroundColor: t.bg }]}
-                          onPress={() => setCancionSeleccionadaDetalle(c)}
+                          onPress={() => { setSemitonos(0); setModoNashville(false); setCancionSeleccionadaDetalle(c); }}
                         >
                           <View style={{ flex: 1, paddingVertical: 4 }}>
                             <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "bold", marginBottom: 2 }}>{c.titulo}</Text>

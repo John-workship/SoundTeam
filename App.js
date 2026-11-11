@@ -628,6 +628,27 @@ export default function App() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    if (!isSupabaseConfigured) {
+      setErrorAuth("Supabase no está configurado.");
+      return;
+    }
+    setCargandoAuth(true);
+    setErrorAuth("");
+    try {
+      const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo }
+      });
+      if (error) setErrorAuth(`No se pudo iniciar sesión con Google: ${error.message}`);
+    } catch (error) {
+      setErrorAuth(`Error al conectar con Google: ${error.message}`);
+    } finally {
+      setCargandoAuth(false);
+    }
+  };
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -908,6 +929,15 @@ export default function App() {
               disabled={cargandoAuth}
             >
               <Text style={styles.loginButtonText}>{cargandoAuth ? "Verificando..." : "Iniciar sesión"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.loginButton, { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D1D5DB", marginTop: 4 }]}
+              onPress={handleGoogleLogin}
+              disabled={cargandoAuth}
+            >
+              <Text style={{ color: "#202124", fontSize: 14, fontWeight: "bold", textAlign: "center" }}>
+                G  Iniciar sesión con Google
+              </Text>
             </TouchableOpacity>
 
             {!!errorAuth && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -364,12 +364,40 @@ export default function App() {
   const [nombreEvento, setNombreEvento] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [setlistActivo, setSetlistActivo] = useState([]);
+  const [cancionLentaSeleccionada, setCancionLentaSeleccionada] = useState("");
+  const [cancionRapidaSeleccionada, setCancionRapidaSeleccionada] = useState("");
+
+  const moverCancionArriba = (index) => {
+    if (index <= 0) return;
+    const actualizado = [...setlistActivo];
+    [actualizado[index - 1], actualizado[index]] = [actualizado[index], actualizado[index - 1]];
+    setSetlistActivo(actualizado);
+  };
+
+  const moverCancionAbajo = (index) => {
+    if (index >= setlistActivo.length - 1) return;
+    const actualizado = [...setlistActivo];
+    [actualizado[index], actualizado[index + 1]] = [actualizado[index + 1], actualizado[index]];
+    setSetlistActivo(actualizado);
+  };
+
 
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
   const [setlistEnVivoActual, setSetlistEnVivoActual] = useState([]);
   const [metronomoActivo, setMetronomoActivo] = useState(false);
   const [pulsoActivo, setPulsoActivo] = useState(false);
+  const [bpmClick, setBpmClick] = useState(120);
+  const [compasClick, setCompasClick] = useState("4/4");
+  const [volumenClick, setVolumenClick] = useState(70);
+  const [paneoClick, setPaneoClick] = useState(0);
+  const [errorClick, setErrorClick] = useState("");
+
+  const audioContextRef = useRef(null);
+  const schedulerClickRef = useRef(null);
+  const siguientePulsoRef = useRef(0);
+  const numeroPulsoRef = useRef(0);
+  const pulsoVisualTimeoutRef = useRef(null);
   const [avanceAutomaticoActivo, setAvanceAutomaticoActivo] = useState(false);
   const [semitonosEnVivo, setSemitonosEnVivo] = useState(0);
   const [modoNashvilleEnVivo, setModoNashvilleEnVivo] = useState(false);
@@ -378,6 +406,130 @@ export default function App() {
     setSemitonosEnVivo(0);
     setModoNashvilleEnVivo(false);
   }, [indiceCancionEnVivo]);
+
+  // Carga el BPM de la canción seleccionada como punto de partida.
+  useEffect(() => {
+    const cancion = setlistEnVivoActual[indiceCancionEnVivo] || {};
+    const bpm = parseInt(cancion.bpm, 10);
+    setBpmClick(Number.isFinite(bpm) ? Math.min(300, Math.max(30, bpm)) : 120);
+  }, [indiceCancionEnVivo, setlistEnVivoActual]);
+
+  // El audio se crea al pulsar Iniciar, respetando las restricciones del navegador.
+  const alternarMetronomo = async () => {
+    if (metronomoActivo) {
+      setMetronomoActivo(false);
+      setPulsoActivo(false);
+      if (audioContextRef.current) {
+        try { await audioContextRef.current.suspend(); } catch (_) {}
+      }
+      return;
+    }
+
+    if (Platform.OS !== "web" || typeof window === "undefined") {
+      setErrorClick("El sonido del click está disponible en la versión web.");
+      return;
+    }
+
+    try {
+      const AudioContextWeb = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextWeb) {
+        setErrorClick("Este navegador no admite el audio necesario para el metrónomo.");
+        return;
+      }
+
+      if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+        audioContextRef.current = new AudioContextWeb();
+      }
+
+      await audioContextRef.current.resume();
+      siguientePulsoRef.current = audioContextRef.current.currentTime + 0.05;
+      numeroPulsoRef.current = 0;
+      setErrorClick("");
+      setMetronomoActivo(true);
+    } catch (error) {
+      setErrorClick("No se pudo iniciar el audio. Comprueba los permisos del navegador.");
+      console.error("Error iniciando metrónomo:", error);
+    }
+  };
+
+  // Scheduler con anticipación para evitar pulsos irregulares.
+  useEffect(() => {
+    if (!metronomoActivo || !audioContextRef.current) return;
+
+    const contexto = audioContextRef.current;
+    const pulsosPorCompas = compasClick === "2/4" ? 2 :
+      compasClick === "3/4" ? 3 :
+      compasClick === "6/8" ? 6 : 4;
+
+    const programarSonido = (tiempo, esAcento) => {
+      const oscilador = contexto.createOscillator();
+      const ganancia = contexto.createGain();
+
+      oscilador.type = "sine";
+      oscilador.frequency.setValueAtTime(esAcento ? 1250 : 850, tiempo);
+
+      const nivel = Math.max(0.0001, (volumenClick / 100) * (esAcento ? 0.9 : 0.65));
+      ganancia.gain.setValueAtTime(0.0001, tiempo);
+      ganancia.gain.linearRampToValueAtTime(nivel, tiempo + 0.005);
+      ganancia.gain.exponentialRampToValueAtTime(0.0001, tiempo + 0.075);
+
+      if (contexto.createStereoPanner) {
+        const paneador = contexto.createStereoPanner();
+        paneador.pan.setValueAtTime(paneoClick, tiempo);
+        oscilador.connect(ganancia);
+        ganancia.connect(paneador);
+        paneador.connect(contexto.destination);
+      } else {
+        oscilador.connect(ganancia);
+        ganancia.connect(contexto.destination);
+      }
+
+      oscilador.start(tiempo);
+      oscilador.stop(tiempo + 0.08);
+
+      const demora = Math.max(0, (tiempo - contexto.currentTime) * 1000);
+      setTimeout(() => {
+        setPulsoActivo(true);
+        if (pulsoVisualTimeoutRef.current) clearTimeout(pulsoVisualTimeoutRef.current);
+        pulsoVisualTimeoutRef.current = setTimeout(() => setPulsoActivo(false), 110);
+      }, demora);
+    };
+
+    const revisarAgenda = () => {
+      if (contexto.state !== "running") return;
+
+      while (siguientePulsoRef.current < contexto.currentTime + 0.12) {
+        const esAcento = numeroPulsoRef.current === 0;
+        programarSonido(siguientePulsoRef.current, esAcento);
+
+        const duracionPulso = 60 / bpmClick;
+        siguientePulsoRef.current += duracionPulso;
+        numeroPulsoRef.current = (numeroPulsoRef.current + 1) % pulsosPorCompas;
+      }
+    };
+
+    revisarAgenda();
+    schedulerClickRef.current = setInterval(revisarAgenda, 25);
+
+    return () => {
+      if (schedulerClickRef.current) {
+        clearInterval(schedulerClickRef.current);
+        schedulerClickRef.current = null;
+      }
+    };
+  }, [metronomoActivo, bpmClick, compasClick, volumenClick, paneoClick]);
+
+  // Limpieza de recursos de audio al salir de la pantalla.
+  useEffect(() => {
+    return () => {
+      if (schedulerClickRef.current) clearInterval(schedulerClickRef.current);
+      if (pulsoVisualTimeoutRef.current) clearTimeout(pulsoVisualTimeoutRef.current);
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
+
 
 
   const [modalMiembroVisible, setModalMiembroVisible] = useState(false);
@@ -403,6 +555,7 @@ export default function App() {
         artista: c.artista || "Sin artista",
         tono: c.tono || "C",
         bpm: c.bpm || "120",
+        tipoSet: (c.tipo_set || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida")).toLowerCase(),
         letra: c.letra || "",
         sedeId: c.sede_id,
       })));
@@ -416,6 +569,16 @@ export default function App() {
   }, [sedeIdSeleccionada, sesionIniciada]);
 
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
+
+  const [modoEdicionCancion, setModoEdicionCancion] = useState(false);
+  const [nuevoTituloCancion, setNuevoTituloCancion] = useState("");
+  const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
+  const [nuevoTonoCancion, setNuevoTonoCancion] = useState("C");
+  const [nuevoBpmCancion, setNuevoBpmCancion] = useState("120");
+  const [nuevoTipoSetCancion, setNuevoTipoSetCancion] = useState("lenta");
+  const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
+  const [etiquetasActuales, setEtiquetasActuales] = useState([]);
+
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
@@ -529,6 +692,69 @@ export default function App() {
     }
   };
 
+
+  const guardarOActualizarCancion = async () => {
+    if (!esAdminOLider) {
+      alert("No tienes permisos para modificar el repertorio.");
+      return;
+    }
+    if (!nuevoTituloCancion.trim()) {
+      alert("Completa el título de la canción.");
+      return;
+    }
+
+    const cancion = {
+      titulo: nuevoTituloCancion.trim(),
+      artista: nuevoArtistaCancion.trim() || "Sin artista",
+      tono: nuevoTonoCancion.trim() || "C",
+      bpm: nuevoBpmCancion.trim() || "120",
+      tipo_set: nuevoTipoSetCancion,
+      etiquetas: etiquetasActuales,
+      letra: nuevaLetraCancion || "",
+      sede_id: sedeIdSeleccionada,
+    };
+
+    const resultado = cancionSeleccionadaDetalle && modoEdicionCancion
+      ? await supabase.from("repertorio").update(cancion).eq("id", cancionSeleccionadaDetalle.id).eq("sede_id", sedeIdSeleccionada)
+      : await supabase.from("repertorio").insert([cancion]);
+
+    if (resultado.error) {
+      alert(`No se pudo guardar la canción: ${resultado.error.message}`);
+      return;
+    }
+
+    await cargarRepertorioSupabase();
+    setModoEdicionCancion(false);
+    setCancionSeleccionadaDetalle(null);
+    setNuevoTituloCancion("");
+    setNuevoArtistaCancion("");
+    setNuevoTonoCancion("C");
+    setNuevoBpmCancion("120");
+    setNuevoTipoSetCancion("lenta");
+    setNuevaLetraCancion("");
+    setEtiquetasActuales([]);
+    alert(modoEdicionCancion ? "Canción actualizada." : "Canción guardada.");
+  };
+
+  const eliminarCancionRepertorio = async (id) => {
+    if (!esAdminOLider) {
+      alert("No tienes permisos para eliminar canciones.");
+      return;
+    }
+    if (!confirm("¿Deseas eliminar esta canción del repertorio?")) return;
+
+    const { error } = await supabase.from("repertorio")
+      .delete().eq("id", id).eq("sede_id", sedeIdSeleccionada);
+
+    if (error) {
+      alert(`No se pudo eliminar la canción: ${error.message}`);
+      return;
+    }
+    await cargarRepertorioSupabase();
+    setCancionSeleccionadaDetalle(null);
+    alert("Canción eliminada.");
+  };
+
   const mesNumStr = String(mesSeleccionadoObj.mesIndex + 1).padStart(2, "0");
   const fechaActualClave = `${mesSeleccionadoObj.year}-${mesNumStr}-${diaSeleccionado < 10 ? "0" + diaSeleccionado : diaSeleccionado}`;
   const serviciosDelDia = servicios.filter((s) => s.fecha === fechaActualClave);
@@ -610,6 +836,30 @@ export default function App() {
     await cargarServiciosSupabase();
     setModalPostularVisible(false);
     alert("Postulación realizada correctamente.");
+  };
+
+
+  const retirarPostulacion = async (servicioId, rol, integrante) => {
+    if (!esAdminOLider) {
+      alert("No tienes permiso para retirar integrantes.");
+      return;
+    }
+
+    if (!confirm(`¿Retirar a ${integrante} de este puesto?`)) return;
+
+    const { error } = await supabase.rpc("retirar_postulacion_servicio", {
+      p_servicio_id: servicioId,
+      p_rol: rol,
+      p_integrante: integrante,
+    });
+
+    if (error) {
+      alert(`No se pudo retirar la postulación: ${error.message}`);
+      return;
+    }
+
+    await cargarServiciosSupabase();
+    alert(`${integrante} fue retirado del puesto.`);
   };
 
   if (!sesionIniciada) {
@@ -715,31 +965,101 @@ export default function App() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: pulsoActivo ? "#22C55E" : "#64748B" }} />
                   <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "bold" }}>
-                    ⚡ {(setlistEnVivoActual[indiceCancionEnVivo] || {}).bpm || "120"} BPM
+                    ⚡ {bpmClick} BPM
                   </Text>
                 </View>
 
                 <View style={{ flexDirection: "row", gap: 5, flexWrap: "wrap" }}>
                   <TouchableOpacity
                     style={[styles.teleprompterActionBtn, { backgroundColor: metronomoActivo ? "#EF4444" : "#22C55E" }]}
-                    onPress={() => setMetronomoActivo(!metronomoActivo)}
+                    onPress={alternarMetronomo}
                   >
                     <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 10 }}>
                       {metronomoActivo ? "⏹️ Detener Click" : "▶️ Iniciar Click"}
                     </Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[styles.teleprompterActionBtn, { backgroundColor: avanceAutomaticoActivo ? "#F97316" : "#334155" }]}
-                    onPress={() => setAvanceAutomaticoActivo(!avanceAutomaticoActivo)}
-                  >
-                    <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 10 }}>
-                      {avanceAutomaticoActivo ? "⏱️ Auto: ON" : "⏱️ Auto: OFF"}
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               </View>
             </View>
+
+
+                  <View style={{ backgroundColor: "#0F172A", borderRadius: 10, padding: 10, marginTop: 10, gap: 10 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                      <Text style={{ color: "#CBD5E1", fontSize: 11, fontWeight: "bold" }}>VELOCIDAD</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                        <TouchableOpacity
+                          style={styles.teleprompterActionBtn}
+                          onPress={() => setBpmClick(v => Math.max(30, v - 1))}
+                        >
+                          <Text style={{ color: "#FFF", fontWeight: "bold" }}>−</Text>
+                        </TouchableOpacity>
+                        <TextInput
+                          value={String(bpmClick)}
+                          onChangeText={v => {
+                            const n = parseInt(v, 10);
+                            if (Number.isFinite(n)) setBpmClick(Math.min(300, Math.max(30, n)));
+                          }}
+                          keyboardType="numeric"
+                          selectTextOnFocus
+                          style={{ color: "#FFF", backgroundColor: "#1E293B", borderRadius: 6, minWidth: 55, textAlign: "center", padding: 6, fontWeight: "bold" }}
+                        />
+                        <Text style={{ color: "#94A3B8", fontSize: 10 }}>BPM</Text>
+                        <TouchableOpacity
+                          style={styles.teleprompterActionBtn}
+                          onPress={() => setBpmClick(v => Math.min(300, v + 1))}
+                        >
+                          <Text style={{ color: "#FFF", fontWeight: "bold" }}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                      <Text style={{ color: "#CBD5E1", fontSize: 11, fontWeight: "bold", marginRight: 4 }}>COMPÁS</Text>
+                      {["2/4", "3/4", "4/4", "6/8"].map(compas => (
+                        <TouchableOpacity
+                          key={compas}
+                          onPress={() => setCompasClick(compas)}
+                          style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, backgroundColor: compasClick === compas ? "#0284C7" : "#334155" }}
+                        >
+                          <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "bold" }}>{compas}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 7 }}>
+                      <Text style={{ color: "#CBD5E1", fontSize: 11, fontWeight: "bold" }}>VOLUMEN</Text>
+                      <TouchableOpacity style={styles.teleprompterActionBtn} onPress={() => setVolumenClick(v => Math.max(0, v - 10))}>
+                        <Text style={{ color: "#FFF" }}>−</Text>
+                      </TouchableOpacity>
+                      <Text style={{ color: "#FFF", fontSize: 11, minWidth: 38, textAlign: "center" }}>{volumenClick}%</Text>
+                      <TouchableOpacity style={styles.teleprompterActionBtn} onPress={() => setVolumenClick(v => Math.min(100, v + 10))}>
+                        <Text style={{ color: "#FFF" }}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                      <Text style={{ color: "#CBD5E1", fontSize: 11, fontWeight: "bold", marginRight: 4 }}>PANEО</Text>
+                      {[
+                        { label: "Izquierda", value: -1 },
+                        { label: "Centro", value: 0 },
+                        { label: "Derecha", value: 1 }
+                      ].map(opcion => (
+                        <TouchableOpacity
+                          key={opcion.label}
+                          onPress={() => setPaneoClick(opcion.value)}
+                          style={{ paddingVertical: 6, paddingHorizontal: 9, borderRadius: 6, backgroundColor: paneoClick === opcion.value ? "#0284C7" : "#334155" }}
+                        >
+                          <Text style={{ color: "#FFF", fontSize: 10 }}>{opcion.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <Text style={{ color: "#64748B", fontSize: 10 }}>
+                      El primer pulso de cada compás lleva acento. En 6/8 se cuentan seis pulsos por compás.
+                    </Text>
+                    {!!errorClick && <Text style={{ color: "#FCA5A5", fontSize: 11 }}>{errorClick}</Text>}
+                  </View>
 
             <View style={styles.teleprompterLyricsBox}>
               <Text style={styles.teleprompterLyricsText}>
@@ -1087,7 +1407,142 @@ export default function App() {
                         onChangeText={setObservaciones}
                       />
 
-                      <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
+                      
+                       <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginTop: 8 }]}>Organización del Setlist</Text>
+                       <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginBottom: 4 }]}>Setlist Activo ({setlistActivo.length}):</Text>
+
+                       {setlistActivo.length === 0 ? (
+                         <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic", marginBottom: 10 }}>No hay canciones en el setlist.</Text>
+                       ) : (
+                         setlistActivo.map((cancion, index) => (
+                           <View key={cancion.id || index} style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, padding: 8, borderRadius: 8, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg, marginBottom: 6 }}>
+                             <Text style={{ color: t.textMain, fontSize: 13, fontWeight: "bold", flex: 1, minWidth: 110 }}>{index + 1}. {cancion.titulo}</Text>
+                             <Text style={{ color: t.textSub, fontSize: 11 }}>T:</Text>
+                             <TextInput
+                               style={{ backgroundColor: t.cardBg, color: t.textMain, borderWidth: 1, borderColor: t.border, borderRadius: 4, width: 38, height: 32, textAlign: "center", fontSize: 12 }}
+                               value={String(cancion.tono || "C")}
+                               onChangeText={(valor) => setSetlistActivo(actual => actual.map((item, i) => i === index ? { ...item, tono: valor } : item))}
+                             />
+                             <Text style={{ color: t.textSub, fontSize: 11 }}>BPM:</Text>
+                             <TextInput
+                               style={{ backgroundColor: t.cardBg, color: t.textMain, borderWidth: 1, borderColor: t.border, borderRadius: 4, width: 46, height: 32, textAlign: "center", fontSize: 12 }}
+                               value={String(cancion.bpm || "120")}
+                               keyboardType="numeric"
+                               onChangeText={(valor) => setSetlistActivo(actual => actual.map((item, i) => i === index ? { ...item, bpm: valor } : item))}
+                             />
+                             <TouchableOpacity style={[styles.smallButton, { backgroundColor: t.cardBg, borderColor: t.border }]} onPress={() => moverCancionArriba(index)}>
+                               <Text style={[styles.smallButtonText, { color: t.primary }]}>▲</Text>
+                             </TouchableOpacity>
+                             <TouchableOpacity style={[styles.smallButton, { backgroundColor: t.cardBg, borderColor: t.border }]} onPress={() => moverCancionAbajo(index)}>
+                               <Text style={[styles.smallButtonText, { color: t.primary }]}>▼</Text>
+                             </TouchableOpacity>
+                             <TouchableOpacity
+                               style={{ backgroundColor: "#EF4444", width: 30, height: 30, borderRadius: 6, justifyContent: "center", alignItems: "center" }}
+                               onPress={() => setSetlistActivo(actual => actual.filter((_, i) => i !== index))}
+                             >
+                               <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "bold" }}>X</Text>
+                             </TouchableOpacity>
+                           </View>
+                         ))
+                       )}
+
+                       {(() => {
+                         const titulos = setlistActivo.map(c => (c.titulo || "").toLowerCase());
+                         const disponibles = repertorio
+                           .filter(c => c.titulo && !titulos.includes(c.titulo.toLowerCase()))
+                           .sort((a, b) => a.titulo.localeCompare(b.titulo));
+
+                         const lentas = disponibles.filter(c => (c.tipoSet || "").toLowerCase() === "lenta");
+                         const rapidas = disponibles.filter(c => (c.tipoSet || "").toLowerCase() === "rapida");
+
+                         const agregarCancion = (seleccion, lista, limpiar) => {
+                           let titulo = seleccion;
+                           if (!titulo && lista.length > 0) titulo = lista[0].titulo;
+                           if (!titulo) {
+                             alert("Selecciona una canción disponible.");
+                             return;
+                           }
+                           if (titulos.includes(titulo.toLowerCase())) {
+                             alert("Esa canción ya está en el setlist.");
+                             return;
+                           }
+                           const existente = repertorio.find(c => c.titulo && c.titulo.toLowerCase() === titulo.toLowerCase());
+                           setSetlistActivo(actual => [...actual, {
+                             id: existente ? existente.id : undefined,
+                             titulo: existente ? existente.titulo : titulo.trim(),
+                             tono: existente ? existente.tono : "C",
+                             bpm: existente ? (existente.bpm || "120") : "120"
+                           }]);
+                           limpiar("");
+                         };
+
+                         const estiloSelector = {
+                           flex: 1, minWidth: 0, backgroundColor: t.cardBg,
+                           color: t.textMain, borderColor: t.border,
+                           borderWidth: "1px", borderRadius: "8px",
+                           padding: "8px", fontSize: "13px"
+                         };
+
+                         return (
+                           <View style={{ marginTop: 10, gap: 10 }}>
+                             <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
+                               <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>🕯️ Set Lentas:</Text>
+                               {lentas.length === 0 ? (
+                                 <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones lentas disponibles en esta sede.</Text>
+                               ) : (
+                                 <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                                   {Platform.OS === "web" ? (
+                                     <select value={cancionLentaSeleccionada} onChange={e => setCancionLentaSeleccionada(e.target.value)} style={estiloSelector}>
+                                       <option value="">-- Selecciona canción lenta --</option>
+                                       {lentas.map(c => <option key={c.id} value={c.titulo}>{c.titulo} ({c.tono} • {c.bpm || "120"} BPM)</option>)}
+                                     </select>
+                                   ) : (
+                                     <TextInput
+                                       style={[styles.loginInput, { flex: 1, backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                                       placeholder="Canción lenta..."
+                                       placeholderTextColor={t.textSub}
+                                       value={cancionLentaSeleccionada}
+                                       onChangeText={setCancionLentaSeleccionada}
+                                     />
+                                   )}
+                                   <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 8, paddingHorizontal: 12 }]} onPress={() => agregarCancion(cancionLentaSeleccionada, lentas, setCancionLentaSeleccionada)}>
+                                     <Text style={[styles.loginButtonText, { fontSize: 12 }]}>+ Agregar</Text>
+                                   </TouchableOpacity>
+                                 </View>
+                               )}
+                             </View>
+
+                             <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
+                               <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>⚡ Set Rápidas:</Text>
+                               {rapidas.length === 0 ? (
+                                 <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones rápidas disponibles en esta sede.</Text>
+                               ) : (
+                                 <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                                   {Platform.OS === "web" ? (
+                                     <select value={cancionRapidaSeleccionada} onChange={e => setCancionRapidaSeleccionada(e.target.value)} style={estiloSelector}>
+                                       <option value="">-- Selecciona canción rápida --</option>
+                                       {rapidas.map(c => <option key={c.id} value={c.titulo}>{c.titulo} ({c.tono} • {c.bpm || "120"} BPM)</option>)}
+                                     </select>
+                                   ) : (
+                                     <TextInput
+                                       style={[styles.loginInput, { flex: 1, backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                                       placeholder="Canción rápida..."
+                                       placeholderTextColor={t.textSub}
+                                       value={cancionRapidaSeleccionada}
+                                       onChangeText={setCancionRapidaSeleccionada}
+                                     />
+                                   )}
+                                   <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 8, paddingHorizontal: 12 }]} onPress={() => agregarCancion(cancionRapidaSeleccionada, rapidas, setCancionRapidaSeleccionada)}>
+                                     <Text style={[styles.loginButtonText, { fontSize: 12 }]}>+ Agregar</Text>
+                                   </TouchableOpacity>
+                                 </View>
+                               )}
+                             </View>
+                           </View>
+                         );
+                       })()}
+
+<View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
                         <TouchableOpacity
                           style={[styles.loginButton, { flex: 1, backgroundColor: t.primary, padding: 12 }]}
                           onPress={async () => {
@@ -1184,6 +1639,64 @@ export default function App() {
                           )}
                         </View>
                         <Text style={{ color: t.textSub, fontSize: 11, marginTop: 2, marginBottom: 4 }}>Observaciones: {serv.observaciones}</Text>
+                        <View style={{ marginTop: 10, marginBottom: 10, padding: 9, borderRadius: 8, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border }}>
+                          <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold", marginBottom: 9 }}>👥 OCUPACIÓN DE PUESTOS</Text>
+                          <View style={{ flexDirection: "row", gap: 10 }}>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={{ color: t.primary, fontSize: 12, fontWeight: "bold", marginBottom: 7 }}>🎤 VOCES</Text>
+                              {[
+                                { key: "vozPrincipal", label: "Voz principal", personas: serv.voces?.principal && serv.voces.principal !== "Sin asignar" ? [serv.voces.principal] : [] },
+                                { key: "coros", label: "Coros", personas: (serv.voces?.coros || "Sin asignar").split(",").map((x) => x.trim()).filter((x) => x && x !== "Sin asignar") },
+                              ].map((puesto) => (
+                                <View key={puesto.key} style={{ marginBottom: 9 }}>
+                                  <Text style={{ color: t.textSub, fontSize: 11, fontWeight: "bold", marginBottom: 3 }}>{puesto.label} ({puesto.personas.length}/{puesto.key === "coros" ? 3 : 1})</Text>
+                                  {puesto.personas.length > 0 ? puesto.personas.map((persona, index) => (
+                                    <View key={`${puesto.key}-${index}`} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 3, marginBottom: 3 }}>
+                                      <Text style={{ color: t.textMain, fontSize: 11, flex: 1 }}>• {persona}</Text>
+                                      {esAdminOLider && (
+                                        <TouchableOpacity onPress={() => retirarPostulacion(serv.id, puesto.key, persona)} style={{ backgroundColor: "#DC2626", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}>
+                                          <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "bold" }}>Retirar</Text>
+                                        </TouchableOpacity>
+                                      )}
+                                    </View>
+                                  )) : (
+                                    <Text style={{ color: "#16A34A", fontSize: 11 }}>✓ Disponible</Text>
+                                  )}
+                                </View>
+                              ))}
+                            </View>
+                            <View style={{ flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: t.border, paddingLeft: 9 }}>
+                              <Text style={{ color: t.primary, fontSize: 12, fontWeight: "bold", marginBottom: 7 }}>🎸 INSTRUMENTOS</Text>
+                              {[
+                                { key: "piano", label: "Piano" },
+                                { key: "guitarra", label: "Guitarra" },
+                                { key: "bajo", label: "Bajo" },
+                                { key: "bateria", label: "Batería" },
+                              ].map((puesto) => {
+                                const persona = serv.instrumentos?.[puesto.key];
+                                const ocupado = persona && persona !== "Sin asignar";
+                                return (
+                                  <View key={puesto.key} style={{ marginBottom: 9 }}>
+                                    <Text style={{ color: t.textSub, fontSize: 11, fontWeight: "bold", marginBottom: 3 }}>{puesto.label}</Text>
+                                    {ocupado ? (
+                                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 3 }}>
+                                        <Text style={{ color: t.textMain, fontSize: 11, flex: 1 }}>• {persona}</Text>
+                                        {esAdminOLider && (
+                                          <TouchableOpacity onPress={() => retirarPostulacion(serv.id, puesto.key, persona)} style={{ backgroundColor: "#DC2626", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}>
+                                            <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "bold" }}>Retirar</Text>
+                                          </TouchableOpacity>
+                                        )}
+                                      </View>
+                                    ) : (
+                                      <Text style={{ color: "#16A34A", fontSize: 11 }}>✓ Disponible</Text>
+                                    )}
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        </View>
+
 
                         <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginTop: 4, marginBottom: 4 }}>🎵 SETLIST ({serv.setlist?.length || 0}):</Text>
                         {serv.setlist && serv.setlist.length > 0 ? (
@@ -1256,6 +1769,7 @@ export default function App() {
                       <Text style={styles.programBtnText}>+ Agregar Miembro</Text>
                     </TouchableOpacity>
                   </View>
+
 
                   {modalMiembroVisible && (
                     <View style={[styles.card, { backgroundColor: t.bg, borderColor: t.primary, borderWidth: 2, marginBottom: 14 }]}>
@@ -1370,6 +1884,30 @@ export default function App() {
                       </View>
                     </View>
                   ) : (
+                    <>
+                    {esAdminOLider && (
+                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 12 }]}>
+                        <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 12 }]}>➕ Agregar nueva canción</Text>
+                        <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 8 }]} placeholder="Título de la canción" placeholderTextColor={t.textSub} value={nuevoTituloCancion} onChangeText={setNuevoTituloCancion} />
+                        <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 8 }]} placeholder="Artista o autor" placeholderTextColor={t.textSub} value={nuevoArtistaCancion} onChangeText={setNuevoArtistaCancion} />
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          <TextInput style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 8 }]} placeholder="Tono (C, G...)" placeholderTextColor={t.textSub} value={nuevoTonoCancion} onChangeText={setNuevoTonoCancion} />
+                          <TextInput style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 8 }]} placeholder="BPM" placeholderTextColor={t.textSub} keyboardType="numeric" value={nuevoBpmCancion} onChangeText={setNuevoBpmCancion} />
+                        </View>
+                        <Text style={[styles.inputLabel, { color: t.textMain }]}>Tipo de set</Text>
+                        <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+                          {[{key:"lenta",label:"🕯️ Lentas"},{key:"rapida",label:"⚡ Rápidas"}].map(op => (
+                            <TouchableOpacity key={op.key} onPress={() => setNuevoTipoSetCancion(op.key)} style={{ flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: nuevoTipoSetCancion === op.key ? t.primary : t.border, backgroundColor: nuevoTipoSetCancion === op.key ? t.primary : t.bg }}>
+                              <Text style={{ color: nuevoTipoSetCancion === op.key ? "#FFF" : t.textMain, textAlign: "center", fontWeight: "bold" }}>{op.label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                        <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 110, textAlignVertical: "top", marginBottom: 10 }]} placeholder="Letra con acordes [C]..." placeholderTextColor={t.textSub} multiline value={nuevaLetraCancion} onChangeText={setNuevaLetraCancion} />
+                        <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary }]} onPress={guardarOActualizarCancion}>
+                          <Text style={styles.loginButtonText}>Guardar en repertorio</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                       <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
                       {repertorio.map((c) => (
@@ -1388,6 +1926,7 @@ export default function App() {
                         </TouchableOpacity>
                       ))}
                     </View>
+                    </>
                   )}
                 </>
               )}

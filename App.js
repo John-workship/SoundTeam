@@ -571,6 +571,7 @@ export default function App() {
   const [cancionSeleccionadaDetalle, setCancionSeleccionadaDetalle] = useState(null);
 
   const [modoEdicionCancion, setModoEdicionCancion] = useState(false);
+  const [idCancionEditando, setIdCancionEditando] = useState(null);
   const [nuevoTituloCancion, setNuevoTituloCancion] = useState("");
   const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
   const [nuevoTonoCancion, setNuevoTonoCancion] = useState("C");
@@ -714,17 +715,25 @@ export default function App() {
       sede_id: sedeIdSeleccionada,
     };
 
-    const resultado = cancionSeleccionadaDetalle && modoEdicionCancion
-      ? await supabase.from("repertorio").update(cancion).eq("id", cancionSeleccionadaDetalle.id).eq("sede_id", sedeIdSeleccionada)
-      : await supabase.from("repertorio").insert([cancion]);
+    const resultado = modoEdicionCancion && idCancionEditando !== null
+      ? await supabase.from("repertorio").update(cancion).eq("id", idCancionEditando).eq("sede_id", sedeIdSeleccionada).select("id")
+      : await supabase.from("repertorio").insert([cancion]).select("id");
 
     if (resultado.error) {
       alert(`No se pudo guardar la canción: ${resultado.error.message}`);
       return;
     }
 
+    if (!resultado.data || resultado.data.length === 0) {
+      alert(modoEdicionCancion
+        ? `No se actualizó ninguna canción. ID: ${idCancionEditando}. Revisa los permisos de actualización (RLS) en Supabase.`
+        : "No se confirmó el registro de la canción.");
+      return;
+    }
+
     await cargarRepertorioSupabase();
     setModoEdicionCancion(false);
+      setIdCancionEditando(null);
     setCancionSeleccionadaDetalle(null);
     setNuevoTituloCancion("");
     setNuevoArtistaCancion("");
@@ -1471,7 +1480,8 @@ export default function App() {
                              id: existente ? existente.id : undefined,
                              titulo: existente ? existente.titulo : titulo.trim(),
                              tono: existente ? existente.tono : "C",
-                             bpm: existente ? (existente.bpm || "120") : "120"
+                             bpm: existente ? (existente.bpm || "120") : "120",
+                             tipoSet: existente ? (existente.tipoSet || "lenta") : (lista === lentas ? "lenta" : "rapida")
                            }]);
                            limpiar("");
                          };
@@ -1700,13 +1710,27 @@ export default function App() {
 
                         <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginTop: 4, marginBottom: 4 }}>🎵 SETLIST ({serv.setlist?.length || 0}):</Text>
                         {serv.setlist && serv.setlist.length > 0 ? (
-                          serv.setlist.map((s, i) => (
-                            <View key={i} style={{ backgroundColor: t.bg, padding: 6, borderRadius: 6, borderWidth: 1, borderColor: t.border, marginBottom: 4 }}>
-                              <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "bold" }}>
-                                {i + 1}. {s.titulo} <Text style={{ color: t.textSub, fontWeight: "normal", fontSize: 10 }}>(Tono: {s.tono} | {s.bpm || "120"} BPM)</Text>
-                              </Text>
-                            </View>
-                          ))
+                          ["lenta", "rapida"].map((tipo) => {
+                            const cancionesTipo = serv.setlist.filter((s) => {
+                              const tipoGuardado = (s.tipoSet || repertorio.find((c) => c.titulo?.toLowerCase() === (s.titulo || "").toLowerCase())?.tipoSet || "lenta").toLowerCase();
+                              return tipoGuardado === tipo;
+                            });
+                            if (cancionesTipo.length === 0) return null;
+                            return (
+                              <View key={tipo} style={{ marginBottom: 8 }}>
+                                <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginBottom: 4 }}>
+                                  {tipo === "lenta" ? "🕯️ LENTAS" : "⚡ RÁPIDAS"}
+                                </Text>
+                                {cancionesTipo.map((s, i) => (
+                                  <View key={`${tipo}-${i}`} style={{ backgroundColor: t.bg, padding: 6, borderRadius: 6, borderWidth: 1, borderColor: t.border, marginBottom: 4 }}>
+                                    <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "bold" }}>
+                                      {i + 1}. {s.titulo} <Text style={{ color: t.textSub, fontWeight: "normal", fontSize: 10 }}>(Tono: {s.tono} | {s.bpm || "120"} BPM)</Text>
+                                    </Text>
+                                  </View>
+                                ))}
+                              </View>
+                            );
+                          })
                         ) : (
                           <Text style={{ color: t.textSub, fontSize: 11, marginLeft: 6, fontStyle: "italic" }}>Sin canciones agregadas al setlist.</Text>
                         )}
@@ -1792,8 +1816,49 @@ export default function App() {
                         value={emailNuevoMiembro}
                         onChangeText={setEmailNuevoMiembro}
                       />
+                      <Text style={[styles.inputLabel, { color: t.textMain, marginTop: 4 }]}>Permisos musicales</Text>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 12 }}>
+                        {[
+                          { key: "vozPrincipal", label: "🎤 Voz principal" },
+                          { key: "coros", label: "👥 Coros" },
+                          { key: "piano", label: "🎹 Piano" },
+                          { key: "guitarra", label: "🎸 Guitarra" },
+                          { key: "bajo", label: "🎸 Bajo" },
+                          { key: "bateria", label: "🥁 Batería" },
+                        ].map((op) => {
+                          const activo = rolesMusicalesNuevo.includes(op.key);
+                          return (
+                            <TouchableOpacity
+                              key={op.key}
+                              onPress={() => setRolesMusicalesNuevo(actual => activo ? actual.filter(r => r !== op.key) : [...actual, op.key])}
+                              style={{ padding: 8, borderRadius: 7, borderWidth: 1, borderColor: activo ? t.primary : t.border, backgroundColor: activo ? t.primary : t.cardBg }}
+                            >
+                              <Text style={{ color: activo ? "#FFFFFF" : t.textMain, fontSize: 11, fontWeight: "bold" }}>{op.label} {activo ? "✓" : "+"}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                      {esAdmin && (
+                        <>
+                          <Text style={[styles.inputLabel, { color: t.textMain }]}>Nivel de acceso</Text>
+                          <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+                            {[
+                              { key: "miembro", label: "Miembro" },
+                              { key: "lider", label: "Líder" },
+                            ].map(op => (
+                              <TouchableOpacity
+                                key={op.key}
+                                onPress={() => setRolAccesoNuevo(op.key)}
+                                style={{ flex: 1, padding: 9, borderRadius: 7, borderWidth: 1, borderColor: rolAccesoNuevo === op.key ? t.primary : t.border, backgroundColor: rolAccesoNuevo === op.key ? t.primary : t.cardBg }}
+                              >
+                                <Text style={{ color: rolAccesoNuevo === op.key ? "#FFFFFF" : t.textMain, textAlign: "center", fontWeight: "bold" }}>{op.label}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </>
+                      )}
                       <Text style={{ color: t.textSub, fontSize: 11, marginBottom: 8 }}>
-                        Crea también la cuenta de acceso en Supabase → Authentication → Users usando este mismo correo.
+                        Para iniciar sesión, la cuenta debe existir también en Supabase → Authentication → Users con este mismo correo.
                       </Text>
                       <TouchableOpacity
                         style={[styles.loginButton, { backgroundColor: t.primary, padding: 10, marginTop: 6 }]}
@@ -1805,11 +1870,15 @@ export default function App() {
                               nombre: nombreNuevoMiembro.trim(),
                               email: correoMiembro,
                               sede_id: sedeIdSeleccionada,
-                              rol_acceso: rolAccesoNuevo,
+                              rol_acceso: esAdmin
+                                ? rolAccesoNuevo
+                                : (idMiembroEditando !== null
+                                  ? (integrantes.find(m => m.id === idMiembroEditando)?.rolAcceso || "miembro")
+                                  : "miembro"),
                               roles_musicales: rolesMusicalesNuevo,
                             };
                             if (idMiembroEditando !== null) {
-                              const { error } = await supabase.from("integrantes").update(integranteObj).eq("id", idMiembroEditando);
+                              const { error } = await supabase.from("integrantes").update(integranteObj).eq("id", idMiembroEditando).eq("sede_id", sedeIdSeleccionada);
                               if (error) { alert(`No se pudo actualizar el integrante: ${error.message}`); return; }
                             } else {
                               const { error } = await supabase.from("integrantes").insert([integranteObj]);
@@ -1830,7 +1899,23 @@ export default function App() {
                     <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
                       <View style={styles.memberHeaderRow}>
                         <Text style={[styles.memberTitle, { color: t.textMain }]}>👤 {int.nombre}</Text>
-                        <TouchableOpacity
+                        <View style={{ flexDirection: "row", gap: 6 }}>
+                          {(int.rolAcceso !== "admin" && (esAdmin || int.rolAcceso === "miembro")) && (
+                            <TouchableOpacity
+                              style={{ backgroundColor: t.primary, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 4 }}
+                              onPress={() => {
+                                setIdMiembroEditando(int.id);
+                                setNombreNuevoMiembro(int.nombre || "");
+                                setEmailNuevoMiembro(int.email || "");
+                                setRolAccesoNuevo(int.rolAcceso === "lider" ? "lider" : "miembro");
+                                setRolesMusicalesNuevo(Array.isArray(int.rolesMusicales) ? int.rolesMusicales : []);
+                                setModalMiembroVisible(true);
+                              }}
+                            >
+                              <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>✏️ Editar</Text>
+                            </TouchableOpacity>
+                          )}
+                          <TouchableOpacity
                           style={{ backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
                           onPress={async () => {
                             const { error } = await supabase.from("integrantes").delete().eq("id", int.id);
@@ -1839,7 +1924,8 @@ export default function App() {
                           }}
                         >
                           <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>🗑️ Eliminar</Text>
-                        </TouchableOpacity>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                       <Text style={{ color: t.textSub, fontSize: 11 }}>Correo: {int.email || "No registrado"} | Acceso: {int.rolAcceso}</Text>
                     </View>
@@ -1857,6 +1943,34 @@ export default function App() {
                       >
                         <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>← Volver al repertorio</Text>
                       </TouchableOpacity>
+                      {esAdminOLider && (
+                        <TouchableOpacity
+                          style={{ backgroundColor: t.primary, padding: 9, borderRadius: 6, marginBottom: 12, alignSelf: "flex-start" }}
+                          onPress={() => {
+                            const c = cancionSeleccionadaDetalle;
+                            setNuevoTituloCancion(c.titulo || "");
+                            setNuevoArtistaCancion(c.artista || "");
+                            setNuevoTonoCancion(c.tono || "C");
+                            setNuevoBpmCancion(String(c.bpm || "120"));
+                            setNuevoTipoSetCancion(c.tipoSet || c.tipo_set || "lenta");
+                            setNuevaLetraCancion(c.letra || "");
+                            setEtiquetasActuales(c.etiquetas || []);
+                            setIdCancionEditando(c.id);
+                            setModoEdicionCancion(true);
+                            setCancionSeleccionadaDetalle(null);
+                          }}
+                        >
+                          <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}>✏️ Editar canción</Text>
+                        </TouchableOpacity>
+                      )}
+                      {esAdminOLider && (
+                        <TouchableOpacity
+                          style={{ backgroundColor: "#B91C1C", padding: 9, borderRadius: 6, marginBottom: 12, alignSelf: "flex-start" }}
+                          onPress={() => eliminarCancionRepertorio(cancionSeleccionadaDetalle.id)}
+                        >
+                          <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}>🗑️ Eliminar canción</Text>
+                        </TouchableOpacity>
+                      )}
                       <Text style={{ fontSize: 22, fontWeight: "bold", color: t.textMain, marginBottom: 4 }}>{cancionSeleccionadaDetalle.titulo}</Text>
                       <Text style={{ color: t.textSub, fontSize: 13, marginBottom: 12 }}>{cancionSeleccionadaDetalle.artista} • Tono: {transponerTono(cancionSeleccionadaDetalle.tono, semitonos)}</Text>
                       <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 12 }}>
@@ -1887,7 +2001,7 @@ export default function App() {
                     <>
                     {esAdminOLider && (
                       <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 12 }]}>
-                        <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 12 }]}>➕ Agregar nueva canción</Text>
+                        <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 12 }]}>{modoEdicionCancion ? "✏️ Editar canción" : "➕ Agregar nueva canción"}</Text>
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 8 }]} placeholder="Título de la canción" placeholderTextColor={t.textSub} value={nuevoTituloCancion} onChangeText={setNuevoTituloCancion} />
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 8 }]} placeholder="Artista o autor" placeholderTextColor={t.textSub} value={nuevoArtistaCancion} onChangeText={setNuevoArtistaCancion} />
                         <View style={{ flexDirection: "row", gap: 8 }}>
@@ -1904,7 +2018,7 @@ export default function App() {
                         </View>
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 110, textAlignVertical: "top", marginBottom: 10 }]} placeholder="Letra con acordes [C]..." placeholderTextColor={t.textSub} multiline value={nuevaLetraCancion} onChangeText={setNuevaLetraCancion} />
                         <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary }]} onPress={guardarOActualizarCancion}>
-                          <Text style={styles.loginButtonText}>Guardar en repertorio</Text>
+                          <Text style={styles.loginButtonText}>{modoEdicionCancion ? "Guardar cambios" : "Guardar en repertorio"}</Text>
                         </TouchableOpacity>
                       </View>
                     )}

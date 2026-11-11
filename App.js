@@ -1918,7 +1918,8 @@ export default function App() {
                               <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>✏️ Editar</Text>
                             </TouchableOpacity>
                           )}
-                          <TouchableOpacity
+                          {(esAdmin || String(int.email || "").trim().toLowerCase() !== "johnbocal31@gmail.com") && (
+<TouchableOpacity
                           style={{ backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 }}
                           onPress={async () => {
                             const { error } = await supabase.from("integrantes").delete().eq("id", int.id);
@@ -1928,6 +1929,7 @@ export default function App() {
                         >
                           <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>🗑️ Eliminar</Text>
                           </TouchableOpacity>
+                          )}
                         </View>
                       </View>
                       <Text style={{ color: t.textSub, fontSize: 11 }}>Correo: {int.email || "No registrado"} | Acceso: {int.rolAcceso}</Text>

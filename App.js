@@ -2431,7 +2431,7 @@ const styles = StyleSheet.create({
   editServiceBtn: { backgroundColor: "#3B82F6", paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
   deleteServiceBtn: { backgroundColor: "#EF4444", paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
   repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 17, paddingHorizontal: 18, borderRadius: 16, borderWidth: 1, marginBottom: 12 },
-  tabBar: { position: "relative", flexShrink: 0, zIndex: 10, elevation: 10, flexDirection: "row", minHeight: 82, borderTopWidth: 1, width: "100%", paddingHorizontal: 10, paddingTop: 9, paddingBottom: Platform.OS === "web" ? 9 : 13 },
+  tabBar: { position: "absolute", bottom: 0, left: 0, right: 0, flexShrink: 0, zIndex: 100, elevation: 20, flexDirection: "row", minHeight: 82, borderTopWidth: 1, paddingHorizontal: 10, paddingTop: 9, paddingBottom: Platform.OS === "web" ? 9 : 13 },
   tabBarMobile: { minHeight: 62, paddingHorizontal: 3, paddingTop: 4, paddingBottom: Platform.OS === "web" ? 4 : 8 },
   tabBarTablet: { minHeight: 70, paddingHorizontal: 6, paddingTop: 6, paddingBottom: 7 },
   tabItem: { flex: 1, minWidth: 0, justifyContent: "center", alignItems: "center", paddingHorizontal: 5, paddingVertical: 11, minHeight: 58, borderRadius: 15 },

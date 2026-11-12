@@ -1300,7 +1300,7 @@ export default function App() {
               </View>
             </View>
           )}
-          <View style={{ flex: 1, minWidth: 0, width: esEscritorio ? undefined : "100%", height: "100%", position: "relative" }}>
+          <View style={{ flex: 1, minWidth: 0, width: esEscritorio ? undefined : "100%", height: esEscritorio ? "100%" : undefined, position: "relative" }}>
           <View style={[styles.header, esMovil && styles.headerMobile, esTablet && styles.headerTablet, { backgroundColor: t.cardBg, borderBottomColor: t.border }]}>
             <View style={styles.headerTopRow}>
               <View style={{ flex: 1 }}>

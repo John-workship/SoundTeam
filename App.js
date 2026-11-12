@@ -184,6 +184,7 @@ const convertirANashville = (letra, tono) => {
 };
 
 export default function App() {
+  const googleLoginEnCursoRef = useRef(false);
   const { width: anchoVentana } = useWindowDimensions();
   const esEscritorio = anchoVentana >= 1200;
   const esTablet = anchoVentana >= 600 && anchoVentana < 1000;
@@ -703,6 +704,8 @@ export default function App() {
       setErrorAuth("Supabase no está configurado.");
       return;
     }
+    if (googleLoginEnCursoRef.current) return;
+    googleLoginEnCursoRef.current = true;
     setCargandoAuth(true);
     setErrorAuth("");
     try {
@@ -715,6 +718,7 @@ export default function App() {
     } catch (error) {
       setErrorAuth(`Error al conectar con Google: ${error.message}`);
     } finally {
+      googleLoginEnCursoRef.current = false;
       setCargandoAuth(false);
     }
   };

@@ -413,6 +413,7 @@ export default function App() {
   const siguientePulsoRef = useRef(0);
   const numeroPulsoRef = useRef(0);
   const pulsoVisualTimeoutRef = useRef(null);
+  const sonidosProgramadosRef = useRef(new Set());
   const [avanceAutomaticoActivo, setAvanceAutomaticoActivo] = useState(false);
   const [semitonosEnVivo, setSemitonosEnVivo] = useState(0);
   const [modoNashvilleEnVivo, setModoNashvilleEnVivo] = useState(false);
@@ -422,123 +423,277 @@ export default function App() {
     setModoNashvilleEnVivo(false);
   }, [indiceCancionEnVivo]);
 
-  // Carga el BPM de la canción seleccionada como punto de partida.
-  useEffect(() => {
-    const cancion = setlistEnVivoActual[indiceCancionEnVivo] || {};
-    const bpm = parseInt(cancion.bpm, 10);
-    setBpmClick(Number.isFinite(bpm) ? Math.min(300, Math.max(30, bpm)) : 120);
-  }, [indiceCancionEnVivo, setlistEnVivoActual]);
 
-  // El audio se crea al pulsar Iniciar, respetando las restricciones del navegador.
-  const alternarMetronomo = async () => {
-    if (metronomoActivo) {
-      setMetronomoActivo(false);
-      setPulsoActivo(false);
-      if (audioContextRef.current) {
-        try { await audioContextRef.current.suspend(); } catch (_) {}
+    // Parámetros sincronizados sin reiniciar el scheduler al cambiar controles.
+    const parametrosClickRef = useRef({
+      bpm: 120,
+      compas: "4/4",
+      volumen: 70,
+      paneo: 0
+    });
+    const transicionClickRef = useRef(null);
+
+    parametrosClickRef.current = {
+      bpm: bpmClick,
+      compas: compasClick,
+      volumen: volumenClick,
+      paneo: paneoClick
+    };
+
+    const obtenerPulsosPorCompas = (compas) =>
+      compas === "2/4" ? 2 :
+      compas === "3/4" ? 3 :
+      compas === "6/8" ? 6 : 4;
+
+    const obtenerParametrosCancion = (cancion = {}) => {
+      const bpmLeido = parseInt(cancion.bpm, 10);
+      const compasLeido = ["2/4", "3/4", "4/4", "6/8"].includes(cancion.compas)
+        ? cancion.compas
+        : "4/4";
+
+      return {
+        bpm: Number.isFinite(bpmLeido)
+          ? Math.min(300, Math.max(30, bpmLeido))
+          : 120,
+        compas: compasLeido
+      };
+    };
+
+    // Cancela únicamente sonidos que todavía no han comenzado.
+    const cancelarSonidosFuturos = () => {
+      const contexto = audioContextRef.current;
+      if (!contexto) return;
+
+      const ahora = contexto.currentTime;
+
+      Array.from(sonidosProgramadosRef.current).forEach(sonido => {
+        if (sonido.tiempo > ahora) {
+          if (sonido.timeoutVisual) clearTimeout(sonido.timeoutVisual);
+          if (sonido.timeoutApagar) clearTimeout(sonido.timeoutApagar);
+
+          try {
+            sonido.oscilador.stop();
+          } catch (_) {}
+
+          sonidosProgramadosRef.current.delete(sonido);
+        }
+      });
+    };
+
+    // Anterior y Siguiente usan la misma lógica de transición.
+    const cambiarCancionEnVivo = (direccion) => {
+      const nuevoIndice = Math.max(
+        0,
+        Math.min(
+          setlistEnVivoActual.length - 1,
+          indiceCancionEnVivo + direccion
+        )
+      );
+
+      if (nuevoIndice === indiceCancionEnVivo) return;
+
+      const destino = setlistEnVivoActual[nuevoIndice] || {};
+      const parametrosDestino = obtenerParametrosCancion(destino);
+      const parametrosActuales = parametrosClickRef.current;
+
+      const cambiaRitmo =
+        parametrosDestino.bpm !== parametrosActuales.bpm ||
+        parametrosDestino.compas !== parametrosActuales.compas;
+
+      if (metronomoActivo && cambiaRitmo) {
+        cancelarSonidosFuturos();
+
+        const contextoAudio = audioContextRef.current;
+        if (contextoAudio && contextoAudio.state === "running") {
+          siguientePulsoRef.current = contextoAudio.currentTime + 0.08;
+        }
+        transicionClickRef.current = {
+          restantes: obtenerPulsosPorCompas(parametrosDestino.compas)
+        };
+        numeroPulsoRef.current = 0;
+      } else {
+        transicionClickRef.current = null;
       }
-      return;
-    }
 
-    if (Platform.OS !== "web" || typeof window === "undefined") {
-      setErrorClick("El sonido del click está disponible en la versión web.");
-      return;
-    }
+      parametrosClickRef.current = {
+        ...parametrosClickRef.current,
+        ...parametrosDestino
+      };
 
-    try {
-      const AudioContextWeb = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextWeb) {
-        setErrorClick("Este navegador no admite el audio necesario para el metrónomo.");
+      setBpmClick(parametrosDestino.bpm);
+      setCompasClick(parametrosDestino.compas);
+      setIndiceCancionEnVivo(nuevoIndice);
+    };
+
+    // Carga BPM y compás de la canción seleccionada.
+    useEffect(() => {
+      const cancion = setlistEnVivoActual[indiceCancionEnVivo] || {};
+      const parametros = obtenerParametrosCancion(cancion);
+
+      setBpmClick(parametros.bpm);
+      setCompasClick(parametros.compas);
+    }, [indiceCancionEnVivo, setlistEnVivoActual]);
+
+    // El audio se crea al pulsar Iniciar, respetando las restricciones del navegador.
+    const alternarMetronomo = async () => {
+      if (metronomoActivo) {
+        setMetronomoActivo(false);
+        setPulsoActivo(false);
+        transicionClickRef.current = null;
+        if (audioContextRef.current) {
+          try { await audioContextRef.current.suspend(); } catch (_) {}
+        }
         return;
       }
 
-      if (!audioContextRef.current || audioContextRef.current.state === "closed") {
-        audioContextRef.current = new AudioContextWeb();
+      if (Platform.OS !== "web" || typeof window === "undefined") {
+        setErrorClick("El sonido del click está disponible en la versión web.");
+        return;
       }
 
-      await audioContextRef.current.resume();
-      siguientePulsoRef.current = audioContextRef.current.currentTime + 0.05;
-      numeroPulsoRef.current = 0;
-      setErrorClick("");
-      setMetronomoActivo(true);
-    } catch (error) {
-      setErrorClick("No se pudo iniciar el audio. Comprueba los permisos del navegador.");
-      console.error("Error iniciando metrónomo:", error);
-    }
-  };
+      try {
+        const AudioContextWeb = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextWeb) {
+          setErrorClick("Este navegador no admite el audio necesario para el metrónomo.");
+          return;
+        }
 
-  // Scheduler con anticipación para evitar pulsos irregulares.
-  useEffect(() => {
-    if (!metronomoActivo || !audioContextRef.current) return;
+        if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+          audioContextRef.current = new AudioContextWeb();
+        }
 
-    const contexto = audioContextRef.current;
-    const pulsosPorCompas = compasClick === "2/4" ? 2 :
-      compasClick === "3/4" ? 3 :
-      compasClick === "6/8" ? 6 : 4;
-
-    const programarSonido = (tiempo, esAcento) => {
-      const oscilador = contexto.createOscillator();
-      const ganancia = contexto.createGain();
-
-      oscilador.type = "sine";
-      oscilador.frequency.setValueAtTime(esAcento ? 1250 : 850, tiempo);
-
-      const nivel = Math.max(0.0001, (volumenClick / 100) * (esAcento ? 0.9 : 0.65));
-      ganancia.gain.setValueAtTime(0.0001, tiempo);
-      ganancia.gain.linearRampToValueAtTime(nivel, tiempo + 0.005);
-      ganancia.gain.exponentialRampToValueAtTime(0.0001, tiempo + 0.075);
-
-      if (contexto.createStereoPanner) {
-        const paneador = contexto.createStereoPanner();
-        paneador.pan.setValueAtTime(paneoClick, tiempo);
-        oscilador.connect(ganancia);
-        ganancia.connect(paneador);
-        paneador.connect(contexto.destination);
-      } else {
-        oscilador.connect(ganancia);
-        ganancia.connect(contexto.destination);
-      }
-
-      oscilador.start(tiempo);
-      oscilador.stop(tiempo + 0.08);
-
-      const demora = Math.max(0, (tiempo - contexto.currentTime) * 1000);
-      setTimeout(() => {
-        setPulsoActivo(true);
-        if (pulsoVisualTimeoutRef.current) clearTimeout(pulsoVisualTimeoutRef.current);
-        pulsoVisualTimeoutRef.current = setTimeout(() => setPulsoActivo(false), 110);
-      }, demora);
-    };
-
-    const revisarAgenda = () => {
-      if (contexto.state !== "running") return;
-
-      while (siguientePulsoRef.current < contexto.currentTime + 0.12) {
-        const esAcento = numeroPulsoRef.current === 0;
-        programarSonido(siguientePulsoRef.current, esAcento);
-
-        const duracionPulso = 60 / bpmClick;
-        siguientePulsoRef.current += duracionPulso;
-        numeroPulsoRef.current = (numeroPulsoRef.current + 1) % pulsosPorCompas;
+        await audioContextRef.current.resume();
+        siguientePulsoRef.current = audioContextRef.current.currentTime + 0.05;
+        numeroPulsoRef.current = 0;
+        transicionClickRef.current = null;
+        setErrorClick("");
+        setMetronomoActivo(true);
+      } catch (error) {
+        setErrorClick("No se pudo iniciar el audio. Comprueba los permisos del navegador.");
+        console.error("Error iniciando metrónomo:", error);
       }
     };
 
-    revisarAgenda();
-    schedulerClickRef.current = setInterval(revisarAgenda, 25);
+    // Scheduler estable: los cambios de BPM, compás, volumen y paneo no lo reinician.
+    useEffect(() => {
+      if (!metronomoActivo || !audioContextRef.current) return;
 
-    return () => {
-      if (schedulerClickRef.current) {
-        clearInterval(schedulerClickRef.current);
-        schedulerClickRef.current = null;
-      }
-    };
-  }, [metronomoActivo, bpmClick, compasClick, volumenClick, paneoClick]);
+      const contexto = audioContextRef.current;
 
+      const programarSonido = (tiempo, esAcento, parametros) => {
+        const oscilador = contexto.createOscillator();
+        const ganancia = contexto.createGain();
+
+        oscilador.type = "sine";
+        oscilador.frequency.setValueAtTime(esAcento ? 1250 : 850, tiempo);
+
+        const nivel = Math.max(
+          0.0001,
+          (parametros.volumen / 100) * (esAcento ? 0.9 : 0.65)
+        );
+        ganancia.gain.setValueAtTime(0.0001, tiempo);
+        ganancia.gain.linearRampToValueAtTime(nivel, tiempo + 0.005);
+        ganancia.gain.exponentialRampToValueAtTime(0.0001, tiempo + 0.075);
+
+        if (contexto.createStereoPanner) {
+          const paneador = contexto.createStereoPanner();
+          paneador.pan.setValueAtTime(parametros.paneo, tiempo);
+          oscilador.connect(ganancia);
+          ganancia.connect(paneador);
+          paneador.connect(contexto.destination);
+        } else {
+          oscilador.connect(ganancia);
+          ganancia.connect(contexto.destination);
+        }
+
+        const sonidoProgramado = {
+          oscilador,
+          tiempo,
+          timeoutVisual: null,
+          timeoutApagar: null
+        };
+
+        sonidosProgramadosRef.current.add(sonidoProgramado);
+
+        oscilador.onended = () => {
+          sonidosProgramadosRef.current.delete(sonidoProgramado);
+        };
+
+        oscilador.start(tiempo);
+        oscilador.stop(tiempo + 0.08);
+
+        const demora = Math.max(0, (tiempo - contexto.currentTime) * 1000);
+        sonidoProgramado.timeoutVisual = setTimeout(() => {
+          sonidoProgramado.timeoutVisual = null;
+          setPulsoActivo(true);
+
+          if (pulsoVisualTimeoutRef.current) {
+            clearTimeout(pulsoVisualTimeoutRef.current);
+          }
+
+          sonidoProgramado.timeoutApagar = setTimeout(() => {
+            setPulsoActivo(false);
+            sonidoProgramado.timeoutApagar = null;
+          }, 110);
+
+          pulsoVisualTimeoutRef.current = sonidoProgramado.timeoutApagar;
+        }, demora);
+      };
+
+      const revisarAgenda = () => {
+        if (contexto.state !== "running") return;
+
+        while (siguientePulsoRef.current < contexto.currentTime + 0.12) {
+          const parametros = parametrosClickRef.current;
+          const pulsosPorCompas = obtenerPulsosPorCompas(parametros.compas);
+          const esAcento = numeroPulsoRef.current === 0;
+
+          programarSonido(siguientePulsoRef.current, esAcento, parametros);
+
+          const transicion = transicionClickRef.current;
+          if (transicion) {
+            transicion.restantes -= 1;
+
+            if (transicion.restantes <= 0) {
+              transicionClickRef.current = null;
+              numeroPulsoRef.current = 0;
+            } else {
+              numeroPulsoRef.current =
+                (numeroPulsoRef.current + 1) % pulsosPorCompas;
+            }
+          } else {
+            numeroPulsoRef.current =
+              (numeroPulsoRef.current + 1) % pulsosPorCompas;
+          }
+
+          siguientePulsoRef.current += 60 / parametros.bpm;
+        }
+      };
+
+      revisarAgenda();
+      schedulerClickRef.current = setInterval(revisarAgenda, 25);
+
+      return () => {
+        if (schedulerClickRef.current) {
+          clearInterval(schedulerClickRef.current);
+          schedulerClickRef.current = null;
+        }
+      };
+    }, [metronomoActivo]);
   // Limpieza de recursos de audio al salir de la pantalla.
   useEffect(() => {
     return () => {
       if (schedulerClickRef.current) clearInterval(schedulerClickRef.current);
       if (pulsoVisualTimeoutRef.current) clearTimeout(pulsoVisualTimeoutRef.current);
+      sonidosProgramadosRef.current.forEach(sonido => {
+        if (sonido.timeoutVisual) clearTimeout(sonido.timeoutVisual);
+        if (sonido.timeoutApagar) clearTimeout(sonido.timeoutApagar);
+        try {
+          sonido.oscilador.stop();
+        } catch (_) {}
+      });
+      sonidosProgramadosRef.current.clear();
+
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         audioContextRef.current.close().catch(() => {});
       }
@@ -571,6 +726,7 @@ export default function App() {
         artista: c.artista || "Sin artista",
         tono: c.tono || "C",
         bpm: c.bpm || "120",
+        compas: c.compas || "4/4",
         tipoSet: (c.tipo_set || (parseInt(c.bpm || "120", 10) < 110 ? "lenta" : "rapida")).toLowerCase(),
         letra: c.letra || "",
         sedeId: c.sede_id,
@@ -592,6 +748,7 @@ export default function App() {
   const [nuevoArtistaCancion, setNuevoArtistaCancion] = useState("");
   const [nuevoTonoCancion, setNuevoTonoCancion] = useState("C");
   const [nuevoBpmCancion, setNuevoBpmCancion] = useState("120");
+  const [nuevoCompasCancion, setNuevoCompasCancion] = useState("4/4");
   const [nuevoTipoSetCancion, setNuevoTipoSetCancion] = useState("lenta");
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
@@ -814,6 +971,7 @@ export default function App() {
       artista: nuevoArtistaCancion.trim() || "Sin artista",
       tono: nuevoTonoCancion.trim() || "C",
       bpm: nuevoBpmCancion.trim() || "120",
+      compas: nuevoCompasCancion,
       tipo_set: nuevoTipoSetCancion,
       etiquetas: etiquetasActuales,
       letra: nuevaLetraCancion || "",
@@ -844,6 +1002,7 @@ export default function App() {
     setNuevoArtistaCancion("");
     setNuevoTonoCancion("C");
     setNuevoBpmCancion("120");
+    setNuevoCompasCancion("4/4");
     setNuevoTipoSetCancion("lenta");
     setNuevaLetraCancion("");
     setEtiquetasActuales([]);
@@ -1269,7 +1428,7 @@ export default function App() {
               <TouchableOpacity
                 style={[styles.teleprompterNavBtn, { backgroundColor: "#334155" }, indiceCancionEnVivo === 0 && { opacity: 0.4 }]}
                 disabled={indiceCancionEnVivo === 0}
-                onPress={() => setIndiceCancionEnVivo(prev => Math.max(0, prev - 1))}
+                onPress={() => cambiarCancionEnVivo(-1)}
               >
                 <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>← Anterior</Text>
               </TouchableOpacity>
@@ -1277,7 +1436,7 @@ export default function App() {
               <TouchableOpacity
                 style={[styles.teleprompterNavBtn, { backgroundColor: "#3B82F6" }, indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.4 }]}
                 disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
-                onPress={() => setIndiceCancionEnVivo(prev => prev + 1)}
+                onPress={() => cambiarCancionEnVivo(1)}
               >
                 <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>Siguiente →</Text>
               </TouchableOpacity>
@@ -1797,6 +1956,7 @@ export default function App() {
                              titulo: existente ? existente.titulo : titulo.trim(),
                              tono: existente ? existente.tono : "C",
                              bpm: existente ? (existente.bpm || "120") : "120",
+                             compas: existente ? (existente.compas || "4/4") : "4/4",
                              tipoSet: existente ? (existente.tipoSet || "lenta") : (lista === lentas ? "lenta" : "rapida")
                            }]);
                            limpiar("");
@@ -2093,7 +2253,19 @@ export default function App() {
                           <TouchableOpacity
                             style={{ backgroundColor: "#2563EB", padding: 11, borderRadius: 10, alignItems: "center", marginTop: 8, marginBottom: 8 }}
                             onPress={() => {
-                              setSetlistEnVivoActual(serv.setlist);
+                              const setlistPreparado = serv.setlist.map(c => {
+                                const deBiblioteca = repertorio.find(r =>
+                                  r.titulo && c.titulo &&
+                                  r.titulo.toLowerCase() === c.titulo.toLowerCase()
+                                ) || {};
+                                return {
+                                  ...c,
+                                  bpm: c.bpm || deBiblioteca.bpm || "120",
+                                  compas: c.compas || deBiblioteca.compas || "4/4",
+                                  tono: c.tono || deBiblioteca.tono || "C"
+                                };
+                              });
+                              setSetlistEnVivoActual(setlistPreparado);
                               setIndiceCancionEnVivo(0);
                                setSemitonosEnVivo(0);
                                setModoNashvilleEnVivo(false);
@@ -2308,6 +2480,7 @@ export default function App() {
                             setNuevoArtistaCancion(c.artista || "");
                             setNuevoTonoCancion(c.tono || "C");
                             setNuevoBpmCancion(String(c.bpm || "120"));
+                            setNuevoCompasCancion(c.compas || "4/4");
                             setNuevoTipoSetCancion(c.tipoSet || c.tipo_set || "lenta");
                             setNuevaLetraCancion(c.letra || "");
                             setEtiquetasActuales(c.etiquetas || []);
@@ -2364,6 +2537,18 @@ export default function App() {
                           <TextInput style={[styles.loginInput, { flex: 1, width: esMovil ? "100%" : undefined, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 44, paddingHorizontal: 13 }]} placeholder="Tono (C, G...)" placeholderTextColor={t.textSub} value={nuevoTonoCancion} onChangeText={setNuevoTonoCancion} />
                           <TextInput style={[styles.loginInput, { flex: 1, width: esMovil ? "100%" : undefined, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 44, paddingHorizontal: 13 }]} placeholder="BPM" placeholderTextColor={t.textSub} keyboardType="numeric" value={nuevoBpmCancion} onChangeText={setNuevoBpmCancion} />
                         </View>
+                         <Text style={[styles.inputLabel, { color: t.textMain }]}>Compás</Text>
+                         <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+                           {["2/4", "3/4", "4/4", "6/8"].map(compas => (
+                             <TouchableOpacity
+                               key={compas}
+                               onPress={() => setNuevoCompasCancion(compas)}
+                               style={{ flex: 1, padding: 10, borderRadius: 9, borderWidth: 1, borderColor: nuevoCompasCancion === compas ? t.primary : t.border, backgroundColor: nuevoCompasCancion === compas ? t.primary : t.bg }}
+                             >
+                               <Text style={{ color: nuevoCompasCancion === compas ? "#FFF" : t.textMain, textAlign: "center", fontWeight: "bold" }}>{compas}</Text>
+                             </TouchableOpacity>
+                           ))}
+                         </View>
                         <Text style={[styles.inputLabel, { color: t.textMain }]}>Tipo de set</Text>
                         <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
                           {[{key:"lenta",label:"🕯️ Lentas"},{key:"rapida",label:"⚡ Rápidas"}].map(op => (

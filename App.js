@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
   Linking,
+  useWindowDimensions,
 } from "react-native";
 import { supabase, isSupabaseConfigured } from "./supabase";
 
@@ -183,11 +184,16 @@ const convertirANashville = (letra, tono) => {
 };
 
 export default function App() {
+  const { width: anchoVentana } = useWindowDimensions();
+  const esEscritorio = anchoVentana >= 1200;
+  const esTablet = anchoVentana >= 600 && anchoVentana < 1000;
+  const esMovil = anchoVentana < 600;
   const [semitonos, setSemitonos] = useState(0);
   const [modoNashville, setModoNashville] = useState(false);
   const [sedeIdSeleccionada, setSedeIdSeleccionada] = useState("general");
   const [integrantes, setIntegrantes] = useState([]);
   const [usuario, setUsuario] = useState("");
+  const [emailUsuario, setEmailUsuario] = useState("");
   const [usuarioId, setUsuarioId] = useState(null);
   const [rolUsuario, setRolUsuario] = useState("miembro");
   const [rolesMusicalesUsuario, setRolesMusicalesUsuario] = useState([]);
@@ -241,6 +247,7 @@ export default function App() {
     if (!session?.user?.id || !session.user.email) {
       setSesionIniciada(false);
       setUsuario("");
+      setEmailUsuario("");
       setUsuarioId(null);
       setRolUsuario("miembro");
       return;
@@ -269,6 +276,7 @@ export default function App() {
     setErrorAuth("");
     setUsuario(perfil.nombre || session.user.email);
     setUsuarioId(session.user.id);
+    setEmailUsuario(session.user.email.trim().toLowerCase());
     setRolUsuario((perfil.rol_acceso || "miembro").toLowerCase());
     setSedeIdSeleccionada(perfil.sede_id || "general");
     setSesionIniciada(true);
@@ -282,12 +290,6 @@ export default function App() {
     }
 
     let mounted = true;
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!mounted) return;
-      if (error) setErrorAuth(`Error de sesión: ${error.message}`);
-      else verificarSesionActiva(data.session);
-    });
-
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       Promise.resolve().then(() => {
         if (!mounted) return;
@@ -324,6 +326,7 @@ export default function App() {
 
   const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const fechaActualObj = new Date();
+  const fechaHoyLocal = `${fechaActualObj.getFullYear()}-${String(fechaActualObj.getMonth() + 1).padStart(2, "0")}-${String(fechaActualObj.getDate()).padStart(2, "0")}`;
   const listaMesesDinamicos = [];
 
   for (let i = 0; i < 4; i++) {
@@ -341,6 +344,10 @@ export default function App() {
   const esDomingoSeleccionado = new Date(mesSeleccionadoObj.year, mesSeleccionadoObj.mesIndex, diaSeleccionado).getDay() === 0;
 
   const [servicios, setServicios] = useState([]);
+  const serviciosProximos = servicios
+    .filter((serv) => String(serv.fecha || "") >= fechaHoyLocal)
+    .sort((a, b) => String(a.fecha || "").localeCompare(String(b.fecha || "")))
+    .slice(0, 3);
 
   const cargarServiciosSupabase = async () => {
     if (!sesionIniciada) return;
@@ -649,7 +656,7 @@ export default function App() {
     setErrorAuth("");
     setMensajeAuth("");
     try {
-      const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) setErrorAuth(`No se pudo enviar el enlace: ${error.message}`);
       else setMensajeAuth("Si el correo está registrado, recibirás un enlace. Revisa también la carpeta de spam.");
@@ -699,7 +706,7 @@ export default function App() {
     setCargandoAuth(true);
     setErrorAuth("");
     try {
-      const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo }
@@ -740,8 +747,19 @@ export default function App() {
     ]);
   };
 
-  const esAdmin = rolUsuario === "admin";
-  const esAdminOLider = rolUsuario === "admin" || rolUsuario === "lider";
+  const esAdmin = emailUsuario === "johnbocal31@gmail.com";
+  const esAdminOLider = esAdmin || rolUsuario === "lider";
+  const esVozPrincipalDeServicio = (serv) =>
+    !!usuarioId &&
+    String(serv?.voces?.principal_user_id || "") === String(usuarioId);
+
+  const servicioEditandoActual = servicios.find(
+    (s) => String(s.id) === String(idServicioEditando)
+  );
+  const esVozPrincipalEditando =
+    !!servicioEditandoActual &&
+    esVozPrincipalDeServicio(servicioEditandoActual) &&
+    !esAdminOLider;
   const puedeGestionarRepertorio = esAdminOLider || rolesMusicalesUsuario.some(r => ["piano", "guitarra", "bajo", "bateria"].includes(String(r).toLowerCase()));
 
   const enviarOActualizarMensajeChat = async () => {
@@ -1247,8 +1265,43 @@ export default function App() {
           </ScrollView>
         </View>
       ) : (
-        <>
-          <View style={[styles.header, { backgroundColor: t.cardBg, borderBottomColor: t.border }]}>
+        <View style={{ flex: 1, flexDirection: esEscritorio ? "row" : "column", width: "100%", height: "100vh", minHeight: "100vh" }}>
+          {esEscritorio && (
+            <View style={{ width: 252, backgroundColor: t.cardBg, borderRightWidth: 1, borderRightColor: t.border, paddingHorizontal: 18, paddingTop: 26, paddingBottom: 20 }}>
+              <View style={{ paddingHorizontal: 10, paddingBottom: 28, borderBottomWidth: 1, borderBottomColor: t.border, marginBottom: 24 }}>
+                <Text style={{ color: t.primary, fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 7 }}>SOUNDTEAM</Text>
+                <Text style={{ color: t.textMain, fontSize: 19, fontWeight: "900" }}>Panel musical</Text>
+                <Text style={{ color: t.textSub, fontSize: 11, marginTop: 5 }} numberOfLines={1}>{sedeActual.nombre}</Text>
+              </View>
+              <Text style={{ color: t.textSub, fontSize: 10, fontWeight: "800", letterSpacing: 1.5, paddingHorizontal: 10, marginBottom: 10 }}>MENÚ PRINCIPAL</Text>
+              {[
+                { key: "inicio", label: "Inicio", icon: "⌂" },
+                { key: "eventos", label: "Eventos y calendario", icon: "▦" },
+                ...(esAdminOLider ? [{ key: "equipo", label: "Equipo", icon: "♧" }] : []),
+                { key: "repertorio", label: "Repertorio", icon: "♫" },
+              ].map((tab) => {
+                const activo = pestana === tab.key;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    onPress={() => { setPestana(tab.key); setCancionSeleccionadaDetalle(null); }}
+                    style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, marginBottom: 6, backgroundColor: activo ? t.primary + "22" : "transparent", borderWidth: 1, borderColor: activo ? t.primary + "66" : "transparent" }}
+                  >
+                    <Text style={{ width: 27, color: activo ? t.primary : t.textSub, fontSize: 19, fontWeight: "800" }}>{tab.icon}</Text>
+                    <Text style={{ color: activo ? t.textMain : t.textSub, fontSize: 13, fontWeight: activo ? "800" : "600" }}>{tab.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <View style={{ flex: 1 }} />
+              <View style={{ backgroundColor: t.bg, borderRadius: 14, borderWidth: 1, borderColor: t.border, padding: 13 }}>
+                <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>TU COMUNIDAD</Text>
+                <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "700", marginTop: 7 }} numberOfLines={1}>{usuario}</Text>
+                <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>ROL: {rolUsuario.toUpperCase()}</Text>
+              </View>
+            </View>
+          )}
+          <View style={{ flex: 1, minWidth: 0, width: esEscritorio ? undefined : "100%", height: "100%", position: "relative" }}>
+          <View style={[styles.header, esMovil && styles.headerMobile, esTablet && styles.headerTablet, { backgroundColor: t.cardBg, borderBottomColor: t.border }]}>
             <View style={styles.headerTopRow}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.headerTitle, { color: t.textMain }]}>SoundTeam • {sedeActual.nombre}</Text>
@@ -1267,7 +1320,7 @@ export default function App() {
             </View>
 
             <View style={{ marginTop: 8 }}>
-              {esAdminOLider && Platform.OS === "web" ? (
+              {esAdmin && Platform.OS === "web" ? (
                 <select
                   value={sedeIdSeleccionada}
                   onChange={(e) => setSedeIdSeleccionada(e.target.value)}
@@ -1355,26 +1408,47 @@ export default function App() {
             </View>
           </View>
 
-          <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
-            <View style={styles.mainWrapper}>
+          <ScrollView style={[styles.content, { flex: 1 }, esMovil && styles.contentMobile, esTablet && styles.contentTablet]} contentContainerStyle={{ paddingBottom: (esMovil || esTablet) ? 110 : 40, alignItems: "center" }}>
+            <View style={[styles.mainWrapper, esMovil && styles.mainWrapperMobile, esTablet && styles.mainWrapperTablet]}>
               {pestana === "inicio" && (
                 <View style={{ width: "100%" }}>
-                  <View style={{ backgroundColor: t.cardBg, borderColor: t.border, borderWidth: 1, borderRadius: 24, padding: 24, marginBottom: 18, overflow: "hidden" }}>
+                  <View style={{ backgroundColor: t.cardBg, borderColor: t.border, borderWidth: 1, borderRadius: esMovil ? 17 : 24, padding: esMovil ? 16 : esTablet ? 20 : 24, marginBottom: esMovil ? 12 : 18, overflow: "hidden" }}>
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
                       <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", letterSpacing: 2 }}>SOUNDTEAM · COMUNIDAD MUSICAL</Text>
                       <View style={{ backgroundColor: t.primary + "22", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20 }}>
                         <Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>● CONECTADOS</Text>
                       </View>
                     </View>
-                    <Text style={{ color: t.textMain, fontSize: 29, fontWeight: "900", lineHeight: 35, marginBottom: 9 }}>Una sola música.{"\n"}Una misma misión.</Text>
+                    <Text style={{ color: t.textMain, fontSize: esMovil ? 23 : esTablet ? 26 : 29, fontWeight: "900", lineHeight: esMovil ? 29 : 35, marginBottom: 9 }}>Una sola música.{"\n"}Una misma misión.</Text>
                     <Text style={{ color: t.textSub, fontSize: 14, lineHeight: 21, marginBottom: 22 }}>Bienvenido a tu espacio de coordinación, servicio y adoración.</Text>
-                    <View style={{ backgroundColor: t.bg, borderRadius: 15, padding: 15, borderLeftWidth: 3, borderLeftColor: t.primary }}>
+                    <View style={{ backgroundColor: t.bg, borderRadius: 13, padding: esMovil ? 11 : 15, borderLeftWidth: 3, borderLeftColor: t.primary }}>
                       <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 7 }}>✨ COLOSENSES 3:23</Text>
                       <Text style={{ color: t.textMain, fontSize: 13, lineHeight: 20, fontStyle: "italic" }}>"Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."</Text>
                     </View>
                   </View>
 
-                  <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
+                  {esEscritorio && (
+                    <View style={{ flexDirection: "row", gap: 12, marginBottom: 18 }}>
+                      {[
+                        { label: "INTEGRANTES", value: integrantesSeccionEquipo.length, icon: "♧" },
+                        { label: "SERVICIOS", value: servicios.length, icon: "▦" },
+                        { label: "CANCIONES", value: repertorio.length, icon: "♫" },
+                      ].map((dato) => (
+                        <View key={dato.label} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: t.border, backgroundColor: t.cardBg }}>
+                          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: t.primary + "22", justifyContent: "center", alignItems: "center" }}>
+                            <Text style={{ color: t.primary, fontSize: 20, fontWeight: "900" }}>{dato.icon}</Text>
+                          </View>
+                          <View>
+                            <Text style={{ color: t.textMain, fontSize: 20, fontWeight: "900" }}>{dato.value}</Text>
+                            <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "800", letterSpacing: 1 }}>{dato.label}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <View style={{ flexDirection: esEscritorio ? "row" : "column", alignItems: "stretch", gap: 16 }}>
+                  <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, flex: esEscritorio ? 1.65 : undefined, width: esEscritorio ? undefined : "100%", marginBottom: esEscritorio ? 0 : 20 }]}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10 }}>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: t.primary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5, marginBottom: 5 }}>COMUNIDAD · EN VIVO</Text>
@@ -1475,6 +1549,53 @@ export default function App() {
                       </TouchableOpacity>
                     </View>
                   </View>
+
+                  {esEscritorio && (
+                    <View style={{ flex: 1, gap: 14 }}>
+                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0 }]}>
+                        <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 6 }}>ACCESO RÁPIDO</Text>
+                        <Text style={{ color: t.textMain, fontSize: 17, fontWeight: "900", marginBottom: 14 }}>Tu espacio de trabajo</Text>
+                        {[
+                          { key: "eventos", title: "Calendario y servicios", detail: "Consulta y programa reuniones", icon: "▦" },
+                          ...(esAdminOLider ? [{ key: "equipo", title: "Gestionar equipo", detail: "Consulta los integrantes", icon: "♧" }] : []),
+                          { key: "repertorio", title: "Biblioteca musical", detail: "Organiza las canciones", icon: "♫" },
+                        ].map((acceso) => (
+                          <TouchableOpacity key={acceso.key} onPress={() => { setPestana(acceso.key); setCancionSeleccionadaDetalle(null); }} style={{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 12, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, marginBottom: 9 }}>
+                            <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: t.primary + "22", alignItems: "center", justifyContent: "center", marginRight: 11 }}>
+                              <Text style={{ color: t.primary, fontSize: 19, fontWeight: "900" }}>{acceso.icon}</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "800" }}>{acceso.title}</Text>
+                              <Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{acceso.detail}</Text>
+                            </View>
+                            <Text style={{ color: t.primary, fontSize: 18, fontWeight: "800" }}>›</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0 }]}>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                          <View>
+                            <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }}>PRÓXIMOS ENCUENTROS</Text>
+                            <Text style={{ color: t.textMain, fontSize: 16, fontWeight: "900", marginTop: 4 }}>Agenda de la sede</Text>
+                          </View>
+                          <TouchableOpacity onPress={() => setPestana("eventos")} style={{ paddingHorizontal: 10, paddingVertical: 7, borderRadius: 9, backgroundColor: t.primary + "22" }}>
+                            <Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>Ver todos</Text>
+                          </TouchableOpacity>
+                        </View>
+                        {serviciosProximos.map((serv) => (
+                            <TouchableOpacity key={serv.id} onPress={() => setPestana("eventos")} style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: t.border }}>
+                              <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "800" }}>{serv.titulo || "Servicio"}</Text>
+                              <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>{serv.fecha}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        {serviciosProximos.length === 0 && (
+                          <Text style={{ color: t.textSub, fontSize: 11, lineHeight: 17, paddingVertical: 10 }}>Todavía no hay servicios próximos programados.</Text>
+                        )}
+                      </View>
+                    </View>
+                  )}
+                  </View>
                 </View>
               )}
 
@@ -1556,11 +1677,12 @@ export default function App() {
 
                       <Text style={[styles.inputLabel, { color: t.textMain }]}>Nombre del evento</Text>
                       <TextInput
-                        style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
+                        style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, opacity: esVozPrincipalEditando ? 0.65 : 1 }]}
                         placeholder="Ej. Culto Dominical"
                         placeholderTextColor={t.textSub}
                         value={nombreEvento}
                         onChangeText={setNombreEvento}
+                        editable={!esVozPrincipalEditando}
                       />
 
                       <Text style={[styles.inputLabel, { color: t.textMain }]}>Observaciones</Text>
@@ -1723,9 +1845,30 @@ export default function App() {
                                 sede_id: sedeIdSeleccionada,
                               };
                               if (idServicioEditando !== null) {
-                                const { error } = await supabase.from("servicios").update({ titulo: nombreEvento.trim(), observaciones, setlist: setlistActivo }).eq("id", idServicioEditando);
-                                if (error) { alert(`No se pudo actualizar el servicio: ${error.message}`); return; }
+                                if (esVozPrincipalEditando) {
+                                  const { error } = await supabase.rpc("soundteam_actualizar_servicio_asignado", {
+                                    p_servicio_id: Number(idServicioEditando),
+                                    p_observaciones: observaciones,
+                                    p_setlist: setlistActivo
+                                  });
+                                  if (error) { alert(`No se pudo actualizar el servicio: ${error.message}`); return; }
+                                } else {
+                                  if (!esAdminOLider) {
+                                    alert("No tienes permiso para modificar este servicio.");
+                                    return;
+                                  }
+                                  const { error } = await supabase.from("servicios").update({
+                                    titulo: nombreEvento.trim(),
+                                    observaciones,
+                                    setlist: setlistActivo
+                                  }).eq("id", idServicioEditando);
+                                  if (error) { alert(`No se pudo actualizar el servicio: ${error.message}`); return; }
+                                }
                               } else {
+                                if (!esAdminOLider) {
+                                  alert("No tienes permiso para crear servicios.");
+                                  return;
+                                }
                                 const { error } = await supabase.from("servicios").insert([{ ...nuevoServicioObj, paleta_seleccionada: null }]);
                                 if (error) { alert(`No se pudo crear el servicio: ${error.message}`); return; }
                               }
@@ -1777,7 +1920,7 @@ export default function App() {
                       <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 18, padding: 14, borderRadius: 16 }]}>
                         <View style={styles.eventCardHeaderRow}>
                           <Text style={[styles.eventMainTitle, { color: t.textMain, fontSize: 13 }]}>📅 {serv.titulo}</Text>
-                          {esAdminOLider && (
+                          {(esAdminOLider || esVozPrincipalDeServicio(serv)) && (
                             <View style={{ flexDirection: "row", gap: 4 }}>
                               <TouchableOpacity
                                 style={[styles.editServiceBtn, { paddingVertical: 2, paddingHorizontal: 5 }]}
@@ -1791,16 +1934,18 @@ export default function App() {
                               >
                                 <Text style={{ fontSize: 10, color: "#FFFFFF", fontWeight: "bold" }}>✏️ Modificar</Text>
                               </TouchableOpacity>
-                              <TouchableOpacity
-                                style={[styles.deleteServiceBtn, { paddingVertical: 2, paddingHorizontal: 5 }]}
-                                onPress={async () => {
-                                  const { error } = await supabase.from("servicios").delete().eq("id", serv.id);
-                                  if (error) { alert(`No se pudo eliminar el servicio: ${error.message}`); return; }
-                                  await cargarServiciosSupabase();
-                                }}
-                              >
-                                <Text style={{ fontSize: 10, color: "#FFFFFF", fontWeight: "bold" }}>🗑️ Eliminar</Text>
-                              </TouchableOpacity>
+                              {esAdminOLider && (
+                                <TouchableOpacity
+                                  style={[styles.deleteServiceBtn, { paddingVertical: 2, paddingHorizontal: 5 }]}
+                                  onPress={async () => {
+                                    const { error } = await supabase.from("servicios").delete().eq("id", serv.id);
+                                    if (error) { alert(`No se pudo eliminar el servicio: ${error.message}`); return; }
+                                    await cargarServiciosSupabase();
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 10, color: "#FFFFFF", fontWeight: "bold" }}>🗑️ Eliminar</Text>
+                                </TouchableOpacity>
+                              )}
                             </View>
                           )}
                         </View>
@@ -2162,9 +2307,9 @@ export default function App() {
                         <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 12 }]}>{modoEdicionCancion ? "✏️ Editar canción" : "➕ Agregar nueva canción"}</Text>
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="Título de la canción" placeholderTextColor={t.textSub} value={nuevoTituloCancion} onChangeText={setNuevoTituloCancion} />
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="Artista o autor" placeholderTextColor={t.textSub} value={nuevoArtistaCancion} onChangeText={setNuevoArtistaCancion} />
-                        <View style={{ flexDirection: "row", gap: 8 }}>
-                          <TextInput style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="Tono (C, G...)" placeholderTextColor={t.textSub} value={nuevoTonoCancion} onChangeText={setNuevoTonoCancion} />
-                          <TextInput style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="BPM" placeholderTextColor={t.textSub} keyboardType="numeric" value={nuevoBpmCancion} onChangeText={setNuevoBpmCancion} />
+                        <View style={{ flexDirection: esMovil ? "column" : "row", gap: 8, width: "100%" }}>
+                          <TextInput style={[styles.loginInput, { flex: 1, width: esMovil ? "100%" : undefined, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 44, paddingHorizontal: 13 }]} placeholder="Tono (C, G...)" placeholderTextColor={t.textSub} value={nuevoTonoCancion} onChangeText={setNuevoTonoCancion} />
+                          <TextInput style={[styles.loginInput, { flex: 1, width: esMovil ? "100%" : undefined, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 44, paddingHorizontal: 13 }]} placeholder="BPM" placeholderTextColor={t.textSub} keyboardType="numeric" value={nuevoBpmCancion} onChangeText={setNuevoBpmCancion} />
                         </View>
                         <Text style={[styles.inputLabel, { color: t.textMain }]}>Tipo de set</Text>
                         <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
@@ -2205,7 +2350,8 @@ export default function App() {
             </View>
           </ScrollView>
 
-          <View style={[styles.tabBar, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>
+          {!esEscritorio && (
+          <View style={[styles.tabBar, esMovil && styles.tabBarMobile, esTablet && styles.tabBarTablet, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>
             {[
               { key: "inicio", label: "🏠 Inicio" },
               { key: "eventos", label: "📅 Eventos" },
@@ -2214,16 +2360,18 @@ export default function App() {
             ].map((tab) => (
               <TouchableOpacity
                 key={tab.key}
-                style={[styles.tabItem, pestana === tab.key && { backgroundColor: t.bg, borderRadius: 12, marginHorizontal: 4, marginVertical: 4 }]}
+                style={[styles.tabItem, (esMovil || esTablet) && styles.tabItemCompact, pestana === tab.key && { backgroundColor: t.bg, borderRadius: 12, marginHorizontal: 2, marginVertical: 3 }]}
                 onPress={() => { setPestana(tab.key); setCancionSeleccionadaDetalle(null); }}
               >
-                <Text style={[styles.tabText, { color: t.textSub }, pestana === tab.key && { color: t.textMain, fontWeight: "bold" }]} numberOfLines={1}>
+                <Text style={[styles.tabText, (esMovil || esTablet) && styles.tabTextCompact, { color: t.textSub }, pestana === tab.key && { color: t.textMain, fontWeight: "bold" }]} numberOfLines={1}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </>
+          )}
+          </View>
+        </View>
       )}
     </View>
   );
@@ -2239,6 +2387,8 @@ const styles = StyleSheet.create({
   loginButton: { paddingVertical: 16, paddingHorizontal: 22, borderRadius: 14, alignItems: "center", minHeight: 54, justifyContent: "center", shadowColor: "#000000", shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
   loginButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 16 },
   header: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 18, borderBottomWidth: 1, width: "100%" },
+  headerMobile: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10 },
+  headerTablet: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 13 },
   headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 },
   headerTitle: { fontSize: 23, fontWeight: "900", letterSpacing: 0.2 },
   headerSubtitle: { fontSize: 12, marginTop: 5 },
@@ -2246,7 +2396,11 @@ const styles = StyleSheet.create({
   logoutBtn: { backgroundColor: "#DC2626", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 9, minHeight: 34, justifyContent: "center" },
   logoutBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
   content: { flex: 1, padding: 22, width: "100%" },
-  mainWrapper: { width: "100%", maxWidth: 1040, alignSelf: "center" },
+  contentMobile: { padding: 10 },
+  contentTablet: { padding: 16 },
+  mainWrapper: { width: "100%", maxWidth: 1280, alignSelf: "center" },
+  mainWrapperMobile: { maxWidth: 560 },
+  mainWrapperTablet: { maxWidth: 900 },
   card: { padding: 22, borderRadius: 22, borderWidth: 1, marginBottom: 20, width: "100%", shadowColor: "#000000", shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 7 }, elevation: 3 },
   cardTitle: { fontSize: 19, fontWeight: "900", marginBottom: 16, letterSpacing: 0.1 },
   welcomeBanner: { padding: 26, borderRadius: 24, marginBottom: 20, width: "100%", shadowColor: "#000000", shadowOpacity: 0.2, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
@@ -2277,9 +2431,13 @@ const styles = StyleSheet.create({
   editServiceBtn: { backgroundColor: "#3B82F6", paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
   deleteServiceBtn: { backgroundColor: "#EF4444", paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
   repertorioItemRowPro: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 17, paddingHorizontal: 18, borderRadius: 16, borderWidth: 1, marginBottom: 12 },
-  tabBar: { flexDirection: "row", minHeight: 82, borderTopWidth: 1, width: "100%", paddingHorizontal: 10, paddingTop: 9, paddingBottom: Platform.OS === "web" ? 9 : 13 },
-  tabItem: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 5, paddingVertical: 11, minHeight: 58, borderRadius: 15 },
+  tabBar: { position: "relative", flexShrink: 0, zIndex: 10, elevation: 10, flexDirection: "row", minHeight: 82, borderTopWidth: 1, width: "100%", paddingHorizontal: 10, paddingTop: 9, paddingBottom: Platform.OS === "web" ? 9 : 13 },
+  tabBarMobile: { minHeight: 62, paddingHorizontal: 3, paddingTop: 4, paddingBottom: Platform.OS === "web" ? 4 : 8 },
+  tabBarTablet: { minHeight: 70, paddingHorizontal: 6, paddingTop: 6, paddingBottom: 7 },
+  tabItem: { flex: 1, minWidth: 0, justifyContent: "center", alignItems: "center", paddingHorizontal: 5, paddingVertical: 11, minHeight: 58, borderRadius: 15 },
+  tabItemCompact: { paddingHorizontal: 1, paddingVertical: 5, minHeight: 48 },
   tabText: { fontSize: 12, textAlign: "center", fontWeight: "800", letterSpacing: 0.1 },
+  tabTextCompact: { fontSize: 10, letterSpacing: 0, includeFontPadding: false },
   memberCard: { padding: 19, borderRadius: 20, borderWidth: 1, marginBottom: 15, shadowColor: "#000000", shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
   memberHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   memberTitle: { fontSize: 15, fontWeight: "bold" },

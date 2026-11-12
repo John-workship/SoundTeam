@@ -355,6 +355,8 @@ export default function App() {
         titulo: s.titulo,
         observaciones: s.observaciones || "Sin observaciones",
         setlist: s.setlist || [],
+        cuposCoros: Number(s.cupos_coros ?? 3),
+        ordenBloquesSetlist: s.orden_bloques_setlist || "lenta-rapida",
         voces: s.voces || { principal: "Sin asignar", coros: "Sin asignar" },
         instrumentos: s.instrumentos || { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
         sedeId: s.sede_id,
@@ -375,6 +377,8 @@ export default function App() {
   const [nombreEvento, setNombreEvento] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [setlistActivo, setSetlistActivo] = useState([]);
+  const [cuposCorosEditando, setCuposCorosEditando] = useState("3");
+  const [ordenBloquesEditando, setOrdenBloquesEditando] = useState("lenta-rapida");
   const [cancionLentaSeleccionada, setCancionLentaSeleccionada] = useState("");
   const [cancionRapidaSeleccionada, setCancionRapidaSeleccionada] = useState("");
 
@@ -551,6 +555,7 @@ export default function App() {
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
   const [repertorio, setRepertorio] = useState([]);
+  const [notasRepertorioAbiertas, setNotasRepertorioAbiertas] = useState({});
 
   const cargarRepertorioSupabase = async () => {
     if (!sesionIniciada) return;
@@ -900,15 +905,35 @@ export default function App() {
   };
 
   const enviarPorWhatsApp = (servicio) => {
-    let texto = `🎵 *Setlist - ${servicio.titulo}* (${diaSeleccionado} de ${mesSeleccionadoObj.nombre} ${mesSeleccionadoObj.year})\n\n`;
-    if (servicio.setlist && servicio.setlist.length > 0) {
-      servicio.setlist.forEach((s, i) => {
-        texto += `${i + 1}. ${s.titulo} (Tono: ${s.tono} | ${s.bpm || "120"} BPM)\n`;
+    const canciones = servicio.setlist || [];
+    const obtenerTipo = (c) => (
+      c.tipoSet ||
+      repertorio.find((r) => r.titulo?.toLowerCase() === (c.titulo || "").toLowerCase())?.tipoSet ||
+      "lenta"
+    ).toLowerCase();
+
+    const orden = servicio.ordenBloquesSetlist === "rapida-lenta"
+      ? ["rapida", "lenta"]
+      : ["lenta", "rapida"];
+
+    let texto = `🎵 *${servicio.titulo}* (${diaSeleccionado} de ${mesSeleccionadoObj.nombre} ${mesSeleccionadoObj.year})\n\n`;
+
+    orden.forEach((tipo) => {
+      const grupo = canciones.filter((c) => obtenerTipo(c) === tipo);
+      if (!grupo.length) return;
+
+      texto += `*SETLIST (${grupo.length}):*\n`;
+      texto += tipo === "lenta" ? "🕯️ *LENTAS*\n" : "⚡ *RÁPIDAS*\n";
+
+      grupo.forEach((c, i) => {
+        texto += `${i + 1}. ${c.titulo} (Tono: ${c.tono || "C"} | ${c.bpm || "120"} BPM)\n`;
       });
-    } else {
-      texto += `Sin canciones asignadas.\n`;
-    }
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+      texto += "\n";
+    });
+
+    if (!canciones.length) texto += "Sin canciones asignadas.\n";
+
+    const url = "https://api.whatsapp.com/send?text=" + encodeURIComponent(texto);
     Linking.openURL(url).catch(() => { alert("No se pudo abrir WhatsApp."); });
   };
 
@@ -925,7 +950,7 @@ export default function App() {
     let nuevaBateria = servicioObjetivo.instrumentos?.bateria || "Sin asignar";
 
     if (rol === "vozPrincipal") { if (nuevaVozP !== "Sin asignar") { alert("⚠️ Voz Principal ocupada."); return; } nuevaVozP = usuario; }
-    else if (rol === "coros") { if (nuevosCoros.length >= 3) { alert("⚠️ Coros al límite (3 personas)."); return; } nuevosCoros.push(usuario); }
+    else if (rol === "coros") { if (nuevosCoros.length >= Number(servicioObjetivo.cuposCoros ?? 3)) { alert("⚠️ No hay más espacio en los coros."); return; } nuevosCoros.push(usuario); }
     else if (rol === "piano") { if (nuevoPiano !== "Sin asignar") { alert("⚠️ Piano ocupado."); return; } nuevoPiano = usuario; }
     else if (rol === "guitarra") { if (nuevaGuitarra !== "Sin asignar") { alert("⚠️ Guitarra ocupada."); return; } nuevaGuitarra = usuario; }
     else if (rol === "bajo") { if (nuevoBajo !== "Sin asignar") { alert("⚠️ Bajo ocupado."); return; } nuevoBajo = usuario; }
@@ -1640,6 +1665,8 @@ export default function App() {
                           setNombreEvento(esDomingoSeleccionado ? "Culto Dominical" : "Culto");
                           setObservaciones("");
                           setSetlistActivo([]);
+                          setCuposCorosEditando("3");
+                          setOrdenBloquesEditando("lenta-rapida");
                           setModalProgramarVisible(true);
                         }}
                       >
@@ -1675,6 +1702,38 @@ export default function App() {
 
                       
                        <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginTop: 8 }]}>Organización del Setlist</Text>
+                       {(esAdminOLider || esVozPrincipalEditando) && (
+                         <View style={{ backgroundColor: t.bg, borderColor: t.border, borderWidth: 1, borderRadius: 9, padding: 10, marginBottom: 10 }}>
+                           {esAdminOLider && (
+                             <>
+                               <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold", marginBottom: 5 }}>Cupos para voces de coro</Text>
+                               <TextInput
+                                 style={[styles.loginInput, { backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain, marginBottom: 10 }]}
+                                 value={cuposCorosEditando}
+                                 onChangeText={(v) => setCuposCorosEditando(v.replace(/[^0-9]/g, ""))}
+                                 keyboardType="numeric"
+                                 placeholder="Cantidad de cupos"
+                                 placeholderTextColor={t.textSub}
+                               />
+                             </>
+                           )}
+                           <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold", marginBottom: 6 }}>Orden de bloques del setlist</Text>
+                           <View style={{ flexDirection: "row", gap: 8 }}>
+                             <TouchableOpacity
+                               style={{ flex: 1, padding: 9, borderRadius: 7, backgroundColor: ordenBloquesEditando === "lenta-rapida" ? t.primary : t.cardBg, borderWidth: 1, borderColor: t.border }}
+                               onPress={() => setOrdenBloquesEditando("lenta-rapida")}
+                             >
+                               <Text style={{ color: ordenBloquesEditando === "lenta-rapida" ? "#FFFFFF" : t.textMain, textAlign: "center", fontSize: 11, fontWeight: "bold" }}>🕯️ Lentas primero</Text>
+                             </TouchableOpacity>
+                             <TouchableOpacity
+                               style={{ flex: 1, padding: 9, borderRadius: 7, backgroundColor: ordenBloquesEditando === "rapida-lenta" ? t.primary : t.cardBg, borderWidth: 1, borderColor: t.border }}
+                               onPress={() => setOrdenBloquesEditando("rapida-lenta")}
+                             >
+                               <Text style={{ color: ordenBloquesEditando === "rapida-lenta" ? "#FFFFFF" : t.textMain, textAlign: "center", fontSize: 11, fontWeight: "bold" }}>⚡ Rápidas primero</Text>
+                             </TouchableOpacity>
+                           </View>
+                         </View>
+                       )}
                        <Text style={[styles.inputLabel, { color: t.textSub, fontSize: 12, marginBottom: 4 }]}>Setlist Activo ({setlistActivo.length}):</Text>
 
                        {setlistActivo.length === 0 ? (
@@ -1822,6 +1881,8 @@ export default function App() {
                                 voces: { principal: "Sin asignar", coros: "Sin asignar" },
                                 instrumentos: { piano: "Sin asignar", guitarra: "Sin asignar", bajo: "Sin asignar", bateria: "Sin asignar" },
                                 sede_id: sedeIdSeleccionada,
+                                cupos_coros: Math.max(1, parseInt(cuposCorosEditando, 10) || 3),
+                                orden_bloques_setlist: ordenBloquesEditando,
                               };
                               if (idServicioEditando !== null) {
                                 if (esVozPrincipalEditando) {
@@ -1839,7 +1900,8 @@ export default function App() {
                                   const { error } = await supabase.from("servicios").update({
                                     titulo: nombreEvento.trim(),
                                     observaciones,
-                                    setlist: setlistActivo
+                                    setlist: setlistActivo,
+                                    cupos_coros: Math.max(1, parseInt(cuposCorosEditando, 10) || 3)
                                   }).eq("id", idServicioEditando);
                                   if (error) { alert(`No se pudo actualizar el servicio: ${error.message}`); return; }
                                 }
@@ -1850,6 +1912,16 @@ export default function App() {
                                 }
                                 const { error } = await supabase.from("servicios").insert([{ ...nuevoServicioObj, paleta_seleccionada: null }]);
                                 if (error) { alert(`No se pudo crear el servicio: ${error.message}`); return; }
+                              }
+                              if (idServicioEditando !== null) {
+                                const { error: errorOrden } = await supabase.rpc("soundteam_actualizar_orden_bloques", {
+                                  p_servicio_id: Number(idServicioEditando),
+                                  p_orden: ordenBloquesEditando
+                                });
+                                if (errorOrden) {
+                                  alert(`El servicio se guardó, pero no se pudo guardar el orden de bloques: ${errorOrden.message}`);
+                                  return;
+                                }
                               }
                               await cargarServiciosSupabase();
                               setModalProgramarVisible(false);
@@ -1908,6 +1980,8 @@ export default function App() {
                                   setNombreEvento(serv.titulo);
                                   setObservaciones(serv.observaciones);
                                   setSetlistActivo(serv.setlist || []);
+                                  setCuposCorosEditando(String(serv.cuposCoros ?? 3));
+                                  setOrdenBloquesEditando(serv.ordenBloquesSetlist || "lenta-rapida");
                                   setModalProgramarVisible(true);
                                 }}
                               >
@@ -1939,7 +2013,7 @@ export default function App() {
                                 { key: "coros", label: "Coros", personas: (serv.voces?.coros || "Sin asignar").split(",").map((x) => x.trim()).filter((x) => x && x !== "Sin asignar") },
                               ].map((puesto) => (
                                 <View key={puesto.key} style={{ marginBottom: 9 }}>
-                                  <Text style={{ color: t.textSub, fontSize: 11, fontWeight: "bold", marginBottom: 3 }}>{puesto.label} ({puesto.personas.length}/{puesto.key === "coros" ? 3 : 1})</Text>
+                                  <Text style={{ color: t.textSub, fontSize: 11, fontWeight: "bold", marginBottom: 3 }}>{puesto.label} ({puesto.personas.length}/{puesto.key === "coros" ? Number(serv.cuposCoros ?? 3) : 1})</Text>
                                   {puesto.personas.length > 0 ? puesto.personas.map((persona, index) => (
                                     <View key={`${puesto.key}-${index}`} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 3, marginBottom: 3 }}>
                                       <Text style={{ color: t.textMain, fontSize: 11, flex: 1 }}>• {persona}</Text>
@@ -1990,7 +2064,7 @@ export default function App() {
 
                         <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginTop: 4, marginBottom: 4 }}>🎵 SETLIST ({serv.setlist?.length || 0}):</Text>
                         {serv.setlist && serv.setlist.length > 0 ? (
-                          ["lenta", "rapida"].map((tipo) => {
+                          (serv.ordenBloquesSetlist === "rapida-lenta" ? ["rapida", "lenta"] : ["lenta", "rapida"]).map((tipo) => {
                             const cancionesTipo = serv.setlist.filter((s) => {
                               const tipoGuardado = (s.tipoSet || repertorio.find((c) => c.titulo?.toLowerCase() === (s.titulo || "").toLowerCase())?.tipoSet || "lenta").toLowerCase();
                               return tipoGuardado === tipo;
@@ -2306,7 +2380,25 @@ export default function App() {
                     )}
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                       <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
-                      {repertorio.map((c) => (
+                      {[...NOTAS_CROMATICAS, "Otros"].map((nota) => {
+                         const cancionesNota = repertorio.filter((c) => {
+                           const tono = String(c.tono || "C").trim().toUpperCase();
+                           return nota === "Otros" ? !NOTAS_CROMATICAS.includes(tono) : tono === nota;
+                         });
+                         if (!cancionesNota.length) return null;
+                         const abierta = !!notasRepertorioAbiertas[nota];
+                         return (
+                           <View key={nota} style={{ marginBottom: 8 }}>
+                             <TouchableOpacity
+                               onPress={() => setNotasRepertorioAbiertas(actual => ({ ...actual, [nota]: !actual[nota] }))}
+                               style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 12, borderRadius: 9, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border }}
+                             >
+                               <Text style={{ color: t.textMain, fontWeight: "bold", fontSize: 13 }}>{nota} ({cancionesNota.length})</Text>
+                               <Text style={{ color: t.primary, fontWeight: "bold" }}>{abierta ? "▲" : "▼"}</Text>
+                             </TouchableOpacity>
+                             {abierta && (
+                               <View style={{ marginTop: 7 }}>
+                                 {cancionesNota.map((c) => (
                         <TouchableOpacity
                           key={c.id}
                           style={[styles.repertorioItemRowPro, { borderBottomColor: t.border, backgroundColor: t.bg, borderRadius: 12, marginBottom: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: t.border }]}
@@ -2321,6 +2413,11 @@ export default function App() {
                           </View>
                         </TouchableOpacity>
                       ))}
+                               </View>
+                             )}
+                           </View>
+                         );
+                       })}
                     </View>
                     </>
                   )}

@@ -103,13 +103,6 @@ const TEMAS = {
   },
 };
 
-const PAPELES_TAPIZ = {
-  ninguno: { nombre: "🎨 Liso", css: {} },
-  ipuc: { nombre: "⛪ IPUC", css: Platform.OS === "web" ? { backgroundColor: "#0f172a" } : {} },
-  patronMusical: { nombre: "🎵 Notas Musicales", css: Platform.OS === "web" ? { backgroundColor: "#1e1b4b" } : {} },
-  eventos: { nombre: "📷 Eventos", css: Platform.OS === "web" ? { backgroundColor: "#311026" } : {} },
-  maderaAcustica: { nombre: "🪵 Madera Estudio", css: Platform.OS === "web" ? { backgroundColor: "#1c1917" } : {} },
-};
 
 const SEDES_DISPONIBLES = [
   { id: "general", nombre: "Sede General" },
@@ -313,11 +306,9 @@ export default function App() {
 
   const [pestana, setPestana] = useState("inicio");
   const [nombreTema, setNombreTema] = useState("azul");
-  const [nombreTapiz, setNombreTapiz] = useState("ninguno");
   const [mostrarMenuPersonalizacion, setMostrarMenuPersonalizacion] = useState(false);
 
   const t = TEMAS[nombreTema];
-  const tapizActual = PAPELES_TAPIZ[nombreTapiz] || PAPELES_TAPIZ.ninguno;
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
 
   const integrantesSeccionEquipo = integrantes.filter((m) => {
@@ -1083,7 +1074,7 @@ export default function App() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: t.bg }, tapizActual.css]}>
+    <View style={[styles.container, { backgroundColor: t.bg }]}>
       {!!errorDatos && (
         <TouchableOpacity onPress={() => setErrorDatos("")} style={{ padding: 8, backgroundColor: "#7F1D1D" }}>
           <Text style={{ color: "#FFFFFF", fontSize: 12 }}>{errorDatos} · Toca para cerrar</Text>
@@ -1365,7 +1356,7 @@ export default function App() {
                 onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
               >
                 <Text style={{ fontSize: 12, color: t.textMain, fontWeight: "700" }}>
-                  🎨 Tema: {t.nombre} | Tapiz: {tapizActual.nombre}
+                  🎨 Tema: {t.nombre}
                 </Text>
                 <Text style={{ fontSize: 11, color: t.primary, fontWeight: "bold" }}>{mostrarMenuPersonalizacion ? "▲ Ocultar" : "▼ Personalizar"}</Text>
               </TouchableOpacity>
@@ -1390,23 +1381,7 @@ export default function App() {
                     })}
                   </View>
 
-                  <Text style={{ fontSize: 11, color: t.textSub, fontWeight: "bold", marginTop: 4 }}>Tapiz:</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
-                    {Object.keys(PAPELES_TAPIZ).map((keyTapiz) => {
-                      const activoTapiz = nombreTapiz === keyTapiz;
-                      return (
-                        <TouchableOpacity
-                          key={keyTapiz}
-                          style={{ paddingVertical: 4, paddingHorizontal: 6, borderRadius: 4, backgroundColor: activoTapiz ? t.primary : t.bg, borderWidth: 1, borderColor: t.border }}
-                          onPress={() => setNombreTapiz(keyTapiz)}
-                        >
-                          <Text style={{ fontSize: 10, color: activoTapiz ? "#FFFFFF" : t.textMain, fontWeight: activoTapiz ? "bold" : "normal" }}>
-                            {PAPELES_TAPIZ[keyTapiz].nombre}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+
                 </View>
               )}
             </View>

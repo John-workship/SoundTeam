@@ -177,6 +177,11 @@ const convertirANashville = (letra, tono) => {
 };
 
 export default function App() {
+  const idProyeccionURL = Platform.OS === "web" && typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("soundTeamProjection")
+    : null;
+  const esModoProyeccion = !!idProyeccionURL;
+  const [datosProyeccion, setDatosProyeccion] = useState(null);
   const googleLoginEnCursoRef = useRef(false);
   const { width: anchoVentana } = useWindowDimensions();
   const esEscritorio = anchoVentana >= 1200;
@@ -278,6 +283,7 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (esModoProyeccion) return;
     if (!isSupabaseConfigured) {
       setErrorAuth("Configura las variables públicas de Supabase para iniciar SoundTeam.");
       return;
@@ -399,6 +405,16 @@ export default function App() {
 
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
+  const [proyeccionAbierta, setProyeccionAbierta] = useState(false);
+  const [enlaceProyeccion, setEnlaceProyeccion] = useState("");
+  const [mensajeProyeccion, setMensajeProyeccion] = useState("");
+  const canalProyeccionRef = useRef(null);
+  const scrollProyeccionRef = useRef(null);
+  const posicionScrollProyeccionRef = useRef(0);
+  const indiceCancionProyectadaRef = useRef(null);
+  const ventanaProyeccionRef = useRef(null);
+  const idProyeccionRef = useRef(null);
+  const estadoProyeccionRef = useRef({ modoActivo: false, payload: { letra: "" } });
   const [setlistEnVivoActual, setSetlistEnVivoActual] = useState([]);
   const [metronomoActivo, setMetronomoActivo] = useState(false);
   const [pulsoActivo, setPulsoActivo] = useState(false);
@@ -711,6 +727,108 @@ export default function App() {
 
   const [repertorio, setRepertorio] = useState([]);
   const [notasRepertorioAbiertas, setNotasRepertorioAbiertas] = useState({});
+
+  const construirEstadoProyeccion = () => {
+    const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
+    const objetoRepo = repertorio.find(r =>
+      r.titulo && cancionActual.titulo &&
+      r.titulo.toLowerCase() === cancionActual.titulo.toLowerCase()
+    ) || {};
+    const letraBase = objetoRepo.letra || cancionActual.letra || "[INTRO]\nLetra no disponible en biblioteca.";
+    const tonoActual = transponerTono(
+      cancionActual.tono || objetoRepo.tono || "C",
+      semitonosEnVivo
+    );
+    const letraTranspuesta = transponerLetra(letraBase, semitonosEnVivo);
+
+    return {
+      letra: modoNashvilleEnVivo
+        ? convertirANashville(letraTranspuesta, tonoActual)
+        : letraTranspuesta,
+      indiceCancion: indiceCancionEnVivo
+    };
+  };
+
+  estadoProyeccionRef.current = {
+    modoActivo: modoEnVivoActivo,
+    payload: construirEstadoProyeccion()
+  };
+
+  const publicarEstadoProyeccion = (canal = canalProyeccionRef.current) => {
+    const estadoActual = estadoProyeccionRef.current;
+    if (!canal || !estadoActual.modoActivo) return;
+    canal.send({
+      type: "broadcast",
+      event: "actualizacion",
+      payload: estadoActual.payload
+    });
+  };
+
+  useEffect(() => {
+    if (!esModoProyeccion || !isSupabaseConfigured) return;
+
+    let mounted = true;
+    const canal = supabase.channel(`soundteam-proyeccion-${idProyeccionURL}`);
+
+    canal.on("broadcast", { event: "actualizacion" }, ({ payload }) => {
+      if (!mounted) return;
+      const nuevoIndice = payload?.indiceCancion ?? null;
+      if (nuevoIndice !== indiceCancionProyectadaRef.current) {
+        indiceCancionProyectadaRef.current = nuevoIndice;
+        posicionScrollProyeccionRef.current = 0;
+        requestAnimationFrame(() => {
+          scrollProyeccionRef.current?.scrollTo({ y: 0, animated: false });
+        });
+      }
+      setDatosProyeccion(payload || null);
+    });
+
+    canal.on("broadcast", { event: "desplazar" }, ({ payload }) => {
+      if (!mounted) return;
+      const delta = Number(payload?.delta) || 0;
+      const nuevaPosicion = Math.max(0, posicionScrollProyeccionRef.current + delta);
+      posicionScrollProyeccionRef.current = nuevaPosicion;
+      scrollProyeccionRef.current?.scrollTo({ y: nuevaPosicion, animated: true });
+    });
+
+    canal.on("broadcast", { event: "inicio_letra" }, () => {
+      if (!mounted) return;
+      posicionScrollProyeccionRef.current = 0;
+      scrollProyeccionRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    canal.on("broadcast", { event: "cerrar" }, () => {
+      if (mounted) setDatosProyeccion(null);
+    });
+
+    canal.subscribe(status => {
+      if (status === "SUBSCRIBED") {
+        canal.send({
+          type: "broadcast",
+          event: "solicitar_estado",
+          payload: {}
+        });
+      }
+    });
+
+    return () => {
+      mounted = false;
+      supabase.removeChannel(canal);
+    };
+  }, [esModoProyeccion, idProyeccionURL]);
+
+  useEffect(() => {
+    if (!modoEnVivoActivo || !proyeccionAbierta) return;
+    publicarEstadoProyeccion();
+  }, [
+    modoEnVivoActivo,
+    proyeccionAbierta,
+    setlistEnVivoActual,
+    indiceCancionEnVivo,
+    repertorio,
+    semitonosEnVivo,
+    modoNashvilleEnVivo
+  ]);
 
   const cargarRepertorioSupabase = async () => {
     if (!sesionIniciada) return;
@@ -1155,7 +1273,129 @@ export default function App() {
     alert(`${integrante} fue retirado del puesto.`);
   };
 
-  if (!sesionIniciada) {
+  const abrirProyeccion = () => {
+    if (Platform.OS !== "web" || typeof window === "undefined") {
+      setMensajeProyeccion("Abre SoundTeam desde Safari o un navegador para crear la pantalla de proyección.");
+      return;
+    }
+
+    if (canalProyeccionRef.current) {
+      canalProyeccionRef.current.send({ type: "broadcast", event: "cerrar", payload: {} });
+      supabase.removeChannel(canalProyeccionRef.current);
+      canalProyeccionRef.current = null;
+    }
+    if (ventanaProyeccionRef.current && !ventanaProyeccionRef.current.closed) {
+      ventanaProyeccionRef.current.close();
+    }
+
+    const id = window.crypto && typeof window.crypto.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("soundTeamProjection", id);
+    url.hash = "";
+
+    idProyeccionRef.current = id;
+    setEnlaceProyeccion(url.toString());
+
+    const ventana = window.open(
+      url.toString(),
+      `soundteam-proyeccion-${id}`,
+      "popup=yes,width=1280,height=800"
+    );
+    ventanaProyeccionRef.current = ventana || null;
+
+    const canal = supabase.channel(`soundteam-proyeccion-${id}`);
+    canalProyeccionRef.current = canal;
+
+    canal.on("broadcast", { event: "solicitar_estado" }, () => {
+      publicarEstadoProyeccion(canal);
+    });
+
+    canal.subscribe(status => {
+      if (status === "SUBSCRIBED") {
+        setProyeccionAbierta(true);
+        publicarEstadoProyeccion(canal);
+        setMensajeProyeccion(
+          ventana
+            ? "Proyección conectada. Puedes mover esa ventana a la pantalla externa."
+            : "Sesión creada. Si el navegador bloqueó la ventana, copia el enlace para abrirlo en la pantalla externa."
+        );
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        setProyeccionAbierta(false);
+        setMensajeProyeccion("No se pudo conectar la proyección. Revisa la conexión e inténtalo de nuevo.");
+      }
+    });
+  };
+
+  const cerrarProyeccion = async () => {
+    const canal = canalProyeccionRef.current;
+    if (canal) {
+      try {
+        await canal.send({ type: "broadcast", event: "cerrar", payload: {} });
+      } catch (_) {}
+      await supabase.removeChannel(canal);
+    }
+
+    const ventana = ventanaProyeccionRef.current;
+    if (ventana && !ventana.closed) ventana.close();
+
+    canalProyeccionRef.current = null;
+    ventanaProyeccionRef.current = null;
+    idProyeccionRef.current = null;
+    setProyeccionAbierta(false);
+    setEnlaceProyeccion("");
+    setMensajeProyeccion("");
+  };
+
+  const desplazarLetraProyectada = (direccion) => {
+    const canal = canalProyeccionRef.current;
+    if (!canal || !proyeccionAbierta) return;
+    canal.send({
+      type: "broadcast",
+      event: "desplazar",
+      payload: { delta: direccion * 360 }
+    });
+  };
+
+  const volverAlInicioDeProyeccion = () => {
+    const canal = canalProyeccionRef.current;
+    if (!canal || !proyeccionAbierta) return;
+    canal.send({ type: "broadcast", event: "inicio_letra", payload: {} });
+  };
+
+  const copiarEnlaceProyeccion = async () => {
+    if (!enlaceProyeccion || typeof navigator === "undefined") {
+      setMensajeProyeccion("No se pudo preparar el enlace de proyección.");
+      return;
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Proyección de SoundTeam",
+          url: enlaceProyeccion
+        });
+        setMensajeProyeccion("Enlace compartido con el equipo de proyección.");
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
+
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(enlaceProyeccion);
+        setMensajeProyeccion("Enlace copiado. Ábrelo en el navegador del equipo conectado al videobeam.");
+        return;
+      } catch (_) {}
+    }
+
+    setMensajeProyeccion("Copia manualmente el enlace que aparece debajo.");
+  };
+
+  if (!sesionIniciada && !esModoProyeccion) {
     return (
       <View style={[styles.loginContainer, { backgroundColor: t.bg }]}>
         <View style={[styles.loginCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
@@ -1258,7 +1498,41 @@ export default function App() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: t.bg }]}>
+    <View style={[styles.container, { backgroundColor: esModoProyeccion ? "#000000" : t.bg }]}>
+      {esModoProyeccion ? (
+        <View style={{ flex: 1, width: "100%", minHeight: "100vh", backgroundColor: "#000000" }}>
+          <ScrollView
+            ref={scrollProyeccionRef}
+            onScroll={event => {
+              posicionScrollProyeccionRef.current = event.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              paddingHorizontal: Math.max(24, anchoVentana * 0.06),
+              paddingVertical: 36
+            }}
+          >
+            <Text
+              selectable
+              style={{
+                color: "#FFFFFF",
+                fontSize: Math.max(26, Math.min(64, anchoVentana * 0.045)),
+                lineHeight: Math.max(39, Math.min(88, anchoVentana * 0.063)),
+                fontWeight: "600",
+                textAlign: "center",
+                width: "100%",
+                maxWidth: 1600
+              }}
+            >
+              {datosProyeccion?.letra || ""}
+            </Text>
+          </ScrollView>
+        </View>
+      ) : (
+        <>
       {!!errorDatos && (
         <TouchableOpacity onPress={() => setErrorDatos("")} style={{ padding: 8, backgroundColor: "#7F1D1D" }}>
           <Text style={{ color: "#FFFFFF", fontSize: 12 }}>{errorDatos} · Toca para cerrar</Text>
@@ -1269,13 +1543,30 @@ export default function App() {
           <View style={styles.teleprompterTopBar}>
             <TouchableOpacity 
               style={styles.teleprompterExitBtn}
-              onPress={() => { setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
+              onPress={() => { cerrarProyeccion(); setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
             >
               <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 11 }}>✕ Salir</Text>
             </TouchableOpacity>
             <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "bold" }}>
               Canción {indiceCancionEnVivo + 1} de {setlistEnVivoActual.length}
             </Text>
+          </View>
+
+          <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#111827", borderBottomWidth: 1, borderBottomColor: "#334155" }}>
+            <TouchableOpacity
+              style={[styles.teleprompterNavBtn, { backgroundColor: "#334155", minWidth: 116 }, indiceCancionEnVivo === 0 && { opacity: 0.4 }]}
+              disabled={indiceCancionEnVivo === 0}
+              onPress={() => cambiarCancionEnVivo(-1)}
+            >
+              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>← Anterior</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.teleprompterNavBtn, { backgroundColor: "#2563EB", minWidth: 116 }, indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.4 }]}
+              disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
+              onPress={() => cambiarCancionEnVivo(1)}
+            >
+              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>Siguiente →</Text>
+            </TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={styles.teleprompterScrollContent}>
@@ -1293,6 +1584,68 @@ export default function App() {
                   </Text>
                 </View>
               </View>
+
+              <View style={{ flexDirection: "row", justifyContent: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                <TouchableOpacity
+                  onPress={abrirProyeccion}
+                  style={{ backgroundColor: proyeccionAbierta ? "#166534" : "#0E7490", paddingVertical: 9, paddingHorizontal: 13, borderRadius: 8 }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 11 }}>
+                    {proyeccionAbierta ? "✓ Proyección activa" : "↗ Abrir pantalla de proyección"}
+                  </Text>
+                </TouchableOpacity>
+                {!!enlaceProyeccion && (
+                  <TouchableOpacity
+                    onPress={copiarEnlaceProyeccion}
+                    style={{ backgroundColor: "#334155", paddingVertical: 9, paddingHorizontal: 13, borderRadius: 8 }}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 11 }}>Copiar enlace para otra pantalla</Text>
+                  </TouchableOpacity>
+                )}
+                {proyeccionAbierta && (
+                  <TouchableOpacity
+                    onPress={cerrarProyeccion}
+                    style={{ backgroundColor: "#7F1D1D", paddingVertical: 9, paddingHorizontal: 13, borderRadius: 8 }}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 11 }}>Cerrar proyección</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {proyeccionAbierta && (
+                <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => desplazarLetraProyectada(-1)}
+                    style={{ backgroundColor: "#334155", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 }}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}>↑ Subir letra</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={volverAlInicioDeProyeccion}
+                    style={{ backgroundColor: "#475569", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 }}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}>↥ Inicio</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => desplazarLetraProyectada(1)}
+                    style={{ backgroundColor: "#0284C7", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 }}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}>↓ Bajar letra</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {!!mensajeProyeccion && (
+                <Text style={{ color: "#7DD3FC", fontSize: 10, textAlign: "center", marginBottom: 10 }}>
+                  {mensajeProyeccion}
+                </Text>
+              )}
+              {!!enlaceProyeccion && (
+                <Text
+                  selectable
+                  style={{ color: "#94A3B8", fontSize: 9, textAlign: "center", marginBottom: 10 }}
+                >
+                  {enlaceProyeccion}
+                </Text>
+              )}
 
               <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginBottom: 12 }}>
                 <TouchableOpacity onPress={() => setSemitonosEnVivo(v => v - 1)} style={{ backgroundColor: "#1E293B", padding: 10, borderRadius: 7, margin: 3 }}>
@@ -1424,23 +1777,6 @@ export default function App() {
               </Text>
             </View>
 
-            <View style={styles.teleprompterNavRow}>
-              <TouchableOpacity
-                style={[styles.teleprompterNavBtn, { backgroundColor: "#334155" }, indiceCancionEnVivo === 0 && { opacity: 0.4 }]}
-                disabled={indiceCancionEnVivo === 0}
-                onPress={() => cambiarCancionEnVivo(-1)}
-              >
-                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>← Anterior</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.teleprompterNavBtn, { backgroundColor: "#3B82F6" }, indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.4 }]}
-                disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
-                onPress={() => cambiarCancionEnVivo(1)}
-              >
-                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 12 }}>Siguiente →</Text>
-              </TouchableOpacity>
-            </View>
           </ScrollView>
         </View>
       ) : (
@@ -2633,6 +2969,8 @@ export default function App() {
           )}
           </View>
         </View>
+      )}
+        </>
       )}
     </View>
   );

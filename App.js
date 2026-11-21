@@ -2695,15 +2695,15 @@ export default function App() {
                         {serv.observaciones && serv.observaciones !== "Sin observaciones" && (
                           <View style={{ backgroundColor: t.bg, borderRadius: 10, padding: 10, marginBottom: 8 }}><Text style={{ color: t.textSub, fontSize: 11, lineHeight: 17 }}>📝 {serv.observaciones}</Text></View>
                         )}
-                        <View style={{ marginTop: 12, marginBottom: 14, padding: anchoVentana < 600 ? 11 : 14, borderRadius: 16, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border }}>
-                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                            <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "800", letterSpacing: 0.6 }}>👥 OCUPACIÓN DE PUESTOS</Text>
+                        <View style={{ marginTop: 10, marginBottom: 12, padding: anchoVentana < 600 ? 8 : 14, borderRadius: 16, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, alignSelf: "stretch" }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: anchoVentana < 600 ? 7 : 12 }}>
+                            <Text style={{ color: t.textMain, fontSize: anchoVentana < 600 ? 10 : 11, fontWeight: "800", letterSpacing: 0.5 }}>👥 OCUPACIÓN DE PUESTOS</Text>
                             <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "700" }}>DISPONIBILIDAD</Text>
                           </View>
-                          <View style={{ flexDirection: anchoVentana < 600 ? "column" : "row", gap: 12 }}>
+                          <View style={{ flexDirection: "row", gap: anchoVentana < 600 ? 7 : 12, alignItems: "stretch", width: "100%" }}>
                             <View style={{ flex: 1, minWidth: 0 }}>
-                              <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: 11, borderWidth: 1, borderColor: t.border }}>
-                              <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎤 VOCES</Text>
+                              <View style={{ backgroundColor: t.cardBg, borderRadius: 11, padding: anchoVentana < 600 ? 8 : 11, borderWidth: 1, borderColor: t.border }}>
+                              <Text style={{ color: t.primary, fontSize: anchoVentana < 600 ? 9 : 11, fontWeight: "800", marginBottom: anchoVentana < 600 ? 6 : 10, letterSpacing: 0.3 }}>🎤 VOCES</Text>
                               {[
                                 { key: "vozPrincipal", label: "Voz principal", personas: serv.voces?.principal && serv.voces.principal !== "Sin asignar" ? [serv.voces.principal] : [] },
                                 { key: "coros", label: "Coros", personas: (serv.voces?.coros || "Sin asignar").split(",").map((x) => x.trim()).filter((x) => x && x !== "Sin asignar") },
@@ -2726,9 +2726,9 @@ export default function App() {
                               ))}
                               </View>
                             </View>
-                            <View style={{ flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: t.border, paddingLeft: 9 }}>
-                              <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: 11, borderWidth: 1, borderColor: t.border }}>
-                              <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎸 INSTRUMENTOS</Text>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <View style={{ backgroundColor: t.cardBg, borderRadius: 11, padding: anchoVentana < 600 ? 8 : 11, borderWidth: 1, borderColor: t.border }}>
+                              <Text style={{ color: t.primary, fontSize: anchoVentana < 600 ? 9 : 11, fontWeight: "800", marginBottom: anchoVentana < 600 ? 6 : 10, letterSpacing: 0.2 }}>🎸 INSTRUMENTOS</Text>
                               {[
                                 { key: "piano", label: "Piano" },
                                 { key: "guitarra", label: "Guitarra" },

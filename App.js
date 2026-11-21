@@ -1542,33 +1542,51 @@ export default function App() {
       )}
       {modoEnVivoActivo ? (
         <View style={[styles.teleprompterContainer, { backgroundColor: "#0B0F19" }]}>
-          <View style={styles.teleprompterTopBar}>
-            <TouchableOpacity 
-              style={styles.teleprompterExitBtn}
-              onPress={() => { cerrarProyeccion(); setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
-            >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 11 }}>✕ Salir</Text>
-            </TouchableOpacity>
-            <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "bold" }}>
-              Canción {indiceCancionEnVivo + 1} de {setlistEnVivoActual.length}
-            </Text>
+          <View style={[styles.teleprompterTopBar, { backgroundColor: "#0F172A", borderBottomWidth: 1, borderBottomColor: "#263449", paddingVertical: 12 }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+              <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: "#22C55E" }} />
+              <View>
+                <Text style={{ color: "#F8FAFC", fontSize: 12, fontWeight: "900", letterSpacing: 1 }}>SOUNDTEAM · EN VIVO</Text>
+                <Text style={{ color: "#94A3B8", fontSize: 10, marginTop: 2 }}>{proyeccionAbierta ? "Pantalla externa conectada" : "Consola de dirección"}</Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Text style={{ color: "#94A3B8", fontSize: 11, fontWeight: "800" }}>
+                {indiceCancionEnVivo + 1} / {setlistEnVivoActual.length}
+              </Text>
+              <TouchableOpacity
+                style={[styles.teleprompterExitBtn, { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 9 }]}
+                onPress={() => { cerrarProyeccion(); setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 11 }}>✕ Salir</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#111827", borderBottomWidth: 1, borderBottomColor: "#334155" }}>
-            <TouchableOpacity
-              style={[styles.teleprompterNavBtn, { backgroundColor: "#334155", minWidth: 116 }, indiceCancionEnVivo === 0 && { opacity: 0.4 }]}
-              disabled={indiceCancionEnVivo === 0}
-              onPress={() => cambiarCancionEnVivo(-1)}
-            >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>← Anterior</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.teleprompterNavBtn, { backgroundColor: "#2563EB", minWidth: 116 }, indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.4 }]}
-              disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
-              onPress={() => cambiarCancionEnVivo(1)}
-            >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>Siguiente →</Text>
-            </TouchableOpacity>
+          <View style={{ backgroundColor: "#111827", paddingHorizontal: 14, paddingTop: 11, paddingBottom: 13, borderBottomWidth: 1, borderBottomColor: "#334155" }}>
+            <Text style={{ color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1.4, marginBottom: 8 }}>CONTROL DE CANCIÓN · SIEMPRE DISPONIBLE</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <TouchableOpacity
+                style={[styles.teleprompterNavBtn, { flex: 1, minWidth: 0, minHeight: 48, backgroundColor: "#334155", borderRadius: 11 }, indiceCancionEnVivo === 0 && { opacity: 0.35 }]}
+                disabled={indiceCancionEnVivo === 0}
+                onPress={() => cambiarCancionEnVivo(-1)}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "900", fontSize: 13 }}>← Anterior</Text>
+              </TouchableOpacity>
+              <View style={{ flex: 1.35, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+                <Text numberOfLines={1} style={{ color: "#F8FAFC", fontSize: 12, fontWeight: "900", textAlign: "center" }}>
+                  {(setlistEnVivoActual[indiceCancionEnVivo] || {}).titulo || "Sin canción"}
+                </Text>
+                <Text style={{ color: "#94A3B8", fontSize: 10, marginTop: 3 }}>Toca para avanzar desde aquí</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.teleprompterNavBtn, { flex: 1, minWidth: 0, minHeight: 48, backgroundColor: "#2563EB", borderRadius: 11 }, indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.35 }]}
+                disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
+                onPress={() => cambiarCancionEnVivo(1)}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "900", fontSize: 13 }}>Siguiente →</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ScrollView contentContainerStyle={styles.teleprompterScrollContent}>

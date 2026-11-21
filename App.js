@@ -727,6 +727,8 @@ export default function App() {
 
   const [repertorio, setRepertorio] = useState([]);
   const [notasRepertorioAbiertas, setNotasRepertorioAbiertas] = useState({});
+  const [busquedaRepertorio, setBusquedaRepertorio] = useState("");
+  const [filtroTipoRepertorio, setFiltroTipoRepertorio] = useState("todos");
 
   const construirEstadoProyeccion = () => {
     const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
@@ -2979,15 +2981,39 @@ export default function App() {
                         </TouchableOpacity>
                       </View>
                     )}
-                    <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
+                    <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 13 : 19 }]}>
+                      <View style={{ marginBottom: 15 }}>
+                        <Text style={{ color: t.textMain, fontSize: 20, fontWeight: "900", marginBottom: 4 }}>Biblioteca musical</Text>
+                        <Text style={{ color: t.textSub, fontSize: 12 }}>Canciones de {sedeActual.nombre} · {repertorio.length} en total</Text>
+                      </View>
+                      <TextInput value={busquedaRepertorio} onChangeText={setBusquedaRepertorio} placeholder="Buscar canción o artista..." placeholderTextColor={t.textSub} style={{ backgroundColor: t.bg, borderColor: t.border, borderWidth: 1, borderRadius: 12, minHeight: 46, paddingHorizontal: 14, color: t.textMain, marginBottom: 12 }} />
+                      <View style={{ flexDirection: "row", gap: 8, marginBottom: 15 }}>
+                        {[{ key: "todos", label: "Todas" }, { key: "lenta", label: "🕯️ Lentas" }, { key: "rapida", label: "⚡ Rápidas" }].map(op => (
+                          <TouchableOpacity key={op.key} onPress={() => setFiltroTipoRepertorio(op.key)} style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 5, borderRadius: 10, borderWidth: 1, borderColor: filtroTipoRepertorio === op.key ? t.primary : t.border, backgroundColor: filtroTipoRepertorio === op.key ? t.primary : t.bg }}>
+                            <Text style={{ color: filtroTipoRepertorio === op.key ? "#FFFFFF" : t.textMain, textAlign: "center", fontWeight: "800", fontSize: 11 }}>{op.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 14 }}>
+                        {NOTAS_CROMATICAS.map(nota => {
+                          const cantidad = repertorio.filter(c => String(c.tono || "C").trim().toUpperCase() === nota).length;
+                          return <TouchableOpacity key={nota} onPress={() => setNotasRepertorioAbiertas(actual => ({ ...actual, [nota]: !actual[nota] }))} style={{ paddingHorizontal: 10, paddingVertical: 7, borderRadius: 20, backgroundColor: notasRepertorioAbiertas[nota] ? t.primary : t.bg, borderWidth: 1, borderColor: notasRepertorioAbiertas[nota] ? t.primary : t.border }}>
+                            <Text style={{ color: notasRepertorioAbiertas[nota] ? "#FFFFFF" : t.textMain, fontSize: 11, fontWeight: "800" }}>{nota} · {cantidad}</Text>
+                          </TouchableOpacity>;
+                        })}
+                      </View>
                       {[...NOTAS_CROMATICAS, "Otros"].map((nota) => {
                          const cancionesNota = repertorio.filter((c) => {
+                           const textoBusqueda = busquedaRepertorio.trim().toLowerCase();
+                           const coincideTexto = !textoBusqueda || String(c.titulo || "").toLowerCase().includes(textoBusqueda) || String(c.artista || "").toLowerCase().includes(textoBusqueda);
+                           const tipo = String(c.tipoSet || c.tipo_set || "lenta").toLowerCase();
+                           const coincideTipo = filtroTipoRepertorio === "todos" || tipo === filtroTipoRepertorio;
+                           if (!coincideTexto || !coincideTipo) return false;
                            const tono = String(c.tono || "C").trim().toUpperCase();
                            return nota === "Otros" ? !NOTAS_CROMATICAS.includes(tono) : tono === nota;
                          });
                          if (!cancionesNota.length) return null;
-                         const abierta = !!notasRepertorioAbiertas[nota];
+                         const abierta = !!busquedaRepertorio.trim() || !!notasRepertorioAbiertas[nota];
                          return (
                            <View key={nota} style={{ marginBottom: 8 }}>
                              <TouchableOpacity

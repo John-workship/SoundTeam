@@ -2696,11 +2696,24 @@ export default function App() {
               )}
 
               {pestana === "equipo" && esAdminOLider && (
-                <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>
-                      👥 Miembros de {sedeActual.nombre} ({integrantesSeccionEquipo.length})
-                    </Text>
+                <View style={{ width: "100%" }}>
+                  <View style={{ backgroundColor: t.banner, borderRadius: esMovil ? 19 : 25, padding: esMovil ? 18 : 26, marginBottom: 16, overflow: "hidden", shadowColor: t.banner, shadowOpacity: 0.18, shadowRadius: 17, shadowOffset: { width: 0, height: 7 }, elevation: 3 }}>
+                    <Text style={{ color: "#DCDFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.6 }}>SOUNDTEAM · ADMINISTRACIÓN</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 25 : 32, fontWeight: "900", marginTop: 8 }}>Tu equipo, en sintonía.</Text>
+                    <Text style={{ color: "#E8EAFE", fontSize: 12, lineHeight: 19, marginTop: 7, maxWidth: 540 }}>Administra los integrantes, sus permisos musicales y el acceso a la sede {sedeActual.nombre}.</Text>
+                    <View style={{ flexDirection: "row", gap: 9, marginTop: 18 }}>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderWidth: 1, borderColor: "#FFFFFF25", borderRadius: 13, padding: 12 }}><Text style={{ color: "#FFFFFF", fontSize: 23, fontWeight: "900" }}>{integrantesSeccionEquipo.length}</Text><Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.6, marginTop: 3 }}>INTEGRANTES</Text></View>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderWidth: 1, borderColor: "#FFFFFF25", borderRadius: 13, padding: 12 }}><Text style={{ color: "#FFFFFF", fontSize: 23, fontWeight: "900" }}>{integrantesSeccionEquipo.filter(m => m.rolAcceso === "lider").length}</Text><Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.6, marginTop: 3 }}>LÍDERES</Text></View>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderWidth: 1, borderColor: "#FFFFFF25", borderRadius: 13, padding: 12 }}><Text style={{ color: "#FFFFFF", fontSize: 23, fontWeight: "900" }}>{integrantesSeccionEquipo.filter(m => Array.isArray(m.rolesMusicales) && m.rolesMusicales.length > 0).length}</Text><Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.6, marginTop: 3 }}>CON ROL MUSICAL</Text></View>
+                    </View>
+                  </View>
+                  <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 14 : 22 }]}>
+                  <View style={{ flexDirection: esMovil ? "column" : "row", justifyContent: "space-between", alignItems: esMovil ? "stretch" : "center", gap: 12, marginBottom: 16 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.4, marginBottom: 5 }}>PERSONAS Y PERMISOS</Text>
+                      <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>Miembros de {sedeActual.nombre}</Text>
+                      <Text style={{ color: t.textSub, fontSize: 11, marginTop: 4 }}>{integrantesSeccionEquipo.length} integrantes registrados en esta sede</Text>
+                    </View>
                     <TouchableOpacity
                       style={[styles.programBtn, { backgroundColor: t.primary }]}
                       onPress={() => {
@@ -2712,7 +2725,7 @@ export default function App() {
                         setModalMiembroVisible(true);
                       }}
                     >
-                      <Text style={styles.programBtnText}>+ Agregar Miembro</Text>
+                      <Text style={styles.programBtnText}>＋ Agregar integrante</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -2818,9 +2831,9 @@ export default function App() {
                   )}
 
                   {integrantesSeccionEquipo.map((int) => (
-                    <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
+                    <View key={int.id} style={[styles.memberCard, { backgroundColor: t.cardBg, borderColor: t.border, borderRadius: 16, padding: esMovil ? 13 : 17, marginBottom: 10, borderWidth: 1 }]}>
                       <View style={styles.memberHeaderRow}>
-                        <Text style={[styles.memberTitle, { color: t.textMain }]}>👤 {int.nombre}</Text>
+                        <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}><Text numberOfLines={2} style={[styles.memberTitle, { color: t.textMain, fontSize: 14, fontWeight: "900" }]}>{int.nombre}</Text><Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{int.rolAcceso === "lider" ? "LÍDER DE SEDE" : int.rolAcceso === "admin" ? "ADMINISTRADOR" : "INTEGRANTE"}</Text></View>
                         <View style={{ flexDirection: "row", gap: 6 }}>
                           {(int.rolAcceso !== "admin" && (esAdmin || int.rolAcceso === "miembro")) && (
                             <TouchableOpacity
@@ -2851,9 +2864,16 @@ export default function App() {
                           )}
                         </View>
                       </View>
-                      <Text style={{ color: t.textSub, fontSize: 12, marginTop: 7, lineHeight: 18 }}>Correo: {int.email || "No registrado"} | Acceso: {int.rolAcceso}</Text>
+                      <Text style={{ color: t.textSub, fontSize: 11, marginTop: 9, lineHeight: 17 }}>{int.email || "Correo no registrado"}</Text>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
+                        {(Array.isArray(int.rolesMusicales) ? int.rolesMusicales : []).length > 0 ? (Array.isArray(int.rolesMusicales) ? int.rolesMusicales : []).map(rol => {
+                          const nombres = { vozPrincipal: "Voz principal", coros: "Coros", piano: "Piano", guitarra: "Guitarra", bajo: "Bajo", bateria: "Batería" };
+                          return <View key={rol} style={{ backgroundColor: t.primary + "16", borderRadius: 20, paddingHorizontal: 9, paddingVertical: 5 }}><Text style={{ color: t.primary, fontSize: 9, fontWeight: "800" }}>{nombres[rol] || rol}</Text></View>;
+                        }) : <Text style={{ color: t.textSub, fontSize: 10, fontStyle: "italic" }}>Sin permisos musicales asignados</Text>}
+                      </View>
                     </View>
                   ))}
+                </View>
                 </View>
               )}
 

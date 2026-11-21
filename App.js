@@ -112,6 +112,39 @@ const SEDES_DISPONIBLES = [
 ];
 
 
+const CANCIONES_CONGREGACIONALES_INICIALES = [
+  { titulo: "Santo, Santo, Santo", artista: "Reginald Heber / John B. Dykes", tono: "D", bpm: "92", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Cuán grande es Él", artista: "Carl Boberg / Stuart K. Hine", tono: "G", bpm: "76", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Sublime gracia", artista: "John Newton", tono: "G", bpm: "74", compas: "3/4", tipo_set: "lenta" },
+  { titulo: "Grande es tu fidelidad", artista: "Thomas O. Chisholm / William M. Runyan", tono: "D", bpm: "78", compas: "3/4", tipo_set: "lenta" },
+  { titulo: "A Dios sea la gloria", artista: "Andraé Crouch", tono: "G", bpm: "112", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Hay poder en Jesús", artista: "Lewis E. Jones", tono: "G", bpm: "118", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Oh qué amigo nos es Cristo", artista: "Joseph M. Scriven / Charles C. Converse", tono: "C", bpm: "84", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "En el monte Calvario", artista: "George Bennard", tono: "G", bpm: "78", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Tal como soy", artista: "Charlotte Elliott / William B. Bradbury", tono: "D", bpm: "72", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Castillo fuerte es nuestro Dios", artista: "Martín Lutero", tono: "C", bpm: "108", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Firmes y adelante", artista: "Sabine Baring-Gould / Arthur S. Sullivan", tono: "G", bpm: "116", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Cuando allá se pase lista", artista: "James M. Black", tono: "G", bpm: "104", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Más cerca, oh Dios, de ti", artista: "Sarah F. Adams / Lowell Mason", tono: "C", bpm: "72", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Roca de la eternidad", artista: "Augustus M. Toplady / Thomas Hastings", tono: "D", bpm: "76", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "La roca firme", artista: "Edward Mote / William B. Bradbury", tono: "G", bpm: "88", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Victoria en Jesús", artista: "E. M. Bartlett", tono: "G", bpm: "116", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Yo tengo un amigo que me ama", artista: "Coro congregacional tradicional", tono: "C", bpm: "112", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Cristo no está muerto", artista: "Coro congregacional tradicional", tono: "G", bpm: "124", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Jehová es mi guerrero", artista: "Coro congregacional tradicional", tono: "Em", bpm: "126", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Yo celebraré", artista: "Coro congregacional tradicional", tono: "G", bpm: "120", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Este es el día", artista: "Salmo 118:24 / coro congregacional", tono: "D", bpm: "116", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Mi pensamiento eres tú, Señor", artista: "Coro congregacional tradicional", tono: "C", bpm: "88", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Te alabaré, mi buen Jesús", artista: "Danilo Montero", tono: "G", bpm: "82", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Tu fidelidad", artista: "Marcos Witt", tono: "D", bpm: "74", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Abre mis ojos, oh Cristo", artista: "Paul Baloche", tono: "E", bpm: "76", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Eres todopoderoso", artista: "Danilo Montero", tono: "A", bpm: "118", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Quiero levantar mis manos", artista: "Danny Berrios", tono: "G", bpm: "78", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "El poder de tu amor", artista: "Geoff Bullock", tono: "G", bpm: "72", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Renuévame", artista: "Marcos Witt", tono: "D", bpm: "76", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Alabaré", artista: "Coro congregacional tradicional", tono: "G", bpm: "120", compas: "4/4", tipo_set: "rapida" },
+]; 
+
 const NOTAS_CROMATICAS = [
   "C", "C#", "D", "D#", "E", "F",
   "F#", "G", "G#", "A", "A#", "B"
@@ -753,6 +786,7 @@ export default function App() {
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
   const [repertorio, setRepertorio] = useState([]);
+  const [importandoCancionesCongregacionales, setImportandoCancionesCongregacionales] = useState(false);
   const [notasRepertorioAbiertas, setNotasRepertorioAbiertas] = useState({});
   const [busquedaRepertorio, setBusquedaRepertorio] = useState("");
   const [filtroTipoRepertorio, setFiltroTipoRepertorio] = useState("todos");
@@ -1065,6 +1099,66 @@ export default function App() {
     esVozPrincipalDeServicio(servicioEditandoActual) &&
     !esAdminOLider;
   const puedeGestionarRepertorio = esAdminOLider || rolesMusicalesUsuario.some(r => ["piano", "guitarra", "bajo", "bateria"].includes(String(r).toLowerCase()));
+
+  const importarCancionesCongregacionales = async () => {
+    if (!puedeGestionarRepertorio || importandoCancionesCongregacionales) return;
+    const confirmado = confirm(
+      `Se preparó un lote de 30 canciones congregacionales para ${sedeActual.nombre}.\\n\\nSe omitirán las que ya existan en esta sede. Los tonos y BPM son valores iniciales sugeridos y podrás editarlos. Las letras quedarán vacías para que agregues material propio o autorizado.\\n\\n¿Continuar?`
+    );
+    if (!confirmado) return;
+
+    setImportandoCancionesCongregacionales(true);
+    try {
+      const { data: existentes, error: errorConsulta } = await supabase
+        .from("repertorio")
+        .select("titulo")
+        .eq("sede_id", sedeIdSeleccionada);
+
+      if (errorConsulta) {
+        alert(`No se pudo comprobar el repertorio actual: ${errorConsulta.message}`);
+        return;
+      }
+
+      const normalizarTitulo = valor => String(valor || "")
+        .normalize("NFD")
+        .replace(/[\\u0300-\\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+
+      const titulosExistentes = new Set((existentes || []).map(c => normalizarTitulo(c.titulo)));
+      const pendientes = CANCIONES_CONGREGACIONALES_INICIALES
+        .filter(c => !titulosExistentes.has(normalizarTitulo(c.titulo)))
+        .map(c => ({
+          ...c,
+          etiquetas: ["Congregacional", "Tono y BPM sugeridos"],
+          letra: "",
+          sede_id: sedeIdSeleccionada,
+        }));
+
+      if (pendientes.length === 0) {
+        alert("Estas 30 canciones ya están registradas en esta sede. No se hicieron cambios.");
+        return;
+      }
+
+      const { data: insertadas, error: errorInsercion } = await supabase
+        .from("repertorio")
+        .insert(pendientes)
+        .select("id");
+
+      if (errorInsercion) {
+        alert(`No se pudo completar la importación: ${errorInsercion.message}`);
+        return;
+      }
+
+      await cargarRepertorioSupabase();
+      alert(`Importación completada. Se agregaron ${insertadas?.length || 0} canciones nuevas. Se omitieron ${30 - pendientes.length} que ya estaban registradas. Revisa y ajusta los tonos y BPM según la versión que usa tu congregación.`);
+    } catch (error) {
+      alert(`Ocurrió un error durante la importación: ${error.message}`);
+    } finally {
+      setImportandoCancionesCongregacionales(false);
+    }
+  };
+
 
   const enviarOActualizarMensajeChat = async () => {
     if (nuevoMensajeTexto.trim() !== "") {
@@ -2999,6 +3093,17 @@ export default function App() {
                     {puedeGestionarRepertorio && (
                       <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 12, borderWidth: 1, borderRadius: 16, padding: 17 }]}>
                         <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 12 }]}>{modoEdicionCancion ? "✏️ Editar canción" : "➕ Agregar nueva canción"}</Text>
+                        {!modoEdicionCancion && (
+                          <TouchableOpacity
+                            onPress={importarCancionesCongregacionales}
+                            disabled={importandoCancionesCongregacionales}
+                            style={{ backgroundColor: t.banner, padding: 13, borderRadius: 11, marginBottom: 14, opacity: importandoCancionesCongregacionales ? 0.65 : 1 }}
+                          >
+                            <Text style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "bold" }}>
+                              {importandoCancionesCongregacionales ? "Importando canciones..." : "🎵 Importar 30 canciones congregacionales"}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="Título de la canción" placeholderTextColor={t.textSub} value={nuevoTituloCancion} onChangeText={setNuevoTituloCancion} />
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="Artista o autor" placeholderTextColor={t.textSub} value={nuevoArtistaCancion} onChangeText={setNuevoArtistaCancion} />
                         <View style={{ flexDirection: esMovil ? "column" : "row", gap: 8, width: "100%" }}>

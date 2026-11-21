@@ -423,6 +423,7 @@ export default function App() {
   const [volumenClick, setVolumenClick] = useState(70);
   const [paneoClick, setPaneoClick] = useState(0);
   const [errorClick, setErrorClick] = useState("");
+  const [cuentaEntrada, setCuentaEntrada] = useState(null);
 
   const audioContextRef = useRef(null);
   const schedulerClickRef = useRef(null);
@@ -516,6 +517,8 @@ export default function App() {
         parametrosDestino.bpm !== parametrosActuales.bpm ||
         parametrosDestino.compas !== parametrosActuales.compas;
 
+      if (transicionClickRef.current) return;
+
       if (metronomoActivo && cambiaRitmo) {
         cancelarSonidosFuturos();
 
@@ -523,12 +526,18 @@ export default function App() {
         if (contextoAudio && contextoAudio.state === "running") {
           siguientePulsoRef.current = contextoAudio.currentTime + 0.08;
         }
+        const totalPulsos = obtenerPulsosPorCompas(parametrosDestino.compas);
         transicionClickRef.current = {
-          restantes: obtenerPulsosPorCompas(parametrosDestino.compas)
+          restantes: totalPulsos,
+          total: totalPulsos,
+          destinoIndice: nuevoIndice
         };
+        setCuentaEntrada(null);
         numeroPulsoRef.current = 0;
       } else {
         transicionClickRef.current = null;
+        setCuentaEntrada(null);
+        setIndiceCancionEnVivo(nuevoIndice);
       }
 
       parametrosClickRef.current = {
@@ -538,7 +547,6 @@ export default function App() {
 
       setBpmClick(parametrosDestino.bpm);
       setCompasClick(parametrosDestino.compas);
-      setIndiceCancionEnVivo(nuevoIndice);
     };
 
     // Carga BPM y compás de la canción seleccionada.
@@ -555,7 +563,11 @@ export default function App() {
       if (metronomoActivo) {
         setMetronomoActivo(false);
         setPulsoActivo(false);
+        if (transicionClickRef.current?.destinoIndice != null) {
+          setIndiceCancionEnVivo(transicionClickRef.current.destinoIndice);
+        }
         transicionClickRef.current = null;
+        setCuentaEntrada(null);
         if (audioContextRef.current) {
           try { await audioContextRef.current.suspend(); } catch (_) {}
         }
@@ -582,6 +594,7 @@ export default function App() {
         siguientePulsoRef.current = audioContextRef.current.currentTime + 0.05;
         numeroPulsoRef.current = 0;
         transicionClickRef.current = null;
+        setCuentaEntrada(null);
         setErrorClick("");
         setMetronomoActivo(true);
       } catch (error) {
@@ -668,11 +681,25 @@ export default function App() {
 
           const transicion = transicionClickRef.current;
           if (transicion) {
+            const numeroCuenta = transicion.total - transicion.restantes + 1;
+            setCuentaEntrada({ actual: numeroCuenta, total: transicion.total });
             transicion.restantes -= 1;
 
             if (transicion.restantes <= 0) {
+              const destinoIndice = transicion.destinoIndice;
+              const tiempoInicioCancion = siguientePulsoRef.current + (60 / parametros.bpm);
+              const demoraInicio = Math.max(
+                0,
+                (tiempoInicioCancion - contexto.currentTime) * 1000
+              );
+
               transicionClickRef.current = null;
               numeroPulsoRef.current = 0;
+
+              setTimeout(() => {
+                setIndiceCancionEnVivo(destinoIndice);
+                setCuentaEntrada(null);
+              }, demoraInicio);
             } else {
               numeroPulsoRef.current =
                 (numeroPulsoRef.current + 1) % pulsosPorCompas;
@@ -1688,6 +1715,11 @@ export default function App() {
                   <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "bold" }}>
                     ⚡ {bpmClick} BPM
                   </Text>
+                  {cuentaEntrada && (
+                    <Text style={{ color: "#FDE68A", fontSize: 11, fontWeight: "900" }}>
+                      ENTRADA {cuentaEntrada.actual}/{cuentaEntrada.total}
+                    </Text>
+                  )}
                 </View>
 
                 <View style={{ flexDirection: "row", gap: 5, flexWrap: "wrap" }}>

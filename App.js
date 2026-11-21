@@ -2579,6 +2579,7 @@ export default function App() {
                                   )}
                                 </View>
                               ))}
+                              </View>
                             </View>
                             <View style={{ flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: t.border, paddingLeft: 9 }}>
                               <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: 11, borderWidth: 1, borderColor: t.border }}>

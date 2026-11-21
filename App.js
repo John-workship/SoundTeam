@@ -2701,7 +2701,7 @@ export default function App() {
                             <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "700" }}>DISPONIBILIDAD</Text>
                           </View>
                           <View style={{ flexDirection: anchoVentana < 600 ? "column" : "row", gap: anchoVentana < 600 ? 9 : 12, alignItems: "stretch" }}>
-                            <View style={{ flex: anchoVentana < 600 ? 0 : 1, minWidth: 0, width: anchoVentana < 600 ? "100%" : undefined }}>
+                            <View style={{ minWidth: 0, width: anchoVentana < 600 ? "100%" : undefined, alignSelf: anchoVentana < 600 ? "stretch" : "auto", flexGrow: 0, flexShrink: 1 }}>
                               <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: anchoVentana < 600 ? 13 : 11, borderWidth: 1, borderColor: t.border }}>
                               <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎤 VOCES</Text>
                               {[
@@ -2726,7 +2726,7 @@ export default function App() {
                               ))}
                               </View>
                             </View>
-                            <View style={{ flex: anchoVentana < 600 ? 0 : 1, minWidth: 0, width: anchoVentana < 600 ? "100%" : undefined, borderLeftWidth: anchoVentana < 600 ? 0 : 1, borderLeftColor: t.border, paddingLeft: anchoVentana < 600 ? 0 : 9 }}>
+                            <View style={{ minWidth: 0, width: anchoVentana < 600 ? "100%" : undefined, alignSelf: anchoVentana < 600 ? "stretch" : "auto", flexGrow: 0, flexShrink: 1, borderLeftWidth: anchoVentana < 600 ? 0 : 1, borderLeftColor: t.border, paddingLeft: anchoVentana < 600 ? 0 : 9 }}>
                               <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: anchoVentana < 600 ? 13 : 11, borderWidth: 1, borderColor: t.border }}>
                               <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎸 INSTRUMENTOS</Text>
                               {[

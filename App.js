@@ -2509,9 +2509,13 @@ export default function App() {
 
                   {serviciosDelDia.length > 0 ? (
                     serviciosDelDia.map((serv) => (
-                      <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 18, padding: 14, borderRadius: 16 }]}>
-                        <View style={styles.eventCardHeaderRow}>
-                          <Text style={[styles.eventMainTitle, { color: t.textMain, fontSize: 13 }]}>📅 {serv.titulo}</Text>
+                      <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 18, padding: anchoVentana < 600 ? 12 : 18, borderRadius: 22, borderWidth: 1, shadowColor: "#26345D", shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 3 }]}>
+                        <View style={[styles.eventCardHeaderRow, { alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 10 }]}>
+                          <View style={{ flex: 1, minWidth: anchoVentana < 600 ? "100%" : 180, backgroundColor: t.primary + "12", borderRadius: 14, padding: 12, borderLeftWidth: 4, borderLeftColor: t.primary }}>
+                            <Text style={{ color: t.primary, fontSize: 9, fontWeight: "800", letterSpacing: 1.1, marginBottom: 4 }}>SERVICIO PROGRAMADO</Text>
+                            <Text style={[styles.eventMainTitle, { color: t.textMain, fontSize: anchoVentana < 600 ? 17 : 19, lineHeight: 24 }]}>{serv.titulo}</Text>
+                            <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>📅 {fechaActualClave}</Text>
+                          </View>
                           {(esAdminOLider || esVozPrincipalDeServicio(serv)) && (
                             <View style={{ flexDirection: "row", gap: 4 }}>
                               <TouchableOpacity
@@ -2543,12 +2547,18 @@ export default function App() {
                             </View>
                           )}
                         </View>
-                        <Text style={{ color: t.textSub, fontSize: 11, marginTop: 2, marginBottom: 4 }}>Observaciones: {serv.observaciones}</Text>
-                        <View style={{ marginTop: 12, marginBottom: 12, padding: 12, borderRadius: 12, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border }}>
-                          <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold", marginBottom: 9 }}>👥 OCUPACIÓN DE PUESTOS</Text>
-                          <View style={{ flexDirection: "row", gap: 10 }}>
+                        {serv.observaciones && serv.observaciones !== "Sin observaciones" && (
+                          <View style={{ backgroundColor: t.bg, borderRadius: 10, padding: 10, marginBottom: 8 }}><Text style={{ color: t.textSub, fontSize: 11, lineHeight: 17 }}>📝 {serv.observaciones}</Text></View>
+                        )}
+                        <View style={{ marginTop: 12, marginBottom: 14, padding: anchoVentana < 600 ? 11 : 14, borderRadius: 16, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                            <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "800", letterSpacing: 0.6 }}>👥 OCUPACIÓN DE PUESTOS</Text>
+                            <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "700" }}>DISPONIBILIDAD</Text>
+                          </View>
+                          <View style={{ flexDirection: anchoVentana < 600 ? "column" : "row", gap: 12 }}>
                             <View style={{ flex: 1, minWidth: 0 }}>
-                              <Text style={{ color: t.primary, fontSize: 12, fontWeight: "bold", marginBottom: 7 }}>🎤 VOCES</Text>
+                              <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: 11, borderWidth: 1, borderColor: t.border }}>
+                              <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎤 VOCES</Text>
                               {[
                                 { key: "vozPrincipal", label: "Voz principal", personas: serv.voces?.principal && serv.voces.principal !== "Sin asignar" ? [serv.voces.principal] : [] },
                                 { key: "coros", label: "Coros", personas: (serv.voces?.coros || "Sin asignar").split(",").map((x) => x.trim()).filter((x) => x && x !== "Sin asignar") },
@@ -2571,7 +2581,8 @@ export default function App() {
                               ))}
                             </View>
                             <View style={{ flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: t.border, paddingLeft: 9 }}>
-                              <Text style={{ color: t.primary, fontSize: 12, fontWeight: "bold", marginBottom: 7 }}>🎸 INSTRUMENTOS</Text>
+                              <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: 11, borderWidth: 1, borderColor: t.border }}>
+                              <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎸 INSTRUMENTOS</Text>
                               {[
                                 { key: "piano", label: "Piano" },
                                 { key: "guitarra", label: "Guitarra" },
@@ -2599,11 +2610,15 @@ export default function App() {
                                 );
                               })}
                             </View>
+                            </View>
                           </View>
                         </View>
 
 
-                        <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginTop: 4, marginBottom: 4 }}>🎵 SETLIST ({serv.setlist?.length || 0}):</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 5, marginBottom: 9 }}>
+                          <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "800", letterSpacing: 0.5 }}>🎵 REPERTORIO DEL SERVICIO</Text>
+                          <View style={{ backgroundColor: t.primary + "18", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 }}><Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>{serv.setlist?.length || 0} canciones</Text></View>
+                        </View>
                         {serv.setlist && serv.setlist.length > 0 ? (
                           (serv.ordenBloquesSetlist === "rapida-lenta" ? ["rapida", "lenta"] : ["lenta", "rapida"]).map((tipo) => {
                             const cancionesTipo = serv.setlist.filter((s) => {
@@ -2617,7 +2632,7 @@ export default function App() {
                                   {tipo === "lenta" ? "🕯️ LENTAS" : "⚡ RÁPIDAS"}
                                 </Text>
                                 {cancionesTipo.map((s, i) => (
-                                  <View key={`${tipo}-${i}`} style={{ backgroundColor: t.bg, padding: 9, borderRadius: 9, borderWidth: 1, borderColor: t.border, marginBottom: 6 }}>
+                                  <View key={`${tipo}-${i}`} style={{ backgroundColor: t.bg, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: t.border, marginBottom: 7, borderLeftWidth: 3, borderLeftColor: tipo === "lenta" ? "#8B5CF6" : "#F59E0B" }}>
                                     <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "bold" }}>
                                       {i + 1}. {s.titulo} <Text style={{ color: t.textSub, fontWeight: "normal", fontSize: 10 }}>(Tono: {s.tono} | {s.bpm || "120"} BPM)</Text>
                                     </Text>

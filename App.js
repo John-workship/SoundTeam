@@ -1782,11 +1782,18 @@ export default function App() {
       ) : (
         <View style={{ flex: 1, flexDirection: esEscritorio ? "row" : "column", width: "100%", height: "100vh", minHeight: "100vh" }}>
           {esEscritorio && (
-            <View style={{ width: 252, backgroundColor: t.cardBg, borderRightWidth: 1, borderRightColor: t.border, paddingHorizontal: 18, paddingTop: 26, paddingBottom: 20 }}>
-              <View style={{ paddingHorizontal: 10, paddingBottom: 28, borderBottomWidth: 1, borderBottomColor: t.border, marginBottom: 24 }}>
-                <Text style={{ color: t.primary, fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 7 }}>SOUNDTEAM</Text>
-                <Text style={{ color: t.textMain, fontSize: 19, fontWeight: "900" }}>Panel musical</Text>
-                <Text style={{ color: t.textSub, fontSize: 11, marginTop: 5 }} numberOfLines={1}>{sedeActual.nombre}</Text>
+            <View style={{ width: 264, backgroundColor: t.cardBg, borderRightWidth: 1, borderRightColor: t.border, paddingHorizontal: 18, paddingTop: 28, paddingBottom: 22, shadowColor: "#18213B", shadowOpacity: 0.05, shadowRadius: 18, shadowOffset: { width: 4, height: 0 }, elevation: 2 }}>
+              <View style={{ paddingHorizontal: 10, paddingBottom: 26, borderBottomWidth: 1, borderBottomColor: t.border, marginBottom: 24 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: t.primary, alignItems: "center", justifyContent: "center", shadowColor: t.primary, shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
+                    <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>S</Text>
+                  </View>
+                  <View>
+                    <Text style={{ color: t.textMain, fontSize: 18, fontWeight: "900", letterSpacing: 0.2 }}>SoundTeam</Text>
+                    <Text style={{ color: t.textSub, fontSize: 10, fontWeight: "700", letterSpacing: 1.1 }}>GESTIÓN MUSICAL</Text>
+                  </View>
+                </View>
+                <Text style={{ color: t.textSub, fontSize: 11, marginTop: 3 }} numberOfLines={1}>{sedeActual.nombre}</Text>
               </View>
               <Text style={{ color: t.textSub, fontSize: 10, fontWeight: "800", letterSpacing: 1.5, paddingHorizontal: 10, marginBottom: 10 }}>MENÚ PRINCIPAL</Text>
               {[
@@ -1800,16 +1807,16 @@ export default function App() {
                   <TouchableOpacity
                     key={tab.key}
                     onPress={() => { setPestana(tab.key); setCancionSeleccionadaDetalle(null); }}
-                    style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, marginBottom: 6, backgroundColor: activo ? t.primary + "22" : "transparent", borderWidth: 1, borderColor: activo ? t.primary + "66" : "transparent" }}
+                    style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, marginBottom: 7, backgroundColor: activo ? t.primary : "transparent", borderWidth: 1, borderColor: activo ? t.primary : "transparent", shadowColor: t.primary, shadowOpacity: activo ? 0.18 : 0, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: activo ? 2 : 0 }}
                   >
-                    <Text style={{ width: 27, color: activo ? t.primary : t.textSub, fontSize: 19, fontWeight: "800" }}>{tab.icon}</Text>
-                    <Text style={{ color: activo ? t.textMain : t.textSub, fontSize: 13, fontWeight: activo ? "800" : "600" }}>{tab.label}</Text>
+                    <Text style={{ width: 27, color: activo ? "#FFFFFF" : t.textSub, fontSize: 19, fontWeight: "800" }}>{tab.icon}</Text>
+                    <Text style={{ color: activo ? "#FFFFFF" : t.textSub, fontSize: 13, fontWeight: activo ? "800" : "600" }}>{tab.label}</Text>
                   </TouchableOpacity>
                 );
               })}
               <View style={{ flex: 1 }} />
-              <View style={{ backgroundColor: t.bg, borderRadius: 14, borderWidth: 1, borderColor: t.border, padding: 13 }}>
-                <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>TU COMUNIDAD</Text>
+              <View style={{ backgroundColor: t.bg, borderRadius: 16, borderWidth: 1, borderColor: t.border, padding: 15 }}>
+                <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }}>TU COMUNIDAD</Text>
                 <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "700", marginTop: 7 }} numberOfLines={1}>{usuario}</Text>
                 <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>ROL: {rolUsuario.toUpperCase()}</Text>
               </View>
@@ -1911,18 +1918,18 @@ export default function App() {
             <View style={[styles.mainWrapper, esMovil && styles.mainWrapperMobile, esTablet && styles.mainWrapperTablet]}>
               {pestana === "inicio" && (
                 <View style={{ width: "100%" }}>
-                  <View style={{ backgroundColor: t.cardBg, borderColor: t.border, borderWidth: 1, borderRadius: esMovil ? 17 : 24, padding: esMovil ? 16 : esTablet ? 20 : 24, marginBottom: esMovil ? 12 : 18, overflow: "hidden" }}>
+                  <View style={{ backgroundColor: t.banner, borderColor: t.banner, borderWidth: 1, borderRadius: esMovil ? 17 : 24, padding: esMovil ? 16 : esTablet ? 20 : 24, marginBottom: esMovil ? 12 : 18, overflow: "hidden" }}>
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-                      <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", letterSpacing: 2 }}>SOUNDTEAM · COMUNIDAD MUSICAL</Text>
-                      <View style={{ backgroundColor: t.primary + "22", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20 }}>
-                        <Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>● CONECTADOS</Text>
+                      <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800", letterSpacing: 2 }}>SOUNDTEAM · COMUNIDAD MUSICAL</Text>
+                      <View style={{ backgroundColor: "#FFFFFF26", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20 }}>
+                        <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "800" }}>● CONECTADOS</Text>
                       </View>
                     </View>
-                    <Text style={{ color: t.textMain, fontSize: esMovil ? 23 : esTablet ? 26 : 29, fontWeight: "900", lineHeight: esMovil ? 29 : 35, marginBottom: 9 }}>Una sola música.{"\n"}Una misma misión.</Text>
-                    <Text style={{ color: t.textSub, fontSize: 14, lineHeight: 21, marginBottom: 22 }}>Bienvenido a tu espacio de coordinación, servicio y adoración.</Text>
-                    <View style={{ backgroundColor: t.bg, borderRadius: 13, padding: esMovil ? 11 : 15, borderLeftWidth: 3, borderLeftColor: t.primary }}>
-                      <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 7 }}>✨ COLOSENSES 3:23</Text>
-                      <Text style={{ color: t.textMain, fontSize: 13, lineHeight: 20, fontStyle: "italic" }}>"Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 23 : esTablet ? 26 : 29, fontWeight: "900", lineHeight: esMovil ? 29 : 35, marginBottom: 9 }}>Una sola música.{"\n"}Una misma misión.</Text>
+                    <Text style={{ color: "#E8EAFE", fontSize: 14, lineHeight: 21, marginBottom: 22 }}>Bienvenido a tu espacio de coordinación, servicio y adoración.</Text>
+                    <View style={{ backgroundColor: "#FFFFFF20", borderRadius: 13, padding: esMovil ? 11 : 15, borderLeftWidth: 3, borderLeftColor: "#FFFFFF" }}>
+                      <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800", marginBottom: 7 }}>✨ COLOSENSES 3:23</Text>
+                      <Text style={{ color: "#FFFFFF", fontSize: 13, lineHeight: 20, fontStyle: "italic" }}>"Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."</Text>
                     </View>
                   </View>
 

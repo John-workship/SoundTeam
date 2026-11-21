@@ -14,15 +14,15 @@ import { supabase, isSupabaseConfigured } from "./supabase";
 
 const TEMAS = {
   azul: {
-    bg: "#0B132B",
-    cardBg: "#1C2541",
-    border: "#3A506B",
-    primary: "#3B82F6",
-    textMain: "#FFFFFF",
-    textSub: "#8D99AE",
-    banner: "#6D28D9",
-    selectedDay: "#F97316",
-    nombre: "🔵 Azul",
+    bg: "#F4F6FC",
+    cardBg: "#FFFFFF",
+    border: "#E5EAF5",
+    primary: "#5755D9",
+    textMain: "#18213B",
+    textSub: "#71809B",
+    banner: "#5145CD",
+    selectedDay: "#5755D9",
+    nombre: "✨ SoundTeam",
   },
   claro: {
     bg: "#F1F5F9",
@@ -184,8 +184,8 @@ export default function App() {
   const [datosProyeccion, setDatosProyeccion] = useState(null);
   const googleLoginEnCursoRef = useRef(false);
   const { width: anchoVentana } = useWindowDimensions();
-  const esEscritorio = anchoVentana >= 1200;
-  const esTablet = anchoVentana >= 600 && anchoVentana < 1000;
+  const esEscritorio = anchoVentana >= 1024;
+  const esTablet = anchoVentana >= 600 && anchoVentana < 1024;
   const esMovil = anchoVentana < 600;
   const [semitonos, setSemitonos] = useState(0);
   const [modoNashville, setModoNashville] = useState(false);
@@ -2994,13 +2994,13 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
   logoutBtn: { backgroundColor: "#DC2626", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 9, minHeight: 34, justifyContent: "center" },
   logoutBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
-  content: { flex: 1, padding: 22, width: "100%" },
-  contentMobile: { padding: 10 },
-  contentTablet: { padding: 16 },
-  mainWrapper: { width: "100%", maxWidth: 1280, alignSelf: "center" },
+  content: { flex: 1, padding: 26, width: "100%" },
+  contentMobile: { padding: 12 },
+  contentTablet: { padding: 20 },
+  mainWrapper: { width: "100%", maxWidth: 1440, alignSelf: "center" },
   mainWrapperMobile: { maxWidth: 560 },
-  mainWrapperTablet: { maxWidth: 900 },
-  card: { padding: 22, borderRadius: 22, borderWidth: 1, marginBottom: 20, width: "100%", shadowColor: "#000000", shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 7 }, elevation: 3 },
+  mainWrapperTablet: { maxWidth: 1040 },
+  card: { padding: 22, borderRadius: 20, borderWidth: 1, marginBottom: 20, width: "100%", shadowColor: "#18213B", shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 7 }, elevation: 2 },
   cardTitle: { fontSize: 19, fontWeight: "900", marginBottom: 16, letterSpacing: 0.1 },
   welcomeBanner: { padding: 26, borderRadius: 24, marginBottom: 20, width: "100%", shadowColor: "#000000", shadowOpacity: 0.2, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
   welcomeTitle: { color: "#FFFFFF", fontSize: 19, fontWeight: "bold", marginBottom: 8 },

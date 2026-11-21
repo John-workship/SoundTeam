@@ -2107,6 +2107,48 @@ export default function App() {
 
               {pestana === "eventos" && (
                 <>
+                  <View style={{ width: "100%", backgroundColor: t.banner, borderRadius: 22, padding: esMovil ? 17 : 24, marginBottom: 18, overflow: "hidden" }}>
+                    <Text style={{ color: "#DCDFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.8 }}>PLANIFICACIÓN · {sedeActual.nombre.toUpperCase()}</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 23 : 29, fontWeight: "900", marginTop: 8 }}>Eventos y servicios</Text>
+                    <Text style={{ color: "#E8EAFE", fontSize: 12, lineHeight: 19, marginTop: 6, maxWidth: 520 }}>Organiza cada encuentro, coordina al equipo y prepara el setlist desde un solo lugar.</Text>
+                    <View style={{ flexDirection: "row", gap: 9, marginTop: 18 }}>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderRadius: 13, padding: 12 }}>
+                        <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{servicios.length}</Text>
+                        <Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.7 }}>SERVICIOS</Text>
+                      </View>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderRadius: 13, padding: 12 }}>
+                        <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{serviciosProximos.length}</Text>
+                        <Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.7 }}>PRÓXIMOS</Text>
+                      </View>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderRadius: 13, padding: 12 }}>
+                        <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{serviciosDelDia.length}</Text>
+                        <Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.7 }}>DEL DÍA</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: t.textMain, fontSize: 17, fontWeight: "900" }}>Calendario de actividades</Text>
+                      <Text style={{ color: t.textSub, fontSize: 11, marginTop: 3 }}>Selecciona una fecha para consultar sus servicios.</Text>
+                    </View>
+                    {esAdminOLider && (
+                      <TouchableOpacity
+                        style={{ backgroundColor: t.primary, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 11, flexDirection: "row", alignItems: "center", gap: 5 }}
+                        onPress={() => {
+                          setIdServicioEditando(null);
+                          setNombreEvento(esDomingoSeleccionado ? "Culto Dominical" : "Culto");
+                          setObservaciones("");
+                          setSetlistActivo([]);
+                          setCuposCorosEditando("3");
+                          setOrdenBloquesEditando("lenta-rapida");
+                          setModalProgramarVisible(true);
+                        }}
+                      >
+                        <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>+</Text>
+                        <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>Programar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   <View style={styles.monthsRow}>
                     {listaMesesDinamicos.map((itemMes) => {
                       const esSeleccionado = mesSeleccionadoObj.key === itemMes.key;
@@ -2124,10 +2166,18 @@ export default function App() {
                     })}
                   </View>
 
-                  <View style={[styles.calendarCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                    <Text style={[styles.calendarHeaderTitle, { color: t.textMain }]}>
-                      {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}
-                    </Text>
+                  <View style={[styles.calendarCard, { backgroundColor: t.cardBg, borderColor: t.border, borderRadius: 20, padding: esMovil ? 13 : 20, borderWidth: 1, shadowColor: "#18213B", shadowOpacity: 0.04, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 1 }]}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 15 }}>
+                      <View>
+                        <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "900", letterSpacing: 1.2 }}>VISTA MENSUAL</Text>
+                        <Text style={[styles.calendarHeaderTitle, { color: t.textMain, marginTop: 3 }]}>
+                          {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}
+                        </Text>
+                      </View>
+                      <View style={{ backgroundColor: t.primary + "16", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 9 }}>
+                        <Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>{servicios.length} programados</Text>
+                      </View>
+                    </View>
 
                     <View style={styles.weekHeaderRow}>
                       {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((dSem, idx) => (
@@ -2155,26 +2205,14 @@ export default function App() {
                     </View>
                   </View>
 
-                  <View style={styles.serviceSectionHeader}>
-                    <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>
-                      Servicios de {sedeActual.nombre} - Día {diaSeleccionado} ({serviciosDelDia.length})
-                    </Text>
-                    {esAdminOLider && (
-                      <TouchableOpacity
-                        style={[styles.programBtn, { backgroundColor: t.primary }]}
-                        onPress={() => {
-                          setIdServicioEditando(null);
-                          setNombreEvento(esDomingoSeleccionado ? "Culto Dominical" : "Culto");
-                          setObservaciones("");
-                          setSetlistActivo([]);
-                          setCuposCorosEditando("3");
-                          setOrdenBloquesEditando("lenta-rapida");
-                          setModalProgramarVisible(true);
-                        }}
-                      >
-                        <Text style={styles.programBtnText}>+ Programar Servicio</Text>
-                      </TouchableOpacity>
-                    )}
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 22, marginBottom: 12, gap: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: t.textMain, fontSize: 18, fontWeight: "900" }}>Servicios del día</Text>
+                      <Text style={{ color: t.textSub, fontSize: 11, marginTop: 3 }}>{diaSeleccionado} de {mesSeleccionadoObj.nombre} · {sedeActual.nombre}</Text>
+                    </View>
+                    <View style={{ backgroundColor: t.primary + "16", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
+                      <Text style={{ color: t.primary, fontSize: 12, fontWeight: "900" }}>{serviciosDelDia.length} {serviciosDelDia.length === 1 ? "servicio" : "servicios"}</Text>
+                    </View>
                   </View>
 
                   {modalProgramarVisible && (

@@ -14,15 +14,15 @@ import { supabase, isSupabaseConfigured } from "./supabase";
 
 const TEMAS = {
   azul: {
-    bg: "#0B132B",
-    cardBg: "#1C2541",
-    border: "#3A506B",
-    primary: "#3B82F6",
-    textMain: "#FFFFFF",
-    textSub: "#8D99AE",
-    banner: "#6D28D9",
-    selectedDay: "#F97316",
-    nombre: "🔵 Azul",
+    bg: "#F4F6FC",
+    cardBg: "#FFFFFF",
+    border: "#E5EAF5",
+    primary: "#5755D9",
+    textMain: "#18213B",
+    textSub: "#71809B",
+    banner: "#5145CD",
+    selectedDay: "#5755D9",
+    nombre: "✨ SoundTeam",
   },
   claro: {
     bg: "#F1F5F9",
@@ -112,6 +112,39 @@ const SEDES_DISPONIBLES = [
 ];
 
 
+const CANCIONES_CONGREGACIONALES_INICIALES = [
+  { titulo: "Santo, Santo, Santo", artista: "Reginald Heber / John B. Dykes", tono: "D", bpm: "92", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Cuán grande es Él", artista: "Carl Boberg / Stuart K. Hine", tono: "G", bpm: "76", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Sublime gracia", artista: "John Newton", tono: "G", bpm: "74", compas: "3/4", tipo_set: "lenta" },
+  { titulo: "Grande es tu fidelidad", artista: "Thomas O. Chisholm / William M. Runyan", tono: "D", bpm: "78", compas: "3/4", tipo_set: "lenta" },
+  { titulo: "A Dios sea la gloria", artista: "Andraé Crouch", tono: "G", bpm: "112", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Hay poder en Jesús", artista: "Lewis E. Jones", tono: "G", bpm: "118", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Oh qué amigo nos es Cristo", artista: "Joseph M. Scriven / Charles C. Converse", tono: "C", bpm: "84", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "En el monte Calvario", artista: "George Bennard", tono: "G", bpm: "78", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Tal como soy", artista: "Charlotte Elliott / William B. Bradbury", tono: "D", bpm: "72", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Castillo fuerte es nuestro Dios", artista: "Martín Lutero", tono: "C", bpm: "108", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Firmes y adelante", artista: "Sabine Baring-Gould / Arthur S. Sullivan", tono: "G", bpm: "116", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Cuando allá se pase lista", artista: "James M. Black", tono: "G", bpm: "104", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Más cerca, oh Dios, de ti", artista: "Sarah F. Adams / Lowell Mason", tono: "C", bpm: "72", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Roca de la eternidad", artista: "Augustus M. Toplady / Thomas Hastings", tono: "D", bpm: "76", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "La roca firme", artista: "Edward Mote / William B. Bradbury", tono: "G", bpm: "88", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Victoria en Jesús", artista: "E. M. Bartlett", tono: "G", bpm: "116", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Yo tengo un amigo que me ama", artista: "Coro congregacional tradicional", tono: "C", bpm: "112", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Cristo no está muerto", artista: "Coro congregacional tradicional", tono: "G", bpm: "124", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Jehová es mi guerrero", artista: "Coro congregacional tradicional", tono: "Em", bpm: "126", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Yo celebraré", artista: "Coro congregacional tradicional", tono: "G", bpm: "120", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Este es el día", artista: "Salmo 118:24 / coro congregacional", tono: "D", bpm: "116", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Mi pensamiento eres tú, Señor", artista: "Coro congregacional tradicional", tono: "C", bpm: "88", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Te alabaré, mi buen Jesús", artista: "Danilo Montero", tono: "G", bpm: "82", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Tu fidelidad", artista: "Marcos Witt", tono: "D", bpm: "74", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Abre mis ojos, oh Cristo", artista: "Paul Baloche", tono: "E", bpm: "76", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Eres todopoderoso", artista: "Danilo Montero", tono: "A", bpm: "118", compas: "4/4", tipo_set: "rapida" },
+  { titulo: "Quiero levantar mis manos", artista: "Danny Berrios", tono: "G", bpm: "78", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "El poder de tu amor", artista: "Geoff Bullock", tono: "G", bpm: "72", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Renuévame", artista: "Marcos Witt", tono: "D", bpm: "76", compas: "4/4", tipo_set: "lenta" },
+  { titulo: "Alabaré", artista: "Coro congregacional tradicional", tono: "G", bpm: "120", compas: "4/4", tipo_set: "rapida" },
+]; 
+
 const NOTAS_CROMATICAS = [
   "C", "C#", "D", "D#", "E", "F",
   "F#", "G", "G#", "A", "A#", "B"
@@ -184,8 +217,8 @@ export default function App() {
   const [datosProyeccion, setDatosProyeccion] = useState(null);
   const googleLoginEnCursoRef = useRef(false);
   const { width: anchoVentana } = useWindowDimensions();
-  const esEscritorio = anchoVentana >= 1200;
-  const esTablet = anchoVentana >= 600 && anchoVentana < 1000;
+  const esEscritorio = anchoVentana >= 1024;
+  const esTablet = anchoVentana >= 600 && anchoVentana < 1024;
   const esMovil = anchoVentana < 600;
   const [semitonos, setSemitonos] = useState(0);
   const [modoNashville, setModoNashville] = useState(false);
@@ -423,6 +456,7 @@ export default function App() {
   const [volumenClick, setVolumenClick] = useState(70);
   const [paneoClick, setPaneoClick] = useState(0);
   const [errorClick, setErrorClick] = useState("");
+  const [cuentaEntrada, setCuentaEntrada] = useState(null);
 
   const audioContextRef = useRef(null);
   const schedulerClickRef = useRef(null);
@@ -516,6 +550,8 @@ export default function App() {
         parametrosDestino.bpm !== parametrosActuales.bpm ||
         parametrosDestino.compas !== parametrosActuales.compas;
 
+      if (transicionClickRef.current) return;
+
       if (metronomoActivo && cambiaRitmo) {
         cancelarSonidosFuturos();
 
@@ -523,12 +559,18 @@ export default function App() {
         if (contextoAudio && contextoAudio.state === "running") {
           siguientePulsoRef.current = contextoAudio.currentTime + 0.08;
         }
+        const totalPulsos = obtenerPulsosPorCompas(parametrosDestino.compas);
         transicionClickRef.current = {
-          restantes: obtenerPulsosPorCompas(parametrosDestino.compas)
+          restantes: totalPulsos,
+          total: totalPulsos,
+          destinoIndice: nuevoIndice
         };
+        setCuentaEntrada(null);
         numeroPulsoRef.current = 0;
       } else {
         transicionClickRef.current = null;
+        setCuentaEntrada(null);
+        setIndiceCancionEnVivo(nuevoIndice);
       }
 
       parametrosClickRef.current = {
@@ -538,7 +580,6 @@ export default function App() {
 
       setBpmClick(parametrosDestino.bpm);
       setCompasClick(parametrosDestino.compas);
-      setIndiceCancionEnVivo(nuevoIndice);
     };
 
     // Carga BPM y compás de la canción seleccionada.
@@ -555,7 +596,11 @@ export default function App() {
       if (metronomoActivo) {
         setMetronomoActivo(false);
         setPulsoActivo(false);
+        if (transicionClickRef.current?.destinoIndice != null) {
+          setIndiceCancionEnVivo(transicionClickRef.current.destinoIndice);
+        }
         transicionClickRef.current = null;
+        setCuentaEntrada(null);
         if (audioContextRef.current) {
           try { await audioContextRef.current.suspend(); } catch (_) {}
         }
@@ -582,6 +627,7 @@ export default function App() {
         siguientePulsoRef.current = audioContextRef.current.currentTime + 0.05;
         numeroPulsoRef.current = 0;
         transicionClickRef.current = null;
+        setCuentaEntrada(null);
         setErrorClick("");
         setMetronomoActivo(true);
       } catch (error) {
@@ -668,11 +714,25 @@ export default function App() {
 
           const transicion = transicionClickRef.current;
           if (transicion) {
+            const numeroCuenta = transicion.total - transicion.restantes + 1;
+            setCuentaEntrada({ actual: numeroCuenta, total: transicion.total });
             transicion.restantes -= 1;
 
             if (transicion.restantes <= 0) {
+              const destinoIndice = transicion.destinoIndice;
+              const tiempoInicioCancion = siguientePulsoRef.current + (60 / parametros.bpm);
+              const demoraInicio = Math.max(
+                0,
+                (tiempoInicioCancion - contexto.currentTime) * 1000
+              );
+
               transicionClickRef.current = null;
               numeroPulsoRef.current = 0;
+
+              setTimeout(() => {
+                setIndiceCancionEnVivo(destinoIndice);
+                setCuentaEntrada(null);
+              }, demoraInicio);
             } else {
               numeroPulsoRef.current =
                 (numeroPulsoRef.current + 1) % pulsosPorCompas;
@@ -726,7 +786,10 @@ export default function App() {
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
 
   const [repertorio, setRepertorio] = useState([]);
+  const [importandoCancionesCongregacionales, setImportandoCancionesCongregacionales] = useState(false);
   const [notasRepertorioAbiertas, setNotasRepertorioAbiertas] = useState({});
+  const [busquedaRepertorio, setBusquedaRepertorio] = useState("");
+  const [filtroTipoRepertorio, setFiltroTipoRepertorio] = useState("todos");
 
   const construirEstadoProyeccion = () => {
     const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
@@ -1036,6 +1099,66 @@ export default function App() {
     esVozPrincipalDeServicio(servicioEditandoActual) &&
     !esAdminOLider;
   const puedeGestionarRepertorio = esAdminOLider || rolesMusicalesUsuario.some(r => ["piano", "guitarra", "bajo", "bateria"].includes(String(r).toLowerCase()));
+
+  const importarCancionesCongregacionales = async () => {
+    if (!puedeGestionarRepertorio || importandoCancionesCongregacionales) return;
+    const confirmado = confirm(
+      `Se preparó un lote de 30 canciones congregacionales para ${sedeActual.nombre}.\\n\\nSe omitirán las que ya existan en esta sede. Los tonos y BPM son valores iniciales sugeridos y podrás editarlos. Las letras quedarán vacías para que agregues material propio o autorizado.\\n\\n¿Continuar?`
+    );
+    if (!confirmado) return;
+
+    setImportandoCancionesCongregacionales(true);
+    try {
+      const { data: existentes, error: errorConsulta } = await supabase
+        .from("repertorio")
+        .select("titulo")
+        .eq("sede_id", sedeIdSeleccionada);
+
+      if (errorConsulta) {
+        alert(`No se pudo comprobar el repertorio actual: ${errorConsulta.message}`);
+        return;
+      }
+
+      const normalizarTitulo = valor => String(valor || "")
+        .normalize("NFD")
+        .replace(/[\\u0300-\\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+
+      const titulosExistentes = new Set((existentes || []).map(c => normalizarTitulo(c.titulo)));
+      const pendientes = CANCIONES_CONGREGACIONALES_INICIALES
+        .filter(c => !titulosExistentes.has(normalizarTitulo(c.titulo)))
+        .map(c => ({
+          ...c,
+          etiquetas: ["Congregacional", "Tono y BPM sugeridos"],
+          letra: "",
+          sede_id: sedeIdSeleccionada,
+        }));
+
+      if (pendientes.length === 0) {
+        alert("Estas 30 canciones ya están registradas en esta sede. No se hicieron cambios.");
+        return;
+      }
+
+      const { data: insertadas, error: errorInsercion } = await supabase
+        .from("repertorio")
+        .insert(pendientes)
+        .select("id");
+
+      if (errorInsercion) {
+        alert(`No se pudo completar la importación: ${errorInsercion.message}`);
+        return;
+      }
+
+      await cargarRepertorioSupabase();
+      alert(`Importación completada. Se agregaron ${insertadas?.length || 0} canciones nuevas. Se omitieron ${30 - pendientes.length} que ya estaban registradas. Revisa y ajusta los tonos y BPM según la versión que usa tu congregación.`);
+    } catch (error) {
+      alert(`Ocurrió un error durante la importación: ${error.message}`);
+    } finally {
+      setImportandoCancionesCongregacionales(false);
+    }
+  };
+
 
   const enviarOActualizarMensajeChat = async () => {
     if (nuevoMensajeTexto.trim() !== "") {
@@ -1540,33 +1663,51 @@ export default function App() {
       )}
       {modoEnVivoActivo ? (
         <View style={[styles.teleprompterContainer, { backgroundColor: "#0B0F19" }]}>
-          <View style={styles.teleprompterTopBar}>
-            <TouchableOpacity 
-              style={styles.teleprompterExitBtn}
-              onPress={() => { cerrarProyeccion(); setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
-            >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 11 }}>✕ Salir</Text>
-            </TouchableOpacity>
-            <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "bold" }}>
-              Canción {indiceCancionEnVivo + 1} de {setlistEnVivoActual.length}
-            </Text>
+          <View style={[styles.teleprompterTopBar, { backgroundColor: "#0F172A", borderBottomWidth: 1, borderBottomColor: "#263449", paddingVertical: 12 }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+              <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: "#22C55E" }} />
+              <View>
+                <Text style={{ color: "#F8FAFC", fontSize: 12, fontWeight: "900", letterSpacing: 1 }}>SOUNDTEAM · EN VIVO</Text>
+                <Text style={{ color: "#94A3B8", fontSize: 10, marginTop: 2 }}>{proyeccionAbierta ? "Pantalla externa conectada" : "Consola de dirección"}</Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Text style={{ color: "#94A3B8", fontSize: 11, fontWeight: "800" }}>
+                {indiceCancionEnVivo + 1} / {setlistEnVivoActual.length}
+              </Text>
+              <TouchableOpacity
+                style={[styles.teleprompterExitBtn, { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 9 }]}
+                onPress={() => { cerrarProyeccion(); setModoEnVivoActivo(false); setMetronomoActivo(false); setAvanceAutomaticoActivo(false); }}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 11 }}>✕ Salir</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#111827", borderBottomWidth: 1, borderBottomColor: "#334155" }}>
-            <TouchableOpacity
-              style={[styles.teleprompterNavBtn, { backgroundColor: "#334155", minWidth: 116 }, indiceCancionEnVivo === 0 && { opacity: 0.4 }]}
-              disabled={indiceCancionEnVivo === 0}
-              onPress={() => cambiarCancionEnVivo(-1)}
-            >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>← Anterior</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.teleprompterNavBtn, { backgroundColor: "#2563EB", minWidth: 116 }, indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.4 }]}
-              disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
-              onPress={() => cambiarCancionEnVivo(1)}
-            >
-              <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 13 }}>Siguiente →</Text>
-            </TouchableOpacity>
+          <View style={{ backgroundColor: "#111827", paddingHorizontal: 14, paddingTop: 11, paddingBottom: 13, borderBottomWidth: 1, borderBottomColor: "#334155" }}>
+            <Text style={{ color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1.4, marginBottom: 8 }}>CONTROL DE CANCIÓN · SIEMPRE DISPONIBLE</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <TouchableOpacity
+                style={[styles.teleprompterNavBtn, { flex: 1, minWidth: 0, minHeight: 48, backgroundColor: "#334155", borderRadius: 11 }, indiceCancionEnVivo === 0 && { opacity: 0.35 }]}
+                disabled={indiceCancionEnVivo === 0}
+                onPress={() => cambiarCancionEnVivo(-1)}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "900", fontSize: 13 }}>← Anterior</Text>
+              </TouchableOpacity>
+              <View style={{ flex: 1.35, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+                <Text numberOfLines={1} style={{ color: "#F8FAFC", fontSize: 12, fontWeight: "900", textAlign: "center" }}>
+                  {(setlistEnVivoActual[indiceCancionEnVivo] || {}).titulo || "Sin canción"}
+                </Text>
+                <Text style={{ color: "#94A3B8", fontSize: 10, marginTop: 3 }}>Toca para avanzar desde aquí</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.teleprompterNavBtn, { flex: 1, minWidth: 0, minHeight: 48, backgroundColor: "#2563EB", borderRadius: 11 }, indiceCancionEnVivo >= setlistEnVivoActual.length - 1 && { opacity: 0.35 }]}
+                disabled={indiceCancionEnVivo >= setlistEnVivoActual.length - 1}
+                onPress={() => cambiarCancionEnVivo(1)}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "900", fontSize: 13 }}>Siguiente →</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ScrollView contentContainerStyle={styles.teleprompterScrollContent}>
@@ -1668,6 +1809,11 @@ export default function App() {
                   <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "bold" }}>
                     ⚡ {bpmClick} BPM
                   </Text>
+                  {cuentaEntrada && (
+                    <Text style={{ color: "#FDE68A", fontSize: 11, fontWeight: "900" }}>
+                      ENTRADA {cuentaEntrada.actual}/{cuentaEntrada.total}
+                    </Text>
+                  )}
                 </View>
 
                 <View style={{ flexDirection: "row", gap: 5, flexWrap: "wrap" }}>
@@ -1782,11 +1928,18 @@ export default function App() {
       ) : (
         <View style={{ flex: 1, flexDirection: esEscritorio ? "row" : "column", width: "100%", height: "100vh", minHeight: "100vh" }}>
           {esEscritorio && (
-            <View style={{ width: 252, backgroundColor: t.cardBg, borderRightWidth: 1, borderRightColor: t.border, paddingHorizontal: 18, paddingTop: 26, paddingBottom: 20 }}>
-              <View style={{ paddingHorizontal: 10, paddingBottom: 28, borderBottomWidth: 1, borderBottomColor: t.border, marginBottom: 24 }}>
-                <Text style={{ color: t.primary, fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 7 }}>SOUNDTEAM</Text>
-                <Text style={{ color: t.textMain, fontSize: 19, fontWeight: "900" }}>Panel musical</Text>
-                <Text style={{ color: t.textSub, fontSize: 11, marginTop: 5 }} numberOfLines={1}>{sedeActual.nombre}</Text>
+            <View style={{ width: 264, backgroundColor: t.cardBg, borderRightWidth: 1, borderRightColor: t.border, paddingHorizontal: 18, paddingTop: 28, paddingBottom: 22, shadowColor: "#18213B", shadowOpacity: 0.05, shadowRadius: 18, shadowOffset: { width: 4, height: 0 }, elevation: 2 }}>
+              <View style={{ paddingHorizontal: 10, paddingBottom: 26, borderBottomWidth: 1, borderBottomColor: t.border, marginBottom: 24 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: t.primary, alignItems: "center", justifyContent: "center", shadowColor: t.primary, shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
+                    <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>S</Text>
+                  </View>
+                  <View>
+                    <Text style={{ color: t.textMain, fontSize: 18, fontWeight: "900", letterSpacing: 0.2 }}>SoundTeam</Text>
+                    <Text style={{ color: t.textSub, fontSize: 10, fontWeight: "700", letterSpacing: 1.1 }}>GESTIÓN MUSICAL</Text>
+                  </View>
+                </View>
+                <Text style={{ color: t.textSub, fontSize: 11, marginTop: 3 }} numberOfLines={1}>{sedeActual.nombre}</Text>
               </View>
               <Text style={{ color: t.textSub, fontSize: 10, fontWeight: "800", letterSpacing: 1.5, paddingHorizontal: 10, marginBottom: 10 }}>MENÚ PRINCIPAL</Text>
               {[
@@ -1800,16 +1953,16 @@ export default function App() {
                   <TouchableOpacity
                     key={tab.key}
                     onPress={() => { setPestana(tab.key); setCancionSeleccionadaDetalle(null); }}
-                    style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, marginBottom: 6, backgroundColor: activo ? t.primary + "22" : "transparent", borderWidth: 1, borderColor: activo ? t.primary + "66" : "transparent" }}
+                    style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, marginBottom: 7, backgroundColor: activo ? t.primary : "transparent", borderWidth: 1, borderColor: activo ? t.primary : "transparent", shadowColor: t.primary, shadowOpacity: activo ? 0.18 : 0, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: activo ? 2 : 0 }}
                   >
-                    <Text style={{ width: 27, color: activo ? t.primary : t.textSub, fontSize: 19, fontWeight: "800" }}>{tab.icon}</Text>
-                    <Text style={{ color: activo ? t.textMain : t.textSub, fontSize: 13, fontWeight: activo ? "800" : "600" }}>{tab.label}</Text>
+                    <Text style={{ width: 27, color: activo ? "#FFFFFF" : t.textSub, fontSize: 19, fontWeight: "800" }}>{tab.icon}</Text>
+                    <Text style={{ color: activo ? "#FFFFFF" : t.textSub, fontSize: 13, fontWeight: activo ? "800" : "600" }}>{tab.label}</Text>
                   </TouchableOpacity>
                 );
               })}
               <View style={{ flex: 1 }} />
-              <View style={{ backgroundColor: t.bg, borderRadius: 14, borderWidth: 1, borderColor: t.border, padding: 13 }}>
-                <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>TU COMUNIDAD</Text>
+              <View style={{ backgroundColor: t.bg, borderRadius: 16, borderWidth: 1, borderColor: t.border, padding: 15 }}>
+                <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }}>TU COMUNIDAD</Text>
                 <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "700", marginTop: 7 }} numberOfLines={1}>{usuario}</Text>
                 <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>ROL: {rolUsuario.toUpperCase()}</Text>
               </View>
@@ -1911,195 +2064,236 @@ export default function App() {
             <View style={[styles.mainWrapper, esMovil && styles.mainWrapperMobile, esTablet && styles.mainWrapperTablet]}>
               {pestana === "inicio" && (
                 <View style={{ width: "100%" }}>
-                  <View style={{ backgroundColor: t.cardBg, borderColor: t.border, borderWidth: 1, borderRadius: esMovil ? 17 : 24, padding: esMovil ? 16 : esTablet ? 20 : 24, marginBottom: esMovil ? 12 : 18, overflow: "hidden" }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-                      <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", letterSpacing: 2 }}>SOUNDTEAM · COMUNIDAD MUSICAL</Text>
-                      <View style={{ backgroundColor: t.primary + "22", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20 }}>
-                        <Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>● CONECTADOS</Text>
+                  <View style={{ backgroundColor: t.banner, borderColor: t.banner, borderWidth: 1, borderRadius: esMovil ? 19 : 26, padding: esMovil ? 18 : esTablet ? 22 : 28, marginBottom: 18, overflow: "hidden", shadowColor: t.banner, shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: esMovil ? 18 : 24, gap: 8 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: "#DCDFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.7 }}>SOUNDTEAM · PANEL PRINCIPAL</Text>
+                        <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700", marginTop: 5 }}>{sedeActual.nombre}</Text>
+                      </View>
+                      <View style={{ backgroundColor: "#FFFFFF20", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: "#FFFFFF30" }}>
+                        <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }}>● SESIÓN ACTIVA</Text>
                       </View>
                     </View>
-                    <Text style={{ color: t.textMain, fontSize: esMovil ? 23 : esTablet ? 26 : 29, fontWeight: "900", lineHeight: esMovil ? 29 : 35, marginBottom: 9 }}>Una sola música.{"\n"}Una misma misión.</Text>
-                    <Text style={{ color: t.textSub, fontSize: 14, lineHeight: 21, marginBottom: 22 }}>Bienvenido a tu espacio de coordinación, servicio y adoración.</Text>
-                    <View style={{ backgroundColor: t.bg, borderRadius: 13, padding: esMovil ? 11 : 15, borderLeftWidth: 3, borderLeftColor: t.primary }}>
-                      <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 7 }}>✨ COLOSENSES 3:23</Text>
-                      <Text style={{ color: t.textMain, fontSize: 13, lineHeight: 20, fontStyle: "italic" }}>"Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 25 : esTablet ? 29 : 34, fontWeight: "900", lineHeight: esMovil ? 31 : 40, marginBottom: 9 }}>Una sola música.{"\n"}Una misma misión.</Text>
+                    <Text style={{ color: "#E8EAFE", fontSize: 13, lineHeight: 20, marginBottom: 20, maxWidth: 560 }}>Hola, {usuario}. Este es tu espacio para coordinar al equipo, preparar los servicios y servir con excelencia.</Text>
+                    <View style={{ backgroundColor: "#FFFFFF18", borderRadius: 14, padding: esMovil ? 12 : 15, borderLeftWidth: 3, borderLeftColor: "#FFFFFF", borderWidth: 1, borderColor: "#FFFFFF22" }}>
+                      <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "900", marginBottom: 6, letterSpacing: 0.8 }}>✨ COLOSENSES 3:23</Text>
+                      <Text style={{ color: "#FFFFFF", fontSize: 12, lineHeight: 19, fontStyle: "italic" }}>"Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."</Text>
                     </View>
                   </View>
 
-                  {esEscritorio && (
-                    <View style={{ flexDirection: "row", gap: 12, marginBottom: 18 }}>
-                      {[
-                        { label: "INTEGRANTES", value: integrantesSeccionEquipo.length, icon: "♧" },
-                        { label: "SERVICIOS", value: servicios.length, icon: "▦" },
-                        { label: "CANCIONES", value: repertorio.length, icon: "♫" },
-                      ].map((dato) => (
-                        <View key={dato.label} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: t.border, backgroundColor: t.cardBg }}>
-                          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: t.primary + "22", justifyContent: "center", alignItems: "center" }}>
-                            <Text style={{ color: t.primary, fontSize: 20, fontWeight: "900" }}>{dato.icon}</Text>
-                          </View>
-                          <View>
-                            <Text style={{ color: t.textMain, fontSize: 20, fontWeight: "900" }}>{dato.value}</Text>
-                            <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "800", letterSpacing: 1 }}>{dato.label}</Text>
-                          </View>
+                  <View style={{ flexDirection: "row", gap: esMovil ? 7 : 12, marginBottom: 18 }}>
+                    {[
+                      { label: "INTEGRANTES", value: integrantesSeccionEquipo.length, icon: "♧", tint: "#5755D9" },
+                      { label: "SERVICIOS", value: servicios.length, icon: "▦", tint: "#2563EB" },
+                      { label: "CANCIONES", value: repertorio.length, icon: "♫", tint: "#7C3AED" },
+                    ].map((dato) => (
+                      <View key={dato.label} style={{ flex: 1, minWidth: 0, flexDirection: esMovil ? "column" : "row", alignItems: esMovil ? "flex-start" : "center", justifyContent: esMovil ? "center" : "flex-start", gap: esMovil ? 7 : 12, padding: esMovil ? 11 : 15, minHeight: esMovil ? 91 : 78, borderRadius: 17, borderWidth: 1, borderColor: t.border, backgroundColor: t.cardBg, shadowColor: "#18213B", shadowOpacity: 0.045, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 1 }}>
+                        <View style={{ width: esMovil ? 30 : 42, height: esMovil ? 30 : 42, borderRadius: 12, backgroundColor: dato.tint + "18", justifyContent: "center", alignItems: "center" }}>
+                          <Text style={{ color: dato.tint, fontSize: esMovil ? 17 : 21, fontWeight: "900" }}>{dato.icon}</Text>
                         </View>
-                      ))}
-                    </View>
-                  )}
+                        <View style={{ minWidth: 0 }}>
+                          <Text style={{ color: t.textMain, fontSize: esMovil ? 19 : 22, fontWeight: "900" }}>{dato.value}</Text>
+                          <Text numberOfLines={1} style={{ color: t.textSub, fontSize: esMovil ? 8 : 9, fontWeight: "900", letterSpacing: 0.65, marginTop: 2 }}>{dato.label}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
 
                   <View style={{ flexDirection: esEscritorio ? "row" : "column", alignItems: "stretch", gap: 16 }}>
-                  <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, flex: esEscritorio ? 1.65 : undefined, width: esEscritorio ? undefined : "100%", marginBottom: esEscritorio ? 0 : 20 }]}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10 }}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: t.primary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5, marginBottom: 5 }}>COMUNIDAD · EN VIVO</Text>
-                        <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>Chat de {sedeActual.nombre}</Text>
-                        <Text style={{ color: t.textSub, fontSize: 11, marginTop: 4 }}>Comparte mensajes y coordina con tu equipo</Text>
-                      </View>
-                      {esAdminOLider && (
-                        <TouchableOpacity style={{ backgroundColor: "#DC2626", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 9 }} onPress={limpiarHistorialChat}>
-                          <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "700" }}>🗑️ Limpiar</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-
-                    <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
-                      {[
-                        { key: "martes", label: "🗓️ Martes" },
-                        { key: "jueves", label: "🗓️ Jueves" },
-                        { key: "finsemana", label: "⛪ Sáb & Dom" },
-                      ].map((ch) => {
-                        const estaActivo = canalChatActivo === ch.key;
-                        return (
-                          <TouchableOpacity
-                            key={ch.key}
-                            style={[
-                              { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg, alignItems: "center" },
-                              estaActivo && { backgroundColor: t.primary, borderColor: t.primary },
-                            ]}
-                            onPress={() => setCanalChatActivo(ch.key)}
-                          >
-                            <Text style={{ fontSize: 12, fontWeight: estaActivo ? "700" : "600", color: estaActivo ? "#FFF" : t.textSub }}>
-                              {ch.label}
-                            </Text>
+                    <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, flex: esEscritorio ? 1.55 : undefined, width: esEscritorio ? undefined : "100%", marginBottom: 0, padding: esMovil ? 15 : 22 }]}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15, gap: 10 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.5, marginBottom: 5 }}>COMUNIDAD · EN VIVO</Text>
+                          <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0, fontSize: esMovil ? 17 : 19 }]}>Chat de {sedeActual.nombre}</Text>
+                          <Text style={{ color: t.textSub, fontSize: 11, marginTop: 4 }}>Comparte mensajes y coordina con tu equipo</Text>
+                        </View>
+                        {esAdminOLider && (
+                          <TouchableOpacity style={{ backgroundColor: "#FEE2E2", paddingHorizontal: 11, paddingVertical: 8, borderRadius: 10 }} onPress={limpiarHistorialChat}>
+                            <Text style={{ color: "#B91C1C", fontSize: 11, fontWeight: "800" }}>🗑 Limpiar</Text>
                           </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-
-                    <View style={{ backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.border, padding: 12, height: 260, marginBottom: 14 }}>
-                      <ScrollView>
-                        {mensajesChat.length === 0 ? (
-                          <Text style={{ color: t.textSub, textAlign: "center", marginTop: 20, fontStyle: "italic", fontSize: 12 }}>
-                            No hay mensajes en este chat para {sedeActual.nombre}. ¡Sé el primero en escribir!
-                          </Text>
-                        ) : (
-                          mensajesChat.map((m, i) => {
-                            const esMio = m.autor === usuario;
-                            return (
-                              <View
-                                key={m.id || i}
-                                style={{
-                                  marginBottom: 10,
-                                  backgroundColor: esMio ? t.primary + "22" : t.cardBg,
-                                  padding: 12,
-                                  borderRadius: 10,
-                                  borderWidth: 1,
-                                  borderColor: t.border,
-                                }}
-                              >
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 2 }}>
-                                  <Text style={{ color: t.primary, fontWeight: "700", fontSize: 12 }}>
-                                    {m.autor} {m.editado ? "(corregido)" : ""}
-                                  </Text>
-                                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                                    <Text style={{ color: t.textSub, fontSize: 10 }}>{m.hora}</Text>
-                                    {esMio && (
-                                      <TouchableOpacity
-                                        onPress={() => {
-                                          setIdMensajeEditando(m.id);
-                                          setNuevoMensajeTexto(m.texto);
-                                        }}
-                                      >
-                                        <Text style={{ color: t.primary, fontSize: 10, fontWeight: "bold" }}>✏️ Corregir</Text>
-                                      </TouchableOpacity>
-                                    )}
-                                  </View>
-                                </View>
-                                <Text style={{ color: t.textMain, fontSize: 13, lineHeight: 19 }}>{m.texto}</Text>
-                              </View>
-                            );
-                          })
                         )}
-                      </ScrollView>
-                    </View>
+                      </View>
 
-                    <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-                      <TextInput
-                        style={[styles.loginInput, { flex: 1, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, borderRadius: 11, minHeight: 48 }]}
-                        placeholder={`Escribir en el chat de ${sedeActual.nombre}...`}
-                        placeholderTextColor={t.textSub}
-                        value={nuevoMensajeTexto}
-                        onChangeText={setNuevoMensajeTexto}
-                      />
-                      <TouchableOpacity
-                        style={[styles.loginButton, { backgroundColor: t.primary, justifyContent: "center", paddingVertical: 12, paddingHorizontal: 18, borderRadius: 11, minHeight: 48 }]}
-                        onPress={enviarOActualizarMensajeChat}
-                      >
-                        <Text style={[styles.loginButtonText, { fontSize: 12 }]}>Enviar</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {esEscritorio && (
-                    <View style={{ flex: 1, gap: 14 }}>
-                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0 }]}>
-                        <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 6 }}>ACCESO RÁPIDO</Text>
-                        <Text style={{ color: t.textMain, fontSize: 17, fontWeight: "900", marginBottom: 14 }}>Tu espacio de trabajo</Text>
+                      <View style={{ flexDirection: "row", gap: 7, marginBottom: 13 }}>
                         {[
-                          { key: "eventos", title: "Calendario y servicios", detail: "Consulta y programa reuniones", icon: "▦" },
-                          ...(esAdminOLider ? [{ key: "equipo", title: "Gestionar equipo", detail: "Consulta los integrantes", icon: "♧" }] : []),
-                          { key: "repertorio", title: "Biblioteca musical", detail: "Organiza las canciones", icon: "♫" },
+                          { key: "martes", label: "🗓️ Martes" },
+                          { key: "jueves", label: "🗓️ Jueves" },
+                          { key: "finsemana", label: "⛪ Sáb & Dom" },
+                        ].map((ch) => {
+                          const estaActivo = canalChatActivo === ch.key;
+                          return (
+                            <TouchableOpacity
+                              key={ch.key}
+                              style={[
+                                { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg, alignItems: "center" },
+                                estaActivo && { backgroundColor: t.primary, borderColor: t.primary },
+                              ]}
+                              onPress={() => setCanalChatActivo(ch.key)}
+                            >
+                              <Text numberOfLines={1} style={{ fontSize: esMovil ? 10 : 12, fontWeight: estaActivo ? "800" : "600", color: estaActivo ? "#FFF" : t.textSub }}>
+                                {ch.label}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
+                      <View style={{ backgroundColor: t.bg, borderRadius: 13, borderWidth: 1, borderColor: t.border, padding: 11, height: esMovil ? 245 : 285, marginBottom: 12 }}>
+                        <ScrollView>
+                          {mensajesChat.length === 0 ? (
+                            <Text style={{ color: t.textSub, textAlign: "center", marginTop: 22, fontStyle: "italic", fontSize: 12, lineHeight: 19 }}>
+                              No hay mensajes en este chat para {sedeActual.nombre}. ¡Sé el primero en escribir!
+                            </Text>
+                          ) : (
+                            mensajesChat.map((m, i) => {
+                              const esMio = m.autor === usuario;
+                              return (
+                                <View
+                                  key={m.id || i}
+                                  style={{
+                                    marginBottom: 10,
+                                    backgroundColor: esMio ? t.primary + "18" : t.cardBg,
+                                    padding: 12,
+                                    borderRadius: 11,
+                                    borderWidth: 1,
+                                    borderColor: t.border,
+                                  }}
+                                >
+                                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3, gap: 8 }}>
+                                    <Text style={{ color: t.primary, fontWeight: "800", fontSize: 12, flex: 1 }}>
+                                      {m.autor} {m.editado ? "(corregido)" : ""}
+                                    </Text>
+                                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                      <Text style={{ color: t.textSub, fontSize: 10 }}>{m.hora}</Text>
+                                      {esMio && (
+                                        <TouchableOpacity
+                                          onPress={() => {
+                                            setIdMensajeEditando(m.id);
+                                            setNuevoMensajeTexto(m.texto);
+                                          }}
+                                        >
+                                          <Text style={{ color: t.primary, fontSize: 10, fontWeight: "bold" }}>✏️ Corregir</Text>
+                                        </TouchableOpacity>
+                                      )}
+                                    </View>
+                                  </View>
+                                  <Text style={{ color: t.textMain, fontSize: 13, lineHeight: 19 }}>{m.texto}</Text>
+                                </View>
+                              );
+                            })
+                          )}
+                        </ScrollView>
+                      </View>
+
+                      <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                        <TextInput
+                          style={[styles.loginInput, { flex: 1, minWidth: 0, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0, paddingHorizontal: 13, paddingVertical: 11, fontSize: 13, borderRadius: 11, minHeight: 47 }]}
+                          placeholder={"Escribir en el chat de " + sedeActual.nombre + "..."}
+                          placeholderTextColor={t.textSub}
+                          value={nuevoMensajeTexto}
+                          onChangeText={setNuevoMensajeTexto}
+                        />
+                        <TouchableOpacity
+                          style={[styles.loginButton, { backgroundColor: t.primary, justifyContent: "center", paddingVertical: 11, paddingHorizontal: esMovil ? 13 : 18, borderRadius: 11, minHeight: 47 }]}
+                          onPress={enviarOActualizarMensajeChat}
+                        >
+                          <Text style={[styles.loginButtonText, { fontSize: 12 }]}>Enviar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
+                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 20 }]}>
+                        <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.5, marginBottom: 6 }}>ACCESO RÁPIDO</Text>
+                        <Text style={{ color: t.textMain, fontSize: 17, fontWeight: "900", marginBottom: 13 }}>Tu espacio de trabajo</Text>
+                        {[
+                          { key: "eventos", title: "Calendario y servicios", detail: "Consulta y programa encuentros", icon: "▦", tint: "#2563EB" },
+                          ...(esAdminOLider ? [{ key: "equipo", title: "Gestionar equipo", detail: "Integrantes, roles y sedes", icon: "♧", tint: "#5755D9" }] : []),
+                          { key: "repertorio", title: "Biblioteca musical", detail: "Organiza las canciones", icon: "♫", tint: "#7C3AED" },
                         ].map((acceso) => (
-                          <TouchableOpacity key={acceso.key} onPress={() => { setPestana(acceso.key); setCancionSeleccionadaDetalle(null); }} style={{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 12, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, marginBottom: 9 }}>
-                            <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: t.primary + "22", alignItems: "center", justifyContent: "center", marginRight: 11 }}>
-                              <Text style={{ color: t.primary, fontSize: 19, fontWeight: "900" }}>{acceso.icon}</Text>
+                          <TouchableOpacity key={acceso.key} onPress={() => { setPestana(acceso.key); setCancionSeleccionadaDetalle(null); }} style={{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 13, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, marginBottom: 8 }}>
+                            <View style={{ width: 39, height: 39, borderRadius: 12, backgroundColor: acceso.tint + "18", alignItems: "center", justifyContent: "center", marginRight: 11 }}>
+                              <Text style={{ color: acceso.tint, fontSize: 19, fontWeight: "900" }}>{acceso.icon}</Text>
                             </View>
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "800" }}>{acceso.title}</Text>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "900" }}>{acceso.title}</Text>
                               <Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{acceso.detail}</Text>
                             </View>
-                            <Text style={{ color: t.primary, fontSize: 18, fontWeight: "800" }}>›</Text>
+                            <Text style={{ color: t.primary, fontSize: 20, fontWeight: "900" }}>›</Text>
                           </TouchableOpacity>
                         ))}
                       </View>
 
-                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0 }]}>
-                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                          <View>
-                            <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }}>PRÓXIMOS ENCUENTROS</Text>
+                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 20 }]}>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 9, gap: 8 }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.2 }}>PRÓXIMOS ENCUENTROS</Text>
                             <Text style={{ color: t.textMain, fontSize: 16, fontWeight: "900", marginTop: 4 }}>Agenda de la sede</Text>
                           </View>
-                          <TouchableOpacity onPress={() => setPestana("eventos")} style={{ paddingHorizontal: 10, paddingVertical: 7, borderRadius: 9, backgroundColor: t.primary + "22" }}>
-                            <Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>Ver todos</Text>
+                          <TouchableOpacity onPress={() => setPestana("eventos")} style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 9, backgroundColor: t.primary + "18" }}>
+                            <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900" }}>Ver todos ›</Text>
                           </TouchableOpacity>
                         </View>
                         {serviciosProximos.map((serv) => (
-                            <TouchableOpacity key={serv.id} onPress={() => setPestana("eventos")} style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: t.border }}>
-                              <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "800" }}>{serv.titulo || "Servicio"}</Text>
-                              <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>{serv.fecha}</Text>
-                            </TouchableOpacity>
-                          ))}
+                          <TouchableOpacity key={serv.id} onPress={() => setPestana("eventos")} style={{ paddingVertical: 11, borderTopWidth: 1, borderTopColor: t.border }}>
+                            <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "900" }}>{serv.titulo || "Servicio"}</Text>
+                            <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>{serv.fecha}</Text>
+                          </TouchableOpacity>
+                        ))}
                         {serviciosProximos.length === 0 && (
                           <Text style={{ color: t.textSub, fontSize: 11, lineHeight: 17, paddingVertical: 10 }}>Todavía no hay servicios próximos programados.</Text>
                         )}
                       </View>
                     </View>
-                  )}
                   </View>
                 </View>
               )}
 
               {pestana === "eventos" && (
                 <>
+                  <View style={{ width: "100%", backgroundColor: t.banner, borderRadius: 22, padding: esMovil ? 17 : 24, marginBottom: 18, overflow: "hidden" }}>
+                    <Text style={{ color: "#DCDFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.8 }}>PLANIFICACIÓN · {sedeActual.nombre.toUpperCase()}</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 23 : 29, fontWeight: "900", marginTop: 8 }}>Eventos y servicios</Text>
+                    <Text style={{ color: "#E8EAFE", fontSize: 12, lineHeight: 19, marginTop: 6, maxWidth: 520 }}>Organiza cada encuentro, coordina al equipo y prepara el setlist desde un solo lugar.</Text>
+                    <View style={{ flexDirection: "row", gap: 9, marginTop: 18 }}>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderRadius: 13, padding: 12 }}>
+                        <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{servicios.length}</Text>
+                        <Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.7 }}>SERVICIOS</Text>
+                      </View>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderRadius: 13, padding: 12 }}>
+                        <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{serviciosProximos.length}</Text>
+                        <Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.7 }}>PRÓXIMOS</Text>
+                      </View>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderRadius: 13, padding: 12 }}>
+                        <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{serviciosDelDia.length}</Text>
+                        <Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.7 }}>DEL DÍA</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: t.textMain, fontSize: 17, fontWeight: "900" }}>Calendario de actividades</Text>
+                      <Text style={{ color: t.textSub, fontSize: 11, marginTop: 3 }}>Selecciona una fecha para consultar sus servicios.</Text>
+                    </View>
+                    {esAdminOLider && (
+                      <TouchableOpacity
+                        style={{ backgroundColor: t.primary, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 11, flexDirection: "row", alignItems: "center", gap: 5 }}
+                        onPress={() => {
+                          setIdServicioEditando(null);
+                          setNombreEvento(esDomingoSeleccionado ? "Culto Dominical" : "Culto");
+                          setObservaciones("");
+                          setSetlistActivo([]);
+                          setCuposCorosEditando("3");
+                          setOrdenBloquesEditando("lenta-rapida");
+                          setModalProgramarVisible(true);
+                        }}
+                      >
+                        <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>+</Text>
+                        <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>Programar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   <View style={styles.monthsRow}>
                     {listaMesesDinamicos.map((itemMes) => {
                       const esSeleccionado = mesSeleccionadoObj.key === itemMes.key;
@@ -2117,10 +2311,18 @@ export default function App() {
                     })}
                   </View>
 
-                  <View style={[styles.calendarCard, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                    <Text style={[styles.calendarHeaderTitle, { color: t.textMain }]}>
-                      {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}
-                    </Text>
+                  <View style={[styles.calendarCard, { backgroundColor: t.cardBg, borderColor: t.border, borderRadius: 20, padding: esMovil ? 13 : 20, borderWidth: 1, shadowColor: "#18213B", shadowOpacity: 0.04, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 1 }]}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 15 }}>
+                      <View>
+                        <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "900", letterSpacing: 1.2 }}>VISTA MENSUAL</Text>
+                        <Text style={[styles.calendarHeaderTitle, { color: t.textMain, marginTop: 3 }]}>
+                          {mesSeleccionadoObj.nombre} {mesSeleccionadoObj.year}
+                        </Text>
+                      </View>
+                      <View style={{ backgroundColor: t.primary + "16", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 9 }}>
+                        <Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>{servicios.length} programados</Text>
+                      </View>
+                    </View>
 
                     <View style={styles.weekHeaderRow}>
                       {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((dSem, idx) => (
@@ -2148,26 +2350,14 @@ export default function App() {
                     </View>
                   </View>
 
-                  <View style={styles.serviceSectionHeader}>
-                    <Text style={[styles.serviceSectionTitle, { color: t.textMain }]}>
-                      Servicios de {sedeActual.nombre} - Día {diaSeleccionado} ({serviciosDelDia.length})
-                    </Text>
-                    {esAdminOLider && (
-                      <TouchableOpacity
-                        style={[styles.programBtn, { backgroundColor: t.primary }]}
-                        onPress={() => {
-                          setIdServicioEditando(null);
-                          setNombreEvento(esDomingoSeleccionado ? "Culto Dominical" : "Culto");
-                          setObservaciones("");
-                          setSetlistActivo([]);
-                          setCuposCorosEditando("3");
-                          setOrdenBloquesEditando("lenta-rapida");
-                          setModalProgramarVisible(true);
-                        }}
-                      >
-                        <Text style={styles.programBtnText}>+ Programar Servicio</Text>
-                      </TouchableOpacity>
-                    )}
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 22, marginBottom: 12, gap: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: t.textMain, fontSize: 18, fontWeight: "900" }}>Servicios del día</Text>
+                      <Text style={{ color: t.textSub, fontSize: 11, marginTop: 3 }}>{diaSeleccionado} de {mesSeleccionadoObj.nombre} · {sedeActual.nombre}</Text>
+                    </View>
+                    <View style={{ backgroundColor: t.primary + "16", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
+                      <Text style={{ color: t.primary, fontSize: 12, fontWeight: "900" }}>{serviciosDelDia.length} {serviciosDelDia.length === 1 ? "servicio" : "servicios"}</Text>
+                    </View>
                   </View>
 
                   {modalProgramarVisible && (
@@ -2464,9 +2654,13 @@ export default function App() {
 
                   {serviciosDelDia.length > 0 ? (
                     serviciosDelDia.map((serv) => (
-                      <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 18, padding: 14, borderRadius: 16 }]}>
-                        <View style={styles.eventCardHeaderRow}>
-                          <Text style={[styles.eventMainTitle, { color: t.textMain, fontSize: 13 }]}>📅 {serv.titulo}</Text>
+                      <View key={serv.id} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 18, padding: anchoVentana < 600 ? 12 : 18, borderRadius: 22, borderWidth: 1, shadowColor: "#26345D", shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 3 }]}>
+                        <View style={[styles.eventCardHeaderRow, { alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 10 }]}>
+                          <View style={{ flex: 1, minWidth: anchoVentana < 600 ? "100%" : 180, backgroundColor: t.primary + "12", borderRadius: 14, padding: 12, borderLeftWidth: 4, borderLeftColor: t.primary }}>
+                            <Text style={{ color: t.primary, fontSize: 9, fontWeight: "800", letterSpacing: 1.1, marginBottom: 4 }}>SERVICIO PROGRAMADO</Text>
+                            <Text style={[styles.eventMainTitle, { color: t.textMain, fontSize: anchoVentana < 600 ? 17 : 19, lineHeight: 24 }]}>{serv.titulo}</Text>
+                            <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>📅 {fechaActualClave}</Text>
+                          </View>
                           {(esAdminOLider || esVozPrincipalDeServicio(serv)) && (
                             <View style={{ flexDirection: "row", gap: 4 }}>
                               <TouchableOpacity
@@ -2498,12 +2692,18 @@ export default function App() {
                             </View>
                           )}
                         </View>
-                        <Text style={{ color: t.textSub, fontSize: 11, marginTop: 2, marginBottom: 4 }}>Observaciones: {serv.observaciones}</Text>
-                        <View style={{ marginTop: 12, marginBottom: 12, padding: 12, borderRadius: 12, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border }}>
-                          <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold", marginBottom: 9 }}>👥 OCUPACIÓN DE PUESTOS</Text>
-                          <View style={{ flexDirection: "row", gap: 10 }}>
+                        {serv.observaciones && serv.observaciones !== "Sin observaciones" && (
+                          <View style={{ backgroundColor: t.bg, borderRadius: 10, padding: 10, marginBottom: 8 }}><Text style={{ color: t.textSub, fontSize: 11, lineHeight: 17 }}>📝 {serv.observaciones}</Text></View>
+                        )}
+                        <View style={{ marginTop: 12, marginBottom: 14, padding: anchoVentana < 600 ? 11 : 14, borderRadius: 16, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                            <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "800", letterSpacing: 0.6 }}>👥 OCUPACIÓN DE PUESTOS</Text>
+                            <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "700" }}>DISPONIBILIDAD</Text>
+                          </View>
+                          <View style={{ flexDirection: anchoVentana < 600 ? "column" : "row", gap: 12 }}>
                             <View style={{ flex: 1, minWidth: 0 }}>
-                              <Text style={{ color: t.primary, fontSize: 12, fontWeight: "bold", marginBottom: 7 }}>🎤 VOCES</Text>
+                              <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: 11, borderWidth: 1, borderColor: t.border }}>
+                              <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎤 VOCES</Text>
                               {[
                                 { key: "vozPrincipal", label: "Voz principal", personas: serv.voces?.principal && serv.voces.principal !== "Sin asignar" ? [serv.voces.principal] : [] },
                                 { key: "coros", label: "Coros", personas: (serv.voces?.coros || "Sin asignar").split(",").map((x) => x.trim()).filter((x) => x && x !== "Sin asignar") },
@@ -2524,9 +2724,11 @@ export default function App() {
                                   )}
                                 </View>
                               ))}
+                              </View>
                             </View>
                             <View style={{ flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: t.border, paddingLeft: 9 }}>
-                              <Text style={{ color: t.primary, fontSize: 12, fontWeight: "bold", marginBottom: 7 }}>🎸 INSTRUMENTOS</Text>
+                              <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: 11, borderWidth: 1, borderColor: t.border }}>
+                              <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎸 INSTRUMENTOS</Text>
                               {[
                                 { key: "piano", label: "Piano" },
                                 { key: "guitarra", label: "Guitarra" },
@@ -2554,11 +2756,15 @@ export default function App() {
                                 );
                               })}
                             </View>
+                            </View>
                           </View>
                         </View>
 
 
-                        <Text style={{ color: t.primary, fontSize: 11, fontWeight: "bold", marginTop: 4, marginBottom: 4 }}>🎵 SETLIST ({serv.setlist?.length || 0}):</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 5, marginBottom: 9 }}>
+                          <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "800", letterSpacing: 0.5 }}>🎵 REPERTORIO DEL SERVICIO</Text>
+                          <View style={{ backgroundColor: t.primary + "18", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 }}><Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>{serv.setlist?.length || 0} canciones</Text></View>
+                        </View>
                         {serv.setlist && serv.setlist.length > 0 ? (
                           (serv.ordenBloquesSetlist === "rapida-lenta" ? ["rapida", "lenta"] : ["lenta", "rapida"]).map((tipo) => {
                             const cancionesTipo = serv.setlist.filter((s) => {
@@ -2572,7 +2778,7 @@ export default function App() {
                                   {tipo === "lenta" ? "🕯️ LENTAS" : "⚡ RÁPIDAS"}
                                 </Text>
                                 {cancionesTipo.map((s, i) => (
-                                  <View key={`${tipo}-${i}`} style={{ backgroundColor: t.bg, padding: 9, borderRadius: 9, borderWidth: 1, borderColor: t.border, marginBottom: 6 }}>
+                                  <View key={`${tipo}-${i}`} style={{ backgroundColor: t.bg, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: t.border, marginBottom: 7, borderLeftWidth: 3, borderLeftColor: tipo === "lenta" ? "#8B5CF6" : "#F59E0B" }}>
                                     <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "bold" }}>
                                       {i + 1}. {s.titulo} <Text style={{ color: t.textSub, fontWeight: "normal", fontSize: 10 }}>(Tono: {s.tono} | {s.bpm || "120"} BPM)</Text>
                                     </Text>
@@ -2636,11 +2842,24 @@ export default function App() {
               )}
 
               {pestana === "equipo" && esAdminOLider && (
-                <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>
-                      👥 Miembros de {sedeActual.nombre} ({integrantesSeccionEquipo.length})
-                    </Text>
+                <View style={{ width: "100%" }}>
+                  <View style={{ backgroundColor: t.banner, borderRadius: esMovil ? 19 : 25, padding: esMovil ? 18 : 26, marginBottom: 16, overflow: "hidden", shadowColor: t.banner, shadowOpacity: 0.18, shadowRadius: 17, shadowOffset: { width: 0, height: 7 }, elevation: 3 }}>
+                    <Text style={{ color: "#DCDFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.6 }}>SOUNDTEAM · ADMINISTRACIÓN</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 25 : 32, fontWeight: "900", marginTop: 8 }}>Tu equipo, en sintonía.</Text>
+                    <Text style={{ color: "#E8EAFE", fontSize: 12, lineHeight: 19, marginTop: 7, maxWidth: 540 }}>Administra los integrantes, sus permisos musicales y el acceso a la sede {sedeActual.nombre}.</Text>
+                    <View style={{ flexDirection: "row", gap: 9, marginTop: 18 }}>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderWidth: 1, borderColor: "#FFFFFF25", borderRadius: 13, padding: 12 }}><Text style={{ color: "#FFFFFF", fontSize: 23, fontWeight: "900" }}>{integrantesSeccionEquipo.length}</Text><Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.6, marginTop: 3 }}>INTEGRANTES</Text></View>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderWidth: 1, borderColor: "#FFFFFF25", borderRadius: 13, padding: 12 }}><Text style={{ color: "#FFFFFF", fontSize: 23, fontWeight: "900" }}>{integrantesSeccionEquipo.filter(m => m.rolAcceso === "lider").length}</Text><Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.6, marginTop: 3 }}>LÍDERES</Text></View>
+                      <View style={{ flex: 1, backgroundColor: "#FFFFFF20", borderWidth: 1, borderColor: "#FFFFFF25", borderRadius: 13, padding: 12 }}><Text style={{ color: "#FFFFFF", fontSize: 23, fontWeight: "900" }}>{integrantesSeccionEquipo.filter(m => Array.isArray(m.rolesMusicales) && m.rolesMusicales.length > 0).length}</Text><Text style={{ color: "#E8EAFE", fontSize: 9, fontWeight: "800", letterSpacing: 0.6, marginTop: 3 }}>CON ROL MUSICAL</Text></View>
+                    </View>
+                  </View>
+                  <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 14 : 22 }]}>
+                  <View style={{ flexDirection: esMovil ? "column" : "row", justifyContent: "space-between", alignItems: esMovil ? "stretch" : "center", gap: 12, marginBottom: 16 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.4, marginBottom: 5 }}>PERSONAS Y PERMISOS</Text>
+                      <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0 }]}>Miembros de {sedeActual.nombre}</Text>
+                      <Text style={{ color: t.textSub, fontSize: 11, marginTop: 4 }}>{integrantesSeccionEquipo.length} integrantes registrados en esta sede</Text>
+                    </View>
                     <TouchableOpacity
                       style={[styles.programBtn, { backgroundColor: t.primary }]}
                       onPress={() => {
@@ -2652,7 +2871,7 @@ export default function App() {
                         setModalMiembroVisible(true);
                       }}
                     >
-                      <Text style={styles.programBtnText}>+ Agregar Miembro</Text>
+                      <Text style={styles.programBtnText}>＋ Agregar integrante</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -2758,9 +2977,9 @@ export default function App() {
                   )}
 
                   {integrantesSeccionEquipo.map((int) => (
-                    <View key={int.id} style={[styles.memberCard, { backgroundColor: t.bg, borderColor: t.border }]}>
+                    <View key={int.id} style={[styles.memberCard, { backgroundColor: t.cardBg, borderColor: t.border, borderRadius: 16, padding: esMovil ? 13 : 17, marginBottom: 10, borderWidth: 1 }]}>
                       <View style={styles.memberHeaderRow}>
-                        <Text style={[styles.memberTitle, { color: t.textMain }]}>👤 {int.nombre}</Text>
+                        <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}><Text numberOfLines={2} style={[styles.memberTitle, { color: t.textMain, fontSize: 14, fontWeight: "900" }]}>{int.nombre}</Text><Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{int.rolAcceso === "lider" ? "LÍDER DE SEDE" : int.rolAcceso === "admin" ? "ADMINISTRADOR" : "INTEGRANTE"}</Text></View>
                         <View style={{ flexDirection: "row", gap: 6 }}>
                           {(int.rolAcceso !== "admin" && (esAdmin || int.rolAcceso === "miembro")) && (
                             <TouchableOpacity
@@ -2791,9 +3010,16 @@ export default function App() {
                           )}
                         </View>
                       </View>
-                      <Text style={{ color: t.textSub, fontSize: 12, marginTop: 7, lineHeight: 18 }}>Correo: {int.email || "No registrado"} | Acceso: {int.rolAcceso}</Text>
+                      <Text style={{ color: t.textSub, fontSize: 11, marginTop: 9, lineHeight: 17 }}>{int.email || "Correo no registrado"}</Text>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
+                        {(Array.isArray(int.rolesMusicales) ? int.rolesMusicales : []).length > 0 ? (Array.isArray(int.rolesMusicales) ? int.rolesMusicales : []).map(rol => {
+                          const nombres = { vozPrincipal: "Voz principal", coros: "Coros", piano: "Piano", guitarra: "Guitarra", bajo: "Bajo", bateria: "Batería" };
+                          return <View key={rol} style={{ backgroundColor: t.primary + "16", borderRadius: 20, paddingHorizontal: 9, paddingVertical: 5 }}><Text style={{ color: t.primary, fontSize: 9, fontWeight: "800" }}>{nombres[rol] || rol}</Text></View>;
+                        }) : <Text style={{ color: t.textSub, fontSize: 10, fontStyle: "italic" }}>Sin permisos musicales asignados</Text>}
+                      </View>
                     </View>
                   ))}
+                </View>
                 </View>
               )}
 
@@ -2867,6 +3093,17 @@ export default function App() {
                     {puedeGestionarRepertorio && (
                       <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 12, borderWidth: 1, borderRadius: 16, padding: 17 }]}>
                         <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 12 }]}>{modoEdicionCancion ? "✏️ Editar canción" : "➕ Agregar nueva canción"}</Text>
+                        {!modoEdicionCancion && (
+                          <TouchableOpacity
+                            onPress={importarCancionesCongregacionales}
+                            disabled={importandoCancionesCongregacionales}
+                            style={{ backgroundColor: t.banner, padding: 13, borderRadius: 11, marginBottom: 14, opacity: importandoCancionesCongregacionales ? 0.65 : 1 }}
+                          >
+                            <Text style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "bold" }}>
+                              {importandoCancionesCongregacionales ? "Importando canciones..." : "🎵 Importar 30 canciones congregacionales"}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="Título de la canción" placeholderTextColor={t.textSub} value={nuevoTituloCancion} onChangeText={setNuevoTituloCancion} />
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="Artista o autor" placeholderTextColor={t.textSub} value={nuevoArtistaCancion} onChangeText={setNuevoArtistaCancion} />
                         <View style={{ flexDirection: esMovil ? "column" : "row", gap: 8, width: "100%" }}>
@@ -2899,15 +3136,39 @@ export default function App() {
                         </TouchableOpacity>
                       </View>
                     )}
-                    <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
-                      <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 14 }]}>Repertorio de {sedeActual.nombre} ({repertorio.length})</Text>
+                    <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 13 : 19 }]}>
+                      <View style={{ marginBottom: 15 }}>
+                        <Text style={{ color: t.textMain, fontSize: 20, fontWeight: "900", marginBottom: 4 }}>Biblioteca musical</Text>
+                        <Text style={{ color: t.textSub, fontSize: 12 }}>Canciones de {sedeActual.nombre} · {repertorio.length} en total</Text>
+                      </View>
+                      <TextInput value={busquedaRepertorio} onChangeText={setBusquedaRepertorio} placeholder="Buscar canción o artista..." placeholderTextColor={t.textSub} style={{ backgroundColor: t.bg, borderColor: t.border, borderWidth: 1, borderRadius: 12, minHeight: 46, paddingHorizontal: 14, color: t.textMain, marginBottom: 12 }} />
+                      <View style={{ flexDirection: "row", gap: 8, marginBottom: 15 }}>
+                        {[{ key: "todos", label: "Todas" }, { key: "lenta", label: "🕯️ Lentas" }, { key: "rapida", label: "⚡ Rápidas" }].map(op => (
+                          <TouchableOpacity key={op.key} onPress={() => setFiltroTipoRepertorio(op.key)} style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 5, borderRadius: 10, borderWidth: 1, borderColor: filtroTipoRepertorio === op.key ? t.primary : t.border, backgroundColor: filtroTipoRepertorio === op.key ? t.primary : t.bg }}>
+                            <Text style={{ color: filtroTipoRepertorio === op.key ? "#FFFFFF" : t.textMain, textAlign: "center", fontWeight: "800", fontSize: 11 }}>{op.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 14 }}>
+                        {NOTAS_CROMATICAS.map(nota => {
+                          const cantidad = repertorio.filter(c => String(c.tono || "C").trim().toUpperCase() === nota).length;
+                          return <TouchableOpacity key={nota} onPress={() => setNotasRepertorioAbiertas(actual => ({ ...actual, [nota]: !actual[nota] }))} style={{ paddingHorizontal: 10, paddingVertical: 7, borderRadius: 20, backgroundColor: notasRepertorioAbiertas[nota] ? t.primary : t.bg, borderWidth: 1, borderColor: notasRepertorioAbiertas[nota] ? t.primary : t.border }}>
+                            <Text style={{ color: notasRepertorioAbiertas[nota] ? "#FFFFFF" : t.textMain, fontSize: 11, fontWeight: "800" }}>{nota} · {cantidad}</Text>
+                          </TouchableOpacity>;
+                        })}
+                      </View>
                       {[...NOTAS_CROMATICAS, "Otros"].map((nota) => {
                          const cancionesNota = repertorio.filter((c) => {
+                           const textoBusqueda = busquedaRepertorio.trim().toLowerCase();
+                           const coincideTexto = !textoBusqueda || String(c.titulo || "").toLowerCase().includes(textoBusqueda) || String(c.artista || "").toLowerCase().includes(textoBusqueda);
+                           const tipo = String(c.tipoSet || c.tipo_set || "lenta").toLowerCase();
+                           const coincideTipo = filtroTipoRepertorio === "todos" || tipo === filtroTipoRepertorio;
+                           if (!coincideTexto || !coincideTipo) return false;
                            const tono = String(c.tono || "C").trim().toUpperCase();
                            return nota === "Otros" ? !NOTAS_CROMATICAS.includes(tono) : tono === nota;
                          });
                          if (!cancionesNota.length) return null;
-                         const abierta = !!notasRepertorioAbiertas[nota];
+                         const abierta = !!busquedaRepertorio.trim() || !!notasRepertorioAbiertas[nota];
                          return (
                            <View key={nota} style={{ marginBottom: 8 }}>
                              <TouchableOpacity
@@ -2928,9 +3189,15 @@ export default function App() {
                           <View style={{ flex: 1, paddingVertical: 6, paddingRight: 10 }}>
                             <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "bold", marginBottom: 4 }}>{c.titulo}</Text>
                             <Text style={{ color: t.textSub, fontSize: 12 }}>{c.artista || "Sin artista"}</Text>
+                            <Text style={{ color: t.textSub, fontSize: 10, marginTop: 5 }}>
+                              {c.bpm || "120"} BPM · Compás {c.compas || "4/4"} · {(c.tipoSet || c.tipo_set || "lenta").toLowerCase() === "rapida" ? "Rápida" : "Lenta"}
+                            </Text>
                           </View>
-                          <View style={{ backgroundColor: t.primary, width: 40, height: 40, borderRadius: 11, justifyContent: "center", alignItems: "center" }}>
-                            <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 13 }}>{c.tono || "C"}</Text>
+                          <View style={{ alignItems: "center", gap: 4 }}>
+                            <View style={{ backgroundColor: t.primary, width: 40, height: 40, borderRadius: 11, justifyContent: "center", alignItems: "center" }}>
+                              <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 13 }}>{c.tono || "C"}</Text>
+                            </View>
+                            <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "700" }}>TONO</Text>
                           </View>
                         </TouchableOpacity>
                       ))}
@@ -2994,13 +3261,13 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
   logoutBtn: { backgroundColor: "#DC2626", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 9, minHeight: 34, justifyContent: "center" },
   logoutBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
-  content: { flex: 1, padding: 22, width: "100%" },
-  contentMobile: { padding: 10 },
-  contentTablet: { padding: 16 },
-  mainWrapper: { width: "100%", maxWidth: 1280, alignSelf: "center" },
+  content: { flex: 1, padding: 26, width: "100%" },
+  contentMobile: { padding: 12 },
+  contentTablet: { padding: 20 },
+  mainWrapper: { width: "100%", maxWidth: 1440, alignSelf: "center" },
   mainWrapperMobile: { maxWidth: 560 },
-  mainWrapperTablet: { maxWidth: 900 },
-  card: { padding: 22, borderRadius: 22, borderWidth: 1, marginBottom: 20, width: "100%", shadowColor: "#000000", shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 7 }, elevation: 3 },
+  mainWrapperTablet: { maxWidth: 1040 },
+  card: { padding: 22, borderRadius: 20, borderWidth: 1, marginBottom: 20, width: "100%", shadowColor: "#18213B", shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 7 }, elevation: 2 },
   cardTitle: { fontSize: 19, fontWeight: "900", marginBottom: 16, letterSpacing: 0.1 },
   welcomeBanner: { padding: 26, borderRadius: 24, marginBottom: 20, width: "100%", shadowColor: "#000000", shadowOpacity: 0.2, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
   welcomeTitle: { color: "#FFFFFF", fontSize: 19, fontWeight: "bold", marginBottom: 8 },

@@ -3189,9 +3189,15 @@ export default function App() {
                           <View style={{ flex: 1, paddingVertical: 6, paddingRight: 10 }}>
                             <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "bold", marginBottom: 4 }}>{c.titulo}</Text>
                             <Text style={{ color: t.textSub, fontSize: 12 }}>{c.artista || "Sin artista"}</Text>
+                            <Text style={{ color: t.textSub, fontSize: 10, marginTop: 5 }}>
+                              {c.bpm || "120"} BPM · Compás {c.compas || "4/4"} · {(c.tipoSet || c.tipo_set || "lenta").toLowerCase() === "rapida" ? "Rápida" : "Lenta"}
+                            </Text>
                           </View>
-                          <View style={{ backgroundColor: t.primary, width: 40, height: 40, borderRadius: 11, justifyContent: "center", alignItems: "center" }}>
-                            <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 13 }}>{c.tono || "C"}</Text>
+                          <View style={{ alignItems: "center", gap: 4 }}>
+                            <View style={{ backgroundColor: t.primary, width: 40, height: 40, borderRadius: 11, justifyContent: "center", alignItems: "center" }}>
+                              <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 13 }}>{c.tono || "C"}</Text>
+                            </View>
+                            <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "700" }}>TONO</Text>
                           </View>
                         </TouchableOpacity>
                       ))}

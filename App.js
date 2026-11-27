@@ -1259,7 +1259,7 @@ export default function App() {
       });
       if (error) throw error;
       if (!data?.temporaryPassword) throw new Error("El servidor no devolvió la contraseña temporal.");
-      alert(`Contraseña temporal para ${integrante.nombre}:\n\n${data.temporaryPassword}\n\nVálida hasta: ${new Date(data.expiresAt).toLocaleString()}\n\nEntrégala directamente al integrante. Al ingresar deberá crear su propia contraseña.`);
+      alert(`Contraseña temporal para ${integrante.nombre}:\n\n${data.temporaryPassword}\n\nVálida hasta: ${new Date(data.expiresAt).toLocaleString()}\n\nEntrégala directamente al integrante. Si tenía una sesión abierta, debe cerrarla e ingresar de nuevo. Al ingresar deberá crear su propia contraseña.`);
     } catch (error) {
       alert(`No se pudo generar la contraseña temporal: ${error.message}`);
     } finally {

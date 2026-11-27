@@ -124,5 +124,7 @@ using (
   )
 );
 
+revoke all on function public.soundteam_es_participante_servicio(bigint) from public, anon;
+revoke all on function public.soundteam_puede_acceder_chat_servicio(bigint) from public, anon;
 grant execute on function public.soundteam_es_participante_servicio(bigint) to authenticated;
 grant execute on function public.soundteam_puede_acceder_chat_servicio(bigint) to authenticated;

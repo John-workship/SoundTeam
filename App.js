@@ -246,7 +246,7 @@ export default function App() {
   const sincronizarDatosApp = async () => {
     const { data: dataInt, error } = await supabase
       .from("integrantes")
-      .select("*")
+      .select("id, nombre, email, sede_id, rol_acceso, roles_musicales, user_id")
       .order("nombre", { ascending: true });
     if (error) {
       setErrorDatos(`No se pudieron cargar los integrantes: ${error.message}`);
@@ -332,7 +332,17 @@ export default function App() {
     setErrorAuth("");
     setUsuario(perfil.nombre_perfil || perfil.nombre || session.user.email);
     setNombrePerfilInput(perfil.nombre_perfil || perfil.nombre || session.user.email);
-    setFotoPerfil(perfil.avatar_url || null);
+    let rutaAvatar = perfil.avatar_url || null;
+    if (rutaAvatar && rutaAvatar.includes("/storage/v1/object/public/avatars/")) {
+      rutaAvatar = decodeURIComponent(rutaAvatar.split("/avatars/").pop().split("?")[0]);
+    }
+    setFotoPerfilRuta(rutaAvatar);
+    if (rutaAvatar) {
+      const { data: avatarFirmado } = await supabase.storage.from("avatars").createSignedUrl(rutaAvatar, 3600);
+      setFotoPerfil(avatarFirmado?.signedUrl || null);
+    } else {
+      setFotoPerfil(null);
+    }
     setUsuarioId(session.user.id);
     setEmailUsuario(session.user.email.trim().toLowerCase());
     setRolUsuario((perfil.rol_acceso || "miembro").toLowerCase());
@@ -373,6 +383,7 @@ export default function App() {
   const [nombreTema, setNombreTema] = useState("azul");
   const [nombrePerfilInput, setNombrePerfilInput] = useState("");
   const [fotoPerfil, setFotoPerfil] = useState(null);
+  const [fotoPerfilRuta, setFotoPerfilRuta] = useState(null);
   const [guardandoPerfil, setGuardandoPerfil] = useState(false);
 
   const t = TEMAS[nombreTema];
@@ -1172,17 +1183,24 @@ export default function App() {
     setErrorDatos("");
   };
 
-  const guardarPerfilPersonal = async (nuevoNombre = nombrePerfilInput, nuevaFoto = fotoPerfil) => {
+  const guardarPerfilPersonal = async (nuevoNombre = nombrePerfilInput, nuevaFoto = fotoPerfilRuta) => {
     if (!usuarioId) return false;
     const nombreLimpio = String(nuevoNombre || "").trim();
     if (!nombreLimpio) { alert("Escribe tu nombre."); return false; }
     setGuardandoPerfil(true);
+    let fotoVisible = null;
+    if (nuevaFoto) {
+      const { data: avatarFirmado, error: avatarError } = await supabase.storage.from("avatars").createSignedUrl(nuevaFoto, 3600);
+      if (avatarError) { setGuardandoPerfil(false); alert(`No se pudo preparar la foto privada: ${avatarError.message}`); return false; }
+      fotoVisible = avatarFirmado?.signedUrl || null;
+    }
     const { error } = await supabase.rpc("soundteam_actualizar_perfil", { p_nombre: nombreLimpio, p_avatar_url: nuevaFoto || null });
     setGuardandoPerfil(false);
     if (error) { alert(`No se pudo guardar tu perfil: ${error.message}`); return false; }
     setUsuario(nombreLimpio);
     setNombrePerfilInput(nombreLimpio);
-    setFotoPerfil(nuevaFoto || null);
+    setFotoPerfilRuta(nuevaFoto || null);
+    setFotoPerfil(fotoVisible);
     alert("Perfil actualizado.");
     return true;
   };
@@ -1201,8 +1219,7 @@ export default function App() {
       const archivo = await respuesta.blob();
       const { error: uploadError } = await supabase.storage.from("avatars").upload(ruta, archivo, { upsert: true, contentType: asset.mimeType || "image/jpeg" });
       if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from("avatars").getPublicUrl(ruta);
-      const guardado = await guardarPerfilPersonal(nombrePerfilInput, data.publicUrl);
+      const guardado = await guardarPerfilPersonal(nombrePerfilInput, ruta);
       if (!guardado) setGuardandoPerfil(false);
     } catch (error) {
       setGuardandoPerfil(false);

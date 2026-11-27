@@ -3123,7 +3123,7 @@ export default function App() {
                         const secciones = [];
                         let actual = { titulo: "Canción completa", lineas: [] };
                         const encabezado = /^\s*\[(INTRO(?:DUCCIÓN)?|V\s*\d+|ESTROFA(?:\s*\d+)?|VERSO(?:\s*\d+)?|CORO(?:\s*\d+)?|ESTRIBILLO|PRE[- ]?CORO|POST[- ]?CORO|PUENTE(?:\s*\d+)?|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|CODA|VUELTA|VAMP|BREAKDOWN|TAG)\]\s*$/i;
-                        lineas.forEach(linea => { const match = linea.match(encabezado); if (match) { if (actual.lineas.length || secciones.length === 0) secciones.push(actual); actual = { titulo: match[1].replace(/\s+/g, " ").toUpperCase(), lineas: [] }; } else actual.lineas.push(linea); });
+                        lineas.forEach(linea => { const match = linea.match(encabezado); if (match) { if (actual.lineas.length) secciones.push(actual); actual = { titulo: match[1].replace(/\s+/g, " ").toUpperCase(), lineas: [] }; } else actual.lineas.push(linea); });
                         if (actual.lineas.length || secciones.length === 0) secciones.push(actual);
                         const abreviatura = (titulo, i) => {
                           const t = titulo.toUpperCase();

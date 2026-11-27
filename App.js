@@ -1435,11 +1435,17 @@ export default function App() {
       alert("Solo Administradores y Líderes pueden limpiar el chat de un servicio.");
       return;
     }
-    const servicio = servicios.find(s => String(s.id) === String(idServicioChatActivo));
-    if (!servicio) return;
+    const servicio = servicioChatActual;
+    if (!servicio) {
+      alert("No se pudo identificar el servicio de este chat. Actualiza la página e inténtalo de nuevo.");
+      return;
+    }
     if (!confirm(`¿Borrar todos los mensajes del chat de "${servicio.titulo || "Servicio"}" del ${servicio.fecha}? Esta acción no se puede deshacer.`)) return;
     const { error } = await supabase.from("mensajes").delete().eq("servicio_id", idServicioChatActivo);
-    if (error) { alert(`No se pudo limpiar el chat: ${error.message}`); return; }
+    if (error) {
+      alert(`No se pudo limpiar el chat: ${error.message}`);
+      return;
+    }
     setMensajesChat([]);
     alert("Historial de este servicio limpiado.");
   };

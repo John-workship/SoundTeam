@@ -957,8 +957,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (sesionIniciada) cargarMensajesSupabase();
-  }, [idServicioChatActivo, sesionIniciada]);
+    if (sesionIniciada && pestana === "chat") cargarMensajesSupabase();
+  }, [idServicioChatActivo, sesionIniciada, pestana]);
 
   const handleLogin = async () => {
     const email = emailInput.trim().toLowerCase();

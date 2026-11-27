@@ -1030,6 +1030,7 @@ export default function App() {
   const siguienteIdSeccion = useRef(2);
 
   const [idServicioChatActivo, setIdServicioChatActivo] = useState(null);
+  const [mostrarDetalleChatMovil, setMostrarDetalleChatMovil] = useState(false);
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
   const [idMensajeEditando, setIdMensajeEditando] = useState(null);
@@ -2174,7 +2175,7 @@ export default function App() {
                 return (
                   <TouchableOpacity
                     key={tab.key}
-                    onPress={() => { setPestana(tab.key); setCancionSeleccionadaDetalle(null); }}
+                    onPress={() => { setPestana(tab.key); setCancionSeleccionadaDetalle(null); if (tab.key === "chat") setMostrarDetalleChatMovil(false); }}
                     style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, marginBottom: 7, backgroundColor: activo ? t.primary : "transparent", borderWidth: 1, borderColor: activo ? t.primary : "transparent", shadowColor: t.primary, shadowOpacity: activo ? 0.18 : 0, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: activo ? 2 : 0 }}
                   >
                     <Text style={{ width: 27, color: activo ? "#FFFFFF" : t.textSub, fontSize: 19, fontWeight: "800" }}>{tab.icon}</Text>
@@ -2322,14 +2323,14 @@ export default function App() {
                     <Text style={{ color: "#E8EAFE", fontSize: 12, lineHeight: 18, marginTop: 6 }}>Cada conversación es privada para los músicos programados y los responsables autorizados.</Text>
                   </View>
                   <View style={{ flexDirection: esEscritorio ? "row" : "column", gap: 14, alignItems: "stretch" }}>
-                    <View style={[styles.card, { width: esEscritorio ? 300 : "100%", backgroundColor: t.cardBg, borderColor: t.border, padding: 14, marginBottom: 0 }]}>
+                    <View style={[styles.card, { display: esMovil && mostrarDetalleChatMovil ? "none" : "flex", width: esEscritorio ? 300 : "100%", backgroundColor: t.cardBg, borderColor: t.border, padding: 14, marginBottom: 0 }]}>
                       <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "900", marginBottom: 10 }}>Tus servicios</Text>
                       {serviciosChatDisponibles.length === 0 ? (
                         <Text style={{ color: t.textSub, fontSize: 12, lineHeight: 18 }}>No tienes servicios asignados con chat disponible.</Text>
                       ) : serviciosChatDisponibles.map(serv => {
                         const activo = String(idServicioChatActivo) === String(serv.id);
                         return (
-                          <TouchableOpacity key={serv.id} onPress={() => { setIdServicioChatActivo(serv.id); setMensajesChat([]); setIdMensajeEditando(null); setNuevoMensajeTexto(""); }}
+                          <TouchableOpacity key={serv.id} onPress={() => { setIdServicioChatActivo(serv.id); setMensajesChat([]); setIdMensajeEditando(null); setNuevoMensajeTexto(""); if (esMovil) setMostrarDetalleChatMovil(true); }}
                             style={{ padding: 12, borderRadius: 11, marginBottom: 7, backgroundColor: activo ? t.primary + "18" : t.bg, borderWidth: 1, borderColor: activo ? t.primary : t.border }}>
                             <Text style={{ color: activo ? t.primary : t.textMain, fontSize: 12, fontWeight: "900" }}>{serv.titulo || "Servicio"}</Text>
                             <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>{serv.fecha}</Text>
@@ -2337,9 +2338,10 @@ export default function App() {
                         );
                       })}
                     </View>
-                    <View style={[styles.card, { flex: 1, minWidth: 0, backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 13 : 18, marginBottom: 0 }]}>
+                    <View style={[styles.card, { display: esMovil && !mostrarDetalleChatMovil ? "none" : "flex", flex: 1, minWidth: 0, backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 13 : 18, marginBottom: 0 }]}>
                       {servicioChatActual ? (
                         <>
+                          {esMovil && <TouchableOpacity onPress={() => setMostrarDetalleChatMovil(false)} style={{ alignSelf: "flex-start", paddingVertical: 8, paddingHorizontal: 11, borderRadius: 9, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, marginBottom: 10 }}><Text style={{ color: t.primary, fontSize: 12, fontWeight: "900" }}>‹ Volver a mis chats</Text></TouchableOpacity>}
                           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 12 }}>
                             <View style={{ flex: 1 }}>
                               <Text style={{ color: t.textMain, fontSize: 16, fontWeight: "900" }}>{servicioChatActual.titulo || "Servicio"}</Text>

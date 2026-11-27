@@ -20,6 +20,9 @@ REVOKE ALL ON TABLE public.teams, public.team_members, public.events,
 
 -- La app no necesita leer el PIN legado. Solo se conceden las columnas necesarias.
 REVOKE ALL ON TABLE public.integrantes FROM anon, authenticated;
+REVOKE SELECT (pin), INSERT (pin), UPDATE (pin) ON TABLE public.integrantes FROM anon, authenticated;
+GRANT USAGE ON SEQUENCE public.integrantes_id_seq TO authenticated;
+REVOKE ALL ON SEQUENCE public.usuarios_id_seq FROM anon, authenticated;
 GRANT SELECT (id, nombre, sede_id, rol_acceso, roles_musicales, email, user_id, avatar_url, nombre_perfil)
   ON TABLE public.integrantes TO authenticated;
 GRANT INSERT (nombre, email, sede_id, rol_acceso, roles_musicales)

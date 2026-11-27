@@ -363,6 +363,7 @@ export default function App() {
       Promise.resolve().then(() => {
         if (!mounted) return;
         if (_event === "PASSWORD_RECOVERY") {
+          setCambioPasswordTemporal(session?.user?.app_metadata?.soundteam_must_change_password === true);
           setModoRecuperacionPassword(true);
           setSesionIniciada(false);
           setErrorAuth("");
@@ -3167,7 +3168,7 @@ export default function App() {
                               <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}>✏️ Editar</Text>
                             </TouchableOpacity>
                           )}
-                          {(esAdmin || String(int.email || "").trim().toLowerCase() !== "johnbocal31@gmail.com") && (
+                          {(esAdmin || (int.rolAcceso === "miembro" && String(int.email || "").trim().toLowerCase() !== "johnbocal31@gmail.com")) && (
 <TouchableOpacity
                           style={{ backgroundColor: "#EF4444", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 9, minHeight: 34, justifyContent: "center" }}
                           onPress={async () => {

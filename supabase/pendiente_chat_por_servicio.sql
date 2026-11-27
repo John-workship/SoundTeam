@@ -4,7 +4,7 @@
 
 alter table public.mensajes
   add column if not exists servicio_id bigint
-  references public.servicios(id) on delete cascade;
+  references public.servicios(id) on delete set null;
 
 create index if not exists mensajes_servicio_created_at_idx
   on public.mensajes (servicio_id, created_at);

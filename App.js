@@ -3153,7 +3153,7 @@ export default function App() {
                             const integranteObj = {
                               nombre: nombreNuevoMiembro.trim(),
                               email: correoMiembro,
-                              sede_id: sedeIdSeleccionada,
+                              ...(idMiembroEditando === null ? { sede_id: sedeIdSeleccionada } : {}),
                               rol_acceso: esAdmin
                                 ? rolAccesoNuevo
                                 : (idMiembroEditando !== null

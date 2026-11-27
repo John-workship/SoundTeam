@@ -935,6 +935,7 @@ export default function App() {
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
   const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
+  const [grupoChatSeleccionado, setGrupoChatSeleccionado] = useState(null);
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
   const [idMensajeEditando, setIdMensajeEditando] = useState(null);
@@ -1945,6 +1946,7 @@ export default function App() {
               {[
                 { key: "inicio", label: "Inicio", icon: "⌂" },
                 { key: "eventos", label: "Eventos y calendario", icon: "▦" },
+                { key: "chat", label: "Chat", icon: "✉" },
                 ...(esAdminOLider ? [{ key: "equipo", label: "Equipo", icon: "♧" }] : []),
                 { key: "repertorio", label: "Repertorio", icon: "♫" },
               ].map((tab) => {
@@ -2100,13 +2102,102 @@ export default function App() {
                     ))}
                   </View>
 
-                  <View style={{ flexDirection: esEscritorio ? "row" : "column", alignItems: "stretch", gap: 16 }}>
-                    <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, flex: esEscritorio ? 1.55 : undefined, width: esEscritorio ? undefined : "100%", marginBottom: 0, padding: esMovil ? 15 : 22 }]}>
+                  <View style={{ flexDirection: "column", alignItems: "stretch", gap: 16 }}>
+                    
+
+                    <View style={{ width: "100%", minWidth: 0, gap: 14 }}>
+                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 20 }]}>
+                        <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.5, marginBottom: 6 }}>ACCESO RÁPIDO</Text>
+                        <Text style={{ color: t.textMain, fontSize: 17, fontWeight: "900", marginBottom: 13 }}>Tu espacio de trabajo</Text>
+                        {[
+                          { key: "eventos", title: "Calendario y servicios", detail: "Consulta y programa encuentros", icon: "▦", tint: "#2563EB" },
+                          ...(esAdminOLider ? [{ key: "equipo", title: "Gestionar equipo", detail: "Integrantes, roles y sedes", icon: "♧", tint: "#5755D9" }] : []),
+                          { key: "repertorio", title: "Biblioteca musical", detail: "Organiza las canciones", icon: "♫", tint: "#7C3AED" },
+                        ].map((acceso) => (
+                          <TouchableOpacity key={acceso.key} onPress={() => { setPestana(acceso.key); setCancionSeleccionadaDetalle(null); }} style={{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 13, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, marginBottom: 8 }}>
+                            <View style={{ width: 39, height: 39, borderRadius: 12, backgroundColor: acceso.tint + "18", alignItems: "center", justifyContent: "center", marginRight: 11 }}>
+                              <Text style={{ color: acceso.tint, fontSize: 19, fontWeight: "900" }}>{acceso.icon}</Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "900" }}>{acceso.title}</Text>
+                              <Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{acceso.detail}</Text>
+                            </View>
+                            <Text style={{ color: t.primary, fontSize: 20, fontWeight: "900" }}>›</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 20 }]}>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 9, gap: 8 }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.2 }}>PRÓXIMOS ENCUENTROS</Text>
+                            <Text style={{ color: t.textMain, fontSize: 16, fontWeight: "900", marginTop: 4 }}>Agenda de la sede</Text>
+                          </View>
+                          <TouchableOpacity onPress={() => setPestana("eventos")} style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 9, backgroundColor: t.primary + "18" }}>
+                            <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900" }}>Ver todos ›</Text>
+                          </TouchableOpacity>
+                        </View>
+                        {serviciosProximos.map((serv) => (
+                          <TouchableOpacity key={serv.id} onPress={() => setPestana("eventos")} style={{ paddingVertical: 11, borderTopWidth: 1, borderTopColor: t.border }}>
+                            <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "900" }}>{serv.titulo || "Servicio"}</Text>
+                            <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>{serv.fecha}</Text>
+                          </TouchableOpacity>
+                        ))}
+                        {serviciosProximos.length === 0 && (
+                          <Text style={{ color: t.textSub, fontSize: 11, lineHeight: 17, paddingVertical: 10 }}>Todavía no hay servicios próximos programados.</Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+
+              {pestana === "chat" && (
+                <View style={{ width: "100%" }}>
+                  {!grupoChatSeleccionado ? (
+                    <>
+                      <View style={{ backgroundColor: t.banner, borderRadius: 22, padding: esMovil ? 18 : 24, marginBottom: 18 }}>
+                        <Text style={{ color: "#DCDFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.6 }}>COMUNIDAD · {sedeActual.nombre.toUpperCase()}</Text>
+                        <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 25 : 30, fontWeight: "900", marginTop: 7 }}>Chats</Text>
+                        <Text style={{ color: "#E8EAFE", fontSize: 12, marginTop: 6 }}>Selecciona el grupo en el que deseas conversar.</Text>
+                      </View>
+                      {[
+                        { key: "martes", title: "Chat grupo martes", subtitle: "Conversación de los servicios del martes", tint: "#EC4899", bg: "#4A1835", day: "MARTES" },
+                        { key: "jueves", title: "Chat grupo jueves", subtitle: "Conversación de los servicios del jueves", tint: "#34D399", bg: "#123F31", day: "JUEVES" },
+                        { key: "finsemana", title: "Chat grupo sáb. y dom.", subtitle: "Conversación de los servicios del fin de semana", tint: "#60A5FA", bg: "#243B65", day: "SÁB. Y DOM." },
+                      ].map((grupo) => (
+                        <TouchableOpacity
+                          key={grupo.key}
+                          onPress={() => { setCanalChatActivo(grupo.key); setGrupoChatSeleccionado(grupo.key); setIdMensajeEditando(null); setNuevoMensajeTexto(""); }}
+                          style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: esMovil ? 14 : 18, marginBottom: 11, borderRadius: 18, borderWidth: 1, borderColor: t.border, backgroundColor: t.cardBg }}
+                        >
+                          <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: grupo.bg, alignItems: "center", justifyContent: "center" }}>
+                            <Text style={{ color: grupo.tint, fontSize: 26, fontWeight: "900" }}>♧</Text>
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={{ color: t.textMain, fontSize: esMovil ? 15 : 18, fontWeight: "900" }}>{grupo.title}</Text>
+                            <Text style={{ color: t.textSub, fontSize: 11, marginTop: 5 }} numberOfLines={2}>{grupo.subtitle}</Text>
+                            <Text style={{ color: grupo.tint, fontSize: 9, fontWeight: "900", letterSpacing: 1, marginTop: 7 }}>{grupo.day}</Text>
+                          </View>
+                          <Text style={{ color: t.textSub, fontSize: 25 }}>›</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => { setGrupoChatSeleccionado(null); setIdMensajeEditando(null); setNuevoMensajeTexto(""); }}
+                        style={{ alignSelf: "flex-start", paddingVertical: 9, paddingHorizontal: 13, borderRadius: 10, backgroundColor: t.cardBg, borderWidth: 1, borderColor: t.border, marginBottom: 12 }}
+                      >
+                        <Text style={{ color: t.primary, fontWeight: "800", fontSize: 12 }}>‹ Volver a Chats</Text>
+                      </TouchableOpacity>
+                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 22 }]}>
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15, gap: 10 }}>
                         <View style={{ flex: 1 }}>
                           <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.5, marginBottom: 5 }}>COMUNIDAD · EN VIVO</Text>
-                          <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0, fontSize: esMovil ? 17 : 19 }]}>Chat de {sedeActual.nombre}</Text>
-                          <Text style={{ color: t.textSub, fontSize: 11, marginTop: 4 }}>Comparte mensajes y coordina con tu equipo</Text>
+                          <Text style={[styles.cardTitle, { color: t.textMain, marginBottom: 0, fontSize: esMovil ? 17 : 19 }]}>Chat · {canalChatActivo === "martes" ? "Martes" : canalChatActivo === "jueves" ? "Jueves" : "Sáb. y Dom."}</Text>
+                          <Text style={{ color: t.textSub, fontSize: 11, marginTop: 4 }}>Conversación de {sedeActual.nombre}</Text>
                         </View>
                         {esAdminOLider && (
                           <TouchableOpacity style={{ backgroundColor: "#FEE2E2", paddingHorizontal: 11, paddingVertical: 8, borderRadius: 10 }} onPress={limpiarHistorialChat}>
@@ -2115,29 +2206,7 @@ export default function App() {
                         )}
                       </View>
 
-                      <View style={{ flexDirection: "row", gap: 7, marginBottom: 13 }}>
-                        {[
-                          { key: "martes", label: "🗓️ Martes" },
-                          { key: "jueves", label: "🗓️ Jueves" },
-                          { key: "finsemana", label: "⛪ Sáb & Dom" },
-                        ].map((ch) => {
-                          const estaActivo = canalChatActivo === ch.key;
-                          return (
-                            <TouchableOpacity
-                              key={ch.key}
-                              style={[
-                                { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg, alignItems: "center" },
-                                estaActivo && { backgroundColor: t.primary, borderColor: t.primary },
-                              ]}
-                              onPress={() => setCanalChatActivo(ch.key)}
-                            >
-                              <Text numberOfLines={1} style={{ fontSize: esMovil ? 10 : 12, fontWeight: estaActivo ? "800" : "600", color: estaActivo ? "#FFF" : t.textSub }}>
-                                {ch.label}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
+                      
 
                       <View style={{ backgroundColor: t.bg, borderRadius: 13, borderWidth: 1, borderColor: t.border, padding: 11, height: esMovil ? 245 : 285, marginBottom: 12 }}>
                         <ScrollView>
@@ -2202,51 +2271,8 @@ export default function App() {
                         </TouchableOpacity>
                       </View>
                     </View>
-
-                    <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
-                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 20 }]}>
-                        <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.5, marginBottom: 6 }}>ACCESO RÁPIDO</Text>
-                        <Text style={{ color: t.textMain, fontSize: 17, fontWeight: "900", marginBottom: 13 }}>Tu espacio de trabajo</Text>
-                        {[
-                          { key: "eventos", title: "Calendario y servicios", detail: "Consulta y programa encuentros", icon: "▦", tint: "#2563EB" },
-                          ...(esAdminOLider ? [{ key: "equipo", title: "Gestionar equipo", detail: "Integrantes, roles y sedes", icon: "♧", tint: "#5755D9" }] : []),
-                          { key: "repertorio", title: "Biblioteca musical", detail: "Organiza las canciones", icon: "♫", tint: "#7C3AED" },
-                        ].map((acceso) => (
-                          <TouchableOpacity key={acceso.key} onPress={() => { setPestana(acceso.key); setCancionSeleccionadaDetalle(null); }} style={{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 13, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, marginBottom: 8 }}>
-                            <View style={{ width: 39, height: 39, borderRadius: 12, backgroundColor: acceso.tint + "18", alignItems: "center", justifyContent: "center", marginRight: 11 }}>
-                              <Text style={{ color: acceso.tint, fontSize: 19, fontWeight: "900" }}>{acceso.icon}</Text>
-                            </View>
-                            <View style={{ flex: 1, minWidth: 0 }}>
-                              <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "900" }}>{acceso.title}</Text>
-                              <Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{acceso.detail}</Text>
-                            </View>
-                            <Text style={{ color: t.primary, fontSize: 20, fontWeight: "900" }}>›</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-
-                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 20 }]}>
-                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 9, gap: 8 }}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.2 }}>PRÓXIMOS ENCUENTROS</Text>
-                            <Text style={{ color: t.textMain, fontSize: 16, fontWeight: "900", marginTop: 4 }}>Agenda de la sede</Text>
-                          </View>
-                          <TouchableOpacity onPress={() => setPestana("eventos")} style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 9, backgroundColor: t.primary + "18" }}>
-                            <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900" }}>Ver todos ›</Text>
-                          </TouchableOpacity>
-                        </View>
-                        {serviciosProximos.map((serv) => (
-                          <TouchableOpacity key={serv.id} onPress={() => setPestana("eventos")} style={{ paddingVertical: 11, borderTopWidth: 1, borderTopColor: t.border }}>
-                            <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "900" }}>{serv.titulo || "Servicio"}</Text>
-                            <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>{serv.fecha}</Text>
-                          </TouchableOpacity>
-                        ))}
-                        {serviciosProximos.length === 0 && (
-                          <Text style={{ color: t.textSub, fontSize: 11, lineHeight: 17, paddingVertical: 10 }}>Todavía no hay servicios próximos programados.</Text>
-                        )}
-                      </View>
-                    </View>
-                  </View>
+                    </>
+                  )}
                 </View>
               )}
 
@@ -3219,6 +3245,7 @@ export default function App() {
             {[
               { key: "inicio", label: "🏠 Inicio" },
               { key: "eventos", label: "📅 Eventos" },
+              { key: "chat", label: "💬 Chat" },
               ...(esAdminOLider ? [{ key: "equipo", label: "👥 Equipo" }] : []),
               { key: "repertorio", label: "🎵 Repertorio" },
             ].map((tab) => (

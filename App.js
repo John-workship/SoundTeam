@@ -297,7 +297,7 @@ export default function App() {
 
     const { data: perfil, error: perfilError } = await supabase
       .from("integrantes")
-      .select("id, nombre, email, sede_id, rol_acceso, roles_musicales, user_id, avatar_url")
+      .select("id, nombre, nombre_perfil, email, sede_id, rol_acceso, roles_musicales, user_id, avatar_url")
       .eq("user_id", session.user.id)
       .maybeSingle();
 
@@ -308,8 +308,8 @@ export default function App() {
     }
 
     setErrorAuth("");
-    setUsuario(perfil.nombre || session.user.email);
-    setNombrePerfilInput(perfil.nombre || session.user.email);
+    setUsuario(perfil.nombre_perfil || perfil.nombre || session.user.email);
+    setNombrePerfilInput(perfil.nombre_perfil || perfil.nombre || session.user.email);
     setFotoPerfil(perfil.avatar_url || null);
     setUsuarioId(session.user.id);
     setEmailUsuario(session.user.email.trim().toLowerCase());

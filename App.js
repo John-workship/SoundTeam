@@ -3496,7 +3496,7 @@ export default function App() {
               <TouchableOpacity
                 key={tab.key}
                 style={[styles.tabItem, (esMovil || esTablet) && styles.tabItemCompact, pestana === tab.key && { backgroundColor: t.bg, borderRadius: 12, marginHorizontal: 2, marginVertical: 3 }]}
-                onPress={() => { setPestana(tab.key); setCancionSeleccionadaDetalle(null); }}
+                onPress={() => { setPestana(tab.key); setCancionSeleccionadaDetalle(null); if (tab.key === "chat") setMostrarDetalleChatMovil(false); }}
               >
                 <Text style={[styles.tabText, (esMovil || esTablet) && styles.tabTextCompact, { color: t.textSub }, pestana === tab.key && { color: t.textMain, fontWeight: "bold" }]} numberOfLines={1}>
                   {tab.label}

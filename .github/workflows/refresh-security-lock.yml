@@ -1,4 +1,4 @@
-name: Refresh security lockfile
+name: Refresh security lockfile and verify
 
 on:
   push:
@@ -27,10 +27,16 @@ jobs:
         run: |
           if git diff --quiet -- package-lock.json; then
             echo "Lockfile already up to date."
-            exit 0
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "security: regenerate lockfile with patched dependencies"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "security: regenerate lockfile with patched dependencies"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Audit all dependency severities
+        run: npm audit --audit-level=low
+      - name: Build web app
+        run: npm run build:web

@@ -8,9 +8,11 @@ import {
   ScrollView,
   Platform,
   Linking,
+  Image,
   useWindowDimensions,
 } from "react-native";
 import { supabase, isSupabaseConfigured } from "./supabase";
+import * as ImagePicker from "expo-image-picker";
 
 const TEMAS = {
   azul: {
@@ -307,6 +309,8 @@ export default function App() {
 
     setErrorAuth("");
     setUsuario(perfil.nombre || session.user.email);
+    setNombrePerfilInput(perfil.nombre || session.user.email);
+    setFotoPerfil(perfil.avatar_url || null);
     setUsuarioId(session.user.id);
     setEmailUsuario(session.user.email.trim().toLowerCase());
     setRolUsuario((perfil.rol_acceso || "miembro").toLowerCase());
@@ -345,7 +349,9 @@ export default function App() {
 
   const [pestana, setPestana] = useState("inicio");
   const [nombreTema, setNombreTema] = useState("azul");
-  const [mostrarMenuPersonalizacion, setMostrarMenuPersonalizacion] = useState(false);
+  const [nombrePerfilInput, setNombrePerfilInput] = useState("");
+  const [fotoPerfil, setFotoPerfil] = useState(null);
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
 
   const t = TEMAS[nombreTema];
   const sedeActual = SEDES_DISPONIBLES.find((s) => s.id === sedeIdSeleccionada) || SEDES_DISPONIBLES[0];
@@ -1075,6 +1081,48 @@ export default function App() {
     setPestana("inicio");
     setErrorAuth("");
     setErrorDatos("");
+  };
+
+  const guardarPerfilPersonal = async (nuevoNombre = nombrePerfilInput, nuevaFoto = fotoPerfil) => {
+    if (!usuarioId) return false;
+    const nombreLimpio = String(nuevoNombre || "").trim();
+    if (!nombreLimpio) { alert("Escribe tu nombre."); return false; }
+    setGuardandoPerfil(true);
+    const { error } = await supabase.rpc("soundteam_actualizar_perfil", { p_nombre: nombreLimpio, p_avatar_url: nuevaFoto || null });
+    setGuardandoPerfil(false);
+    if (error) { alert(`No se pudo guardar tu perfil: ${error.message}`); return false; }
+    setUsuario(nombreLimpio);
+    setNombrePerfilInput(nombreLimpio);
+    setFotoPerfil(nuevaFoto || null);
+    alert("Perfil actualizado.");
+    return true;
+  };
+
+  const seleccionarFotoPerfil = async () => {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) { alert("Necesitamos permiso para acceder a tus fotos."); return; }
+    const resultado = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.82 });
+    if (resultado.canceled || !resultado.assets?.[0]) return;
+    const asset = resultado.assets[0];
+    try {
+      setGuardandoPerfil(true);
+      const extension = (asset.fileName || asset.uri.split(".").pop() || "jpg").split(".").pop().toLowerCase();
+      const ruta = `${usuarioId}/avatar-${Date.now()}.${extension}`;
+      const respuesta = await fetch(asset.uri);
+      const archivo = await respuesta.blob();
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(ruta, archivo, { upsert: true, contentType: asset.mimeType || "image/jpeg" });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(ruta);
+      const guardado = await guardarPerfilPersonal(nombrePerfilInput, data.publicUrl);
+      if (!guardado) setGuardandoPerfil(false);
+    } catch (error) {
+      setGuardandoPerfil(false);
+      alert(`No se pudo cargar la foto: ${error.message}`);
+    }
+  };
+
+  const quitarFotoPerfil = async () => {
+    await guardarPerfilPersonal(nombrePerfilInput, null);
   };
 
   const recargarDatosApp = async () => {
@@ -1978,8 +2026,8 @@ export default function App() {
                 { key: "inicio", label: "Inicio", icon: "⌂" },
                 { key: "chat", label: "Chat", icon: "▤" },
                 { key: "eventos", label: "Eventos y calendario", icon: "▦" },
-                ...(esAdminOLider ? [{ key: "equipo", label: "Equipo", icon: "♧" }] : []),
                 { key: "repertorio", label: "Repertorio", icon: "♫" },
+                { key: "ajustes", label: "Ajustes", icon: "⚙" },
               ].map((tab) => {
                 const activo = pestana === tab.key;
                 return (
@@ -2047,49 +2095,6 @@ export default function App() {
                 </select>
               ) : null}
 
-              <TouchableOpacity
-                style={{
-                  backgroundColor: t.bg,
-                  borderWidth: 1,
-                  borderColor: t.border,
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderRadius: 10,
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-                onPress={() => setMostrarMenuPersonalizacion(!mostrarMenuPersonalizacion)}
-              >
-                <Text style={{ fontSize: 12, color: t.textMain, fontWeight: "700" }}>
-                  🎨 Tema: {t.nombre}
-                </Text>
-                <Text style={{ fontSize: 11, color: t.primary, fontWeight: "bold" }}>{mostrarMenuPersonalizacion ? "▲ Ocultar" : "▼ Personalizar"}</Text>
-              </TouchableOpacity>
-
-              {mostrarMenuPersonalizacion && (
-                <View style={{ marginTop: 6, backgroundColor: t.cardBg, borderRadius: 6, borderWidth: 1, borderColor: t.border, padding: 8, gap: 8 }}>
-                  <Text style={{ fontSize: 11, color: t.textSub, fontWeight: "bold" }}>Temas:</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
-                    {Object.keys(TEMAS).map((keyTema) => {
-                      const activo = nombreTema === keyTema;
-                      return (
-                        <TouchableOpacity
-                          key={keyTema}
-                          style={{ paddingVertical: 4, paddingHorizontal: 6, borderRadius: 4, backgroundColor: activo ? t.primary : t.bg, borderWidth: 1, borderColor: t.border }}
-                          onPress={() => setNombreTema(keyTema)}
-                        >
-                          <Text style={{ fontSize: 10, color: activo ? "#FFFFFF" : t.textMain, fontWeight: activo ? "bold" : "normal" }}>
-                            {TEMAS[keyTema].nombre}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-
-                </View>
-              )}
             </View>
           </View>
 
@@ -2114,6 +2119,14 @@ export default function App() {
                       <Text style={{ color: "#FFFFFF", fontSize: 12, lineHeight: 19, fontStyle: "italic" }}>"Y todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres."</Text>
                     </View>
                   </View>
+
+                  {esAdminOLider && (
+                    <TouchableOpacity onPress={() => setPestana("equipo")} style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.primary, borderWidth: 1, padding: esMovil ? 16 : 20, marginBottom: 18, flexDirection: "row", alignItems: "center", gap: 14 }]}>
+                      <View style={{ width: 48, height: 48, borderRadius: 15, backgroundColor: t.primary + "22", alignItems: "center", justifyContent: "center" }}><Text style={{ color: t.primary, fontSize: 25 }}>👥</Text></View>
+                      <View style={{ flex: 1 }}><Text style={{ color: t.textMain, fontSize: 16, fontWeight: "900" }}>Equipo</Text><Text style={{ color: t.textSub, fontSize: 11, marginTop: 4 }}>Personas y permisos · {integrantesSeccionEquipo.length} integrantes</Text></View>
+                      <Text style={{ color: t.primary, fontSize: 22, fontWeight: "900" }}>›</Text>
+                    </TouchableOpacity>
+                  )}
 
                   <View style={{ flexDirection: "row", gap: esMovil ? 7 : 12, marginBottom: 18 }}>
                     {[
@@ -2814,6 +2827,41 @@ export default function App() {
                 </>
               )}
 
+              {pestana === "ajustes" && (
+                <View style={{ width: "100%" }}>
+                  <View style={{ backgroundColor: t.banner, borderRadius: esMovil ? 19 : 25, padding: esMovil ? 18 : 26, marginBottom: 18 }}>
+                    <Text style={{ color: "#DCDFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.5 }}>SOUNDTEAM · PREFERENCIAS</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 25 : 32, fontWeight: "900", marginTop: 8 }}>Ajustes</Text>
+                    <Text style={{ color: "#E8EAFE", fontSize: 12, marginTop: 6 }}>Administra tu perfil y la apariencia de tu aplicación.</Text>
+                  </View>
+                  <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 16 : 22 }]}>
+                    <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginBottom: 14 }}>PERFIL DEL USUARIO</Text>
+                    <View style={{ alignItems: "center", marginBottom: 18 }}>
+                      {fotoPerfil ? <Image source={{ uri: fotoPerfil }} style={{ width: 104, height: 104, borderRadius: 52, borderWidth: 2, borderColor: t.primary }} /> : <View style={{ width: 104, height: 104, borderRadius: 52, backgroundColor: t.primary, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#FFFFFF", fontSize: 34, fontWeight: "900" }}>{(usuario || "U").split(" ").map(p => p[0]).join("").slice(0,2).toUpperCase()}</Text></View>}
+                      <View style={{ flexDirection: "row", gap: 10, marginTop: 12, flexWrap: "wrap", justifyContent: "center" }}>
+                        <TouchableOpacity onPress={seleccionarFotoPerfil} disabled={guardandoPerfil} style={{ backgroundColor: t.primary, paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10 }}><Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>＋ Cambiar foto</Text></TouchableOpacity>
+                        {!!fotoPerfil && <TouchableOpacity onPress={quitarFotoPerfil} disabled={guardandoPerfil} style={{ backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10 }}><Text style={{ color: t.textMain, fontSize: 11, fontWeight: "800" }}>Quitar foto</Text></TouchableOpacity>}
+                      </View>
+                    </View>
+                    <Text style={[styles.inputLabel, { color: t.textMain }]}>Nombre de perfil</Text>
+                    <TextInput value={nombrePerfilInput} onChangeText={setNombrePerfilInput} placeholder="Tu nombre" placeholderTextColor={t.textSub} style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, borderRadius: 11, marginBottom: 12 }]} />
+                    <TouchableOpacity onPress={() => guardarPerfilPersonal()} disabled={guardandoPerfil} style={{ backgroundColor: t.primary, borderRadius: 11, padding: 13, alignItems: "center", opacity: guardandoPerfil ? 0.6 : 1 }}><Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 12 }}>{guardandoPerfil ? "Guardando..." : "Guardar cambios"}</Text></TouchableOpacity>
+                    <Text style={{ color: t.textSub, fontSize: 10, lineHeight: 16, marginTop: 10 }}>Este nombre solo cambia cómo aparece tu perfil. No modifica los nombres usados en la programación de servicios ni los datos de otros integrantes.</Text>
+                  </View>
+                  <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 16 : 22 }]}>
+                    <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginBottom: 5 }}>APARIENCIA</Text>
+                    <Text style={{ color: t.textMain, fontSize: 17, fontWeight: "900", marginBottom: 5 }}>Tema de la aplicación</Text>
+                    <Text style={{ color: t.textSub, fontSize: 11, marginBottom: 14 }}>Selecciona los colores que prefieras.</Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                      {Object.keys(TEMAS).map(keyTema => {
+                        const activo = nombreTema === keyTema;
+                        return <TouchableOpacity key={keyTema} onPress={() => setNombreTema(keyTema)} style={{ paddingVertical: 10, paddingHorizontal: 13, borderRadius: 11, backgroundColor: activo ? t.primary : t.bg, borderWidth: 1, borderColor: activo ? t.primary : t.border }}><Text style={{ color: activo ? "#FFFFFF" : t.textMain, fontSize: 11, fontWeight: activo ? "900" : "600" }}>{TEMAS[keyTema].nombre}</Text></TouchableOpacity>;
+                      })}
+                    </View>
+                  </View>
+                </View>
+              )}
+
               {pestana === "equipo" && esAdminOLider && (
                 <View style={{ width: "100%" }}>
                   <View style={{ backgroundColor: t.banner, borderRadius: esMovil ? 19 : 25, padding: esMovil ? 18 : 26, marginBottom: 16, overflow: "hidden", shadowColor: t.banner, shadowOpacity: 0.18, shadowRadius: 17, shadowOffset: { width: 0, height: 7 }, elevation: 3 }}>
@@ -3193,8 +3241,8 @@ export default function App() {
               { key: "inicio", label: "🏠 Inicio" },
               { key: "chat", label: "💬 Chat" },
               { key: "eventos", label: "📅 Eventos" },
-              ...(esAdminOLider ? [{ key: "equipo", label: "👥 Equipo" }] : []),
               { key: "repertorio", label: "🎵 Repertorio" },
+              { key: "ajustes", label: "⚙ Ajustes" },
             ].map((tab) => (
               <TouchableOpacity
                 key={tab.key}

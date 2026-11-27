@@ -297,7 +297,7 @@ export default function App() {
 
     const { data: perfil, error: perfilError } = await supabase
       .from("integrantes")
-      .select("id, nombre, email, sede_id, rol_acceso, roles_musicales, user_id")
+      .select("id, nombre, email, sede_id, rol_acceso, roles_musicales, user_id, avatar_url")
       .eq("user_id", session.user.id)
       .maybeSingle();
 

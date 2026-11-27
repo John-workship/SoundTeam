@@ -2451,66 +2451,102 @@ export default function App() {
                        )}
 
                        {(() => {
-                        const letraVista = modoNashville
-                          ? convertirANashville(transponerLetra(cancionSeleccionadaDetalle.letra || "", semitonos), transponerTono(cancionSeleccionadaDetalle.tono, semitonos))
-                          : transponerLetra(cancionSeleccionadaDetalle.letra || "", semitonos);
-                        const lineas = letraVista.split("\n");
-                        const secciones = [];
-                        let actual = { titulo: "Canción completa", lineas: [] };
-                        const encabezado = /^\s*\[(INTRO(?:DUCCIÓN)?|V\s*\d+|ESTROFA(?:\s*\d+)?|VERSO(?:\s*\d+)?|CORO(?:\s*\d+)?|ESTRIBILLO|PRE[- ]?CORO|POST[- ]?CORO|PUENTE(?:\s*\d+)?|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|CODA|VUELTA|VAMP|BREAKDOWN|TAG)\]\s*$/i;
-                        lineas.forEach(linea => {
-                          const match = linea.match(encabezado);
-                          if (match) {
-                            if (actual.lineas.length || secciones.length === 0) secciones.push(actual);
-                            actual = { titulo: match[1].replace(/\s+/g, " ").toUpperCase(), lineas: [] };
-                          } else actual.lineas.push(linea);
-                        });
-                        if (actual.lineas.length || secciones.length === 0) secciones.push(actual);
-                        const abreviatura = (titulo, i) => {
-                          const t = titulo.toUpperCase();
-                          if (/^(ESTROFA|VERSO|V)\s*(\d+)?$/.test(t)) return `V${(t.match(/\d+/) || [i+1])[0]}`;
-                          if (/CORO|ESTRIBILLO/.test(t)) return "C";
-                          if (/PRE/.test(t)) return "PC";
-                          if (/POST/.test(t)) return "PoC";
-                          if (/PUENTE/.test(t)) return "P";
-                          if (/INTRO/.test(t)) return "IN";
-                          if (/INTERLUDIO/.test(t)) return "INT";
-                          if (/INSTRUMENTAL/.test(t)) return "I";
-                          if (/OUTRO/.test(t)) return "O";
-                          if (/FINAL/.test(t)) return "F";
-                          if (/CODA/.test(t)) return "T";
-                          if (/VUELTA/.test(t)) return "Vu";
-                          if (/VAMP/.test(t)) return "Va";
-                          if (/BREAKDOWN/.test(t)) return "BD";
-                          return t.slice(0, 3);
-                        };
-                        return <>
-                          {secciones.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 7, paddingVertical: 3 }}>
-                            {secciones.map((s, i) => <TouchableOpacity key={i} onPress={() => scrollLetraRef.current?.scrollTo({ y: posicionesSeccionesRef.current[i] || 0, animated: true })} style={{ backgroundColor: i === seccionCancionActiva ? t.primary : t.cardBg, borderColor: i === seccionCancionActiva ? t.primary : t.border, borderWidth: 1, borderRadius: 22, paddingHorizontal: 12, paddingVertical: 8 }}>
-                              <Text style={{ color: i === seccionCancionActiva ? "#FFFFFF" : t.textMain, fontSize: 12, fontWeight: "900" }}>{abreviatura(s.titulo, i)}</Text>
-                            </TouchableOpacity>)}
-                          </ScrollView>}
-                          <ScrollView ref={scrollLetraRef} nestedScrollEnabled showsVerticalScrollIndicator style={{ maxHeight: 620, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.border }} onScroll={e => { const y = e.nativeEvent.contentOffset.y; let active = 0; secciones.forEach((_, i) => { if ((posicionesSeccionesRef.current[i] || 0) <= y + 35) active = i; }); if (active !== seccionCancionActiva) setSeccionCancionActiva(active); }} scrollEventThrottle={100}>
-                            {secciones.map((s, index) => <View key={index} onLayout={e => { posicionesSeccionesRef.current[index] = e.nativeEvent.layout.y; }}>
-                              <View style={{ flexDirection: "row", alignItems: "center", alignSelf: "flex-start", backgroundColor: index === 0 ? "#A5E9FA" : /CORO|ESTRIBILLO/.test(s.titulo) ? "#FFC3AE" : t.primary, borderRadius: 22, paddingHorizontal: 10, paddingVertical: 5, marginTop: index === 0 ? 8 : 14, marginBottom: 8, marginLeft: 12 }}>
-                                <View style={{ width: 25, height: 25, borderRadius: 14, backgroundColor: "#17191D", alignItems: "center", justifyContent: "center", marginRight: 7 }}><Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "900" }}>{abreviatura(s.titulo, index)}</Text></View>
-                                <Text style={{ color: "#15171B", fontSize: 12, fontWeight: "900" }}>{s.titulo}</Text>
-                              </View>
-                              <View style={{ paddingHorizontal: 13, paddingBottom: 10 }}>
-                                {s.lineas.map((linea, i) => {
-                                  const acordes = [...linea.matchAll(/\[([^\]]+)\]/g)].map(m => m[1]);
-                                  const texto = linea.replace(/\[([^\]]+)\]/g, "").trim();
-                                  if (!linea.trim()) return <View key={i} style={{ height: 9 }} />;
-                                  return <View key={i} style={{ marginBottom: 7 }}>
-                                    {acordes.length > 0 && <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 18, marginLeft: 4, marginBottom: 1 }}>{acordes.map((acorde, j) => <Text key={j} style={{ color: t.primary, fontSize: 15, fontWeight: "900", minWidth: 22 }}>{acorde}</Text>)}</View>}
-                                    {!!texto && <Text style={{ color: t.textMain, fontSize: 16, lineHeight: 25 }}>{texto}</Text>}
-                                  </View>;
-                                })}
-                              </View>
-                            </View>)}
-                          </ScrollView>
-                        </>;
-                      })()}
+                         const titulos = setlistActivo.map(c => (c.titulo || "").toLowerCase());
+                         const disponibles = repertorio
+                           .filter(c => c.titulo && !titulos.includes(c.titulo.toLowerCase()))
+                           .sort((a, b) => a.titulo.localeCompare(b.titulo));
+
+                         const lentas = disponibles.filter(c => (c.tipoSet || "").toLowerCase() === "lenta");
+                         const rapidas = disponibles.filter(c => (c.tipoSet || "").toLowerCase() === "rapida");
+
+                         const agregarCancion = (seleccion, lista, limpiar) => {
+                           let titulo = seleccion;
+                           if (!titulo && lista.length > 0) titulo = lista[0].titulo;
+                           if (!titulo) {
+                             alert("Selecciona una canción disponible.");
+                             return;
+                           }
+                           if (titulos.includes(titulo.toLowerCase())) {
+                             alert("Esa canción ya está en el setlist.");
+                             return;
+                           }
+                           const existente = repertorio.find(c => c.titulo && c.titulo.toLowerCase() === titulo.toLowerCase());
+                           setSetlistActivo(actual => [...actual, {
+                             id: existente ? existente.id : undefined,
+                             titulo: existente ? existente.titulo : titulo.trim(),
+                             tono: existente ? existente.tono : "C",
+                             bpm: existente ? (existente.bpm || "120") : "120",
+                             compas: existente ? (existente.compas || "4/4") : "4/4",
+                             tipoSet: existente ? (existente.tipoSet || "lenta") : (lista === lentas ? "lenta" : "rapida")
+                           }]);
+                           limpiar("");
+                         };
+
+                         const estiloSelector = {
+                           flex: 1, minWidth: 0, backgroundColor: t.cardBg,
+                           color: t.textMain, borderColor: t.border,
+                           borderWidth: "1px", borderRadius: "8px",
+                           padding: "8px", fontSize: "13px"
+                         };
+
+                         return (
+                           <View style={{ marginTop: 10, gap: 10 }}>
+                             <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
+                               <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>🕯️ Set Lentas:</Text>
+                               {lentas.length === 0 ? (
+                                 <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones lentas disponibles en esta sede.</Text>
+                               ) : (
+                                 <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                                   {Platform.OS === "web" ? (
+                                     <select value={cancionLentaSeleccionada} onChange={e => setCancionLentaSeleccionada(e.target.value)} style={estiloSelector}>
+                                       <option value="">-- Selecciona canción lenta --</option>
+                                       {lentas.map(c => <option key={c.id} value={c.titulo}>{c.titulo} ({c.tono} • {c.bpm || "120"} BPM)</option>)}
+                                     </select>
+                                   ) : (
+                                     <TextInput
+                                       style={[styles.loginInput, { flex: 1, backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                                       placeholder="Canción lenta..."
+                                       placeholderTextColor={t.textSub}
+                                       value={cancionLentaSeleccionada}
+                                       onChangeText={setCancionLentaSeleccionada}
+                                     />
+                                   )}
+                                   <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 8, paddingHorizontal: 12 }]} onPress={() => agregarCancion(cancionLentaSeleccionada, lentas, setCancionLentaSeleccionada)}>
+                                     <Text style={[styles.loginButtonText, { fontSize: 12 }]}>+ Agregar</Text>
+                                   </TouchableOpacity>
+                                 </View>
+                               )}
+                             </View>
+
+                             <View style={{ backgroundColor: t.bg, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: t.border }}>
+                               <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginBottom: 6 }]}>⚡ Set Rápidas:</Text>
+                               {rapidas.length === 0 ? (
+                                 <Text style={{ color: t.textSub, fontSize: 12, fontStyle: "italic" }}>No hay canciones rápidas disponibles en esta sede.</Text>
+                               ) : (
+                                 <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                                   {Platform.OS === "web" ? (
+                                     <select value={cancionRapidaSeleccionada} onChange={e => setCancionRapidaSeleccionada(e.target.value)} style={estiloSelector}>
+                                       <option value="">-- Selecciona canción rápida --</option>
+                                       {rapidas.map(c => <option key={c.id} value={c.titulo}>{c.titulo} ({c.tono} • {c.bpm || "120"} BPM)</option>)}
+                                     </select>
+                                   ) : (
+                                     <TextInput
+                                       style={[styles.loginInput, { flex: 1, backgroundColor: t.cardBg, borderColor: t.border, color: t.textMain, marginBottom: 0 }]}
+                                       placeholder="Canción rápida..."
+                                       placeholderTextColor={t.textSub}
+                                       value={cancionRapidaSeleccionada}
+                                       onChangeText={setCancionRapidaSeleccionada}
+                                     />
+                                   )}
+                                   <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, paddingVertical: 8, paddingHorizontal: 12 }]} onPress={() => agregarCancion(cancionRapidaSeleccionada, rapidas, setCancionRapidaSeleccionada)}>
+                                     <Text style={[styles.loginButtonText, { fontSize: 12 }]}>+ Agregar</Text>
+                                   </TouchableOpacity>
+                                 </View>
+                               )}
+                             </View>
+                           </View>
+                         );
+                       })()}
 
 <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
                         <TouchableOpacity
@@ -3086,33 +3122,44 @@ export default function App() {
                         const lineas = letraVista.split("\n");
                         const secciones = [];
                         let actual = { titulo: "Canción completa", lineas: [] };
-                        const encabezado = /^\s*\[(INTRO|INTRODUCCI[ÓO]N|V\s*\d+|ESTROFA(?:\s*\d+)?|VERSO(?:\s*\d+)?|CORO|PRECORO|PUENTE|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|TAG)\]\s*$/i;
-                        lineas.forEach(linea => {
-                          const match = linea.match(encabezado);
-                          if (match) {
-                            if (actual.lineas.length) secciones.push(actual);
-                            actual = { titulo: match[1].replace(/\s+/g, " ").toUpperCase(), lineas: [] };
-                          } else actual.lineas.push(linea);
-                        });
+                        const encabezado = /^\s*\[(INTRO(?:DUCCIÓN)?|V\s*\d+|ESTROFA(?:\s*\d+)?|VERSO(?:\s*\d+)?|CORO(?:\s*\d+)?|ESTRIBILLO|PRE[- ]?CORO|POST[- ]?CORO|PUENTE(?:\s*\d+)?|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|CODA|VUELTA|VAMP|BREAKDOWN|TAG)\]\s*$/i;
+                        lineas.forEach(linea => { const match = linea.match(encabezado); if (match) { if (actual.lineas.length || secciones.length === 0) secciones.push(actual); actual = { titulo: match[1].replace(/\s+/g, " ").toUpperCase(), lineas: [] }; } else actual.lineas.push(linea); });
                         if (actual.lineas.length || secciones.length === 0) secciones.push(actual);
-                        const seccion = secciones[Math.min(seccionCancionActiva, secciones.length - 1)] || secciones[0];
+                        const abreviatura = (titulo, i) => {
+                          const t = titulo.toUpperCase();
+                          if (/^(ESTROFA|VERSO|V)\s*(\d+)?$/.test(t)) return `V${(t.match(/\d+/) || [i+1])[0]}`;
+                          if (/CORO|ESTRIBILLO/.test(t)) return "C";
+                          if (/PRE/.test(t)) return "PC";
+                          if (/POST/.test(t)) return "PoC";
+                          if (/PUENTE/.test(t)) return "P";
+                          if (/INTRO/.test(t)) return "IN";
+                          if (/INTERLUDIO/.test(t)) return "INT";
+                          if (/INSTRUMENTAL/.test(t)) return "I";
+                          if (/OUTRO/.test(t)) return "O";
+                          if (/FINAL/.test(t)) return "F";
+                          if (/CODA/.test(t)) return "T";
+                          if (/VUELTA/.test(t)) return "Vu";
+                          if (/VAMP/.test(t)) return "Va";
+                          if (/BREAKDOWN/.test(t)) return "BD";
+                          return t.slice(0, 3);
+                        };
                         return <>
-                          {secciones.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 7 }}>
-                            {secciones.map((s, i) => <TouchableOpacity key={i} onPress={() => setSeccionCancionActiva(i)} style={{ backgroundColor: i === seccionCancionActiva ? t.primary : t.cardBg, borderColor: i === seccionCancionActiva ? t.primary : t.border, borderWidth: 1, borderRadius: 20, paddingHorizontal: 13, paddingVertical: 8 }}>
-                              <Text style={{ color: i === seccionCancionActiva ? "#FFFFFF" : t.textMain, fontSize: 11, fontWeight: "900" }}>{s.titulo}</Text>
+                          {secciones.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 7, paddingVertical: 3 }}>
+                            {secciones.map((s, i) => <TouchableOpacity key={i} onPress={() => scrollLetraRef.current?.scrollTo({ y: posicionesSeccionesRef.current[i] || 0, animated: true })} style={{ backgroundColor: i === seccionCancionActiva ? t.primary : t.cardBg, borderColor: i === seccionCancionActiva ? t.primary : t.border, borderWidth: 1, borderRadius: 22, paddingHorizontal: 12, paddingVertical: 8 }}>
+                              <Text style={{ color: i === seccionCancionActiva ? "#FFFFFF" : t.textMain, fontSize: 12, fontWeight: "900" }}>{abreviatura(s.titulo, i)}</Text>
                             </TouchableOpacity>)}
                           </ScrollView>}
-                          <View style={{ backgroundColor: t.bg, padding: 17, borderRadius: 12, borderWidth: 1, borderColor: t.border }}>
-                            {seccion.lineas.map((linea, i) => {
-                              const acordes = [...linea.matchAll(/\[([^\]]+)\]/g)].map(m => m[1]);
-                              const texto = linea.replace(/\[([^\]]+)\]/g, "").trim();
-                              if (!linea.trim()) return <View key={i} style={{ height: 12 }} />;
-                              return <View key={i} style={{ marginBottom: 8 }}>
-                                {acordes.length > 0 && <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 18, marginLeft: 4, marginBottom: 1 }}>{acordes.map((acorde, j) => <Text key={j} style={{ color: t.primary, fontSize: 15, fontWeight: "900", minWidth: 22 }}>{acorde}</Text>)}</View>}
-                                {!!texto && <Text style={{ color: t.textMain, fontSize: 16, lineHeight: 25 }}>{texto}</Text>}
-                              </View>;
-                            })}
-                          </View>
+                          <ScrollView ref={scrollLetraRef} nestedScrollEnabled showsVerticalScrollIndicator style={{ maxHeight: 620, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.border }} onScroll={e => { const y = e.nativeEvent.contentOffset.y; let active = 0; secciones.forEach((_, i) => { if ((posicionesSeccionesRef.current[i] || 0) <= y + 35) active = i; }); if (active !== seccionCancionActiva) setSeccionCancionActiva(active); }} scrollEventThrottle={100}>
+                            {secciones.map((s, index) => <View key={index} onLayout={e => { posicionesSeccionesRef.current[index] = e.nativeEvent.layout.y; }}>
+                              <View style={{ flexDirection: "row", alignItems: "center", alignSelf: "flex-start", backgroundColor: index === 0 ? "#A5E9FA" : /CORO|ESTRIBILLO/.test(s.titulo) ? "#FFC3AE" : t.primary, borderRadius: 22, paddingHorizontal: 10, paddingVertical: 5, marginTop: index === 0 ? 8 : 14, marginBottom: 8, marginLeft: 12 }}>
+                                <View style={{ width: 25, height: 25, borderRadius: 14, backgroundColor: "#17191D", alignItems: "center", justifyContent: "center", marginRight: 7 }}><Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "900" }}>{abreviatura(s.titulo, index)}</Text></View>
+                                <Text style={{ color: "#15171B", fontSize: 12, fontWeight: "900" }}>{s.titulo}</Text>
+                              </View>
+                              <View style={{ paddingHorizontal: 13, paddingBottom: 10 }}>
+                                {s.lineas.map((linea, i) => { const acordes = [...linea.matchAll(/\[([^\]]+)\]/g)].map(m => m[1]); const texto = linea.replace(/\[([^\]]+)\]/g, "").trim(); if (!linea.trim()) return <View key={i} style={{ height: 9 }} />; return <View key={i} style={{ marginBottom: 7 }}>{acordes.length > 0 && <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 18, marginLeft: 4, marginBottom: 1 }}>{acordes.map((acorde, j) => <Text key={j} style={{ color: t.primary, fontSize: 15, fontWeight: "900", minWidth: 22 }}>{acorde}</Text>)}</View>}{!!texto && <Text style={{ color: t.textMain, fontSize: 16, lineHeight: 25 }}>{texto}</Text>}</View>; })}
+                              </View>
+                            </View>)}
+                          </ScrollView>
                         </>;
                       })()}
                     </View>

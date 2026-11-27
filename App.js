@@ -2205,27 +2205,6 @@ export default function App() {
 
                     <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
                       <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 20 }]}>
-                        <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.5, marginBottom: 6 }}>ACCESO RÁPIDO</Text>
-                        <Text style={{ color: t.textMain, fontSize: 17, fontWeight: "900", marginBottom: 13 }}>Tu espacio de trabajo</Text>
-                        {[
-                          { key: "eventos", title: "Calendario y servicios", detail: "Consulta y programa encuentros", icon: "▦", tint: "#2563EB" },
-                          ...(esAdminOLider ? [{ key: "equipo", title: "Gestionar equipo", detail: "Integrantes, roles y sedes", icon: "♧", tint: "#5755D9" }] : []),
-                          { key: "repertorio", title: "Biblioteca musical", detail: "Organiza las canciones", icon: "♫", tint: "#7C3AED" },
-                        ].map((acceso) => (
-                          <TouchableOpacity key={acceso.key} onPress={() => { setPestana(acceso.key); setCancionSeleccionadaDetalle(null); }} style={{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 13, backgroundColor: t.bg, borderWidth: 1, borderColor: t.border, marginBottom: 8 }}>
-                            <View style={{ width: 39, height: 39, borderRadius: 12, backgroundColor: acceso.tint + "18", alignItems: "center", justifyContent: "center", marginRight: 11 }}>
-                              <Text style={{ color: acceso.tint, fontSize: 19, fontWeight: "900" }}>{acceso.icon}</Text>
-                            </View>
-                            <View style={{ flex: 1, minWidth: 0 }}>
-                              <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "900" }}>{acceso.title}</Text>
-                              <Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{acceso.detail}</Text>
-                            </View>
-                            <Text style={{ color: t.primary, fontSize: 20, fontWeight: "900" }}>›</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-
-                      <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 20 }]}>
                         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 9, gap: 8 }}>
                           <View style={{ flex: 1 }}>
                             <Text style={{ color: t.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1.2 }}>PRÓXIMOS ENCUENTROS</Text>

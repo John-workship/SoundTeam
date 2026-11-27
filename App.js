@@ -508,6 +508,7 @@ export default function App() {
   const [proyeccionAbierta, setProyeccionAbierta] = useState(false);
   const [enlaceProyeccion, setEnlaceProyeccion] = useState("");
   const [mensajeProyeccion, setMensajeProyeccion] = useState("");
+  const [mensajeInvitacion, setMensajeInvitacion] = useState("");
   const canalProyeccionRef = useRef(null);
   const scrollProyeccionRef = useRef(null);
   const posicionScrollProyeccionRef = useRef(0);
@@ -1742,6 +1743,32 @@ export default function App() {
     const canal = canalProyeccionRef.current;
     if (!canal || !proyeccionAbierta) return;
     canal.send({ type: "broadcast", event: "inicio_letra", payload: {} });
+  };
+
+  const copiarEnlaceApp = async () => {
+    const enlaceApp = "https://soundteam-eta.vercel.app";
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(enlaceApp);
+        setMensajeInvitacion("¡Enlace de SoundTeam copiado! Compártelo con tu equipo.");
+        return;
+      } catch (_) {}
+    }
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      const campoTemporal = document.createElement("textarea");
+      campoTemporal.value = enlaceApp;
+      campoTemporal.style.position = "fixed";
+      campoTemporal.style.opacity = "0";
+      document.body.appendChild(campoTemporal);
+      campoTemporal.select();
+      const copiado = document.execCommand("copy");
+      document.body.removeChild(campoTemporal);
+      if (copiado) {
+        setMensajeInvitacion("¡Enlace de SoundTeam copiado! Compártelo con tu equipo.");
+        return;
+      }
+    }
+    setMensajeInvitacion("No se pudo copiar automáticamente. Enlace: " + enlaceApp);
   };
 
   const copiarEnlaceProyeccion = async () => {
@@ -3021,6 +3048,14 @@ export default function App() {
                     <Text style={{ color: "#DCDFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.5 }}>SOUNDTEAM · PREFERENCIAS</Text>
                     <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 25 : 32, fontWeight: "900", marginTop: 8 }}>Ajustes</Text>
                     <Text style={{ color: "#E8EAFE", fontSize: 12, marginTop: 6 }}>Administra tu perfil y la apariencia de tu aplicación.</Text>
+                  </View>
+                  <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 16 : 22, marginBottom: 16 }]}>
+                    <Text style={{ color: t.textMain, fontSize: 16, fontWeight: "900", marginBottom: 6 }}>Invita a tu equipo</Text>
+                    <Text style={{ color: t.textSub, fontSize: 12, lineHeight: 18, marginBottom: 14 }}>Comparte el enlace para que los integrantes puedan ingresar a SoundTeam.</Text>
+                    <TouchableOpacity onPress={copiarEnlaceApp} style={{ backgroundColor: t.primary, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 13, minHeight: 46, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, alignSelf: "flex-start" }}>
+                      <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "900" }}>↗ Compartir enlace</Text>
+                    </TouchableOpacity>
+                    {!!mensajeInvitacion && <Text style={{ color: t.textSub, fontSize: 11, fontWeight: "700", marginTop: 10 }}>{mensajeInvitacion}</Text>}
                   </View>
                   <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 16 : 22 }]}>
                     <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginBottom: 14 }}>PERFIL DEL USUARIO</Text>

@@ -101,11 +101,11 @@ ALTER POLICY soundteam_integrantes_update ON public.integrantes
 ALTER POLICY soundteam_integrantes_delete ON public.integrantes
   USING (
     public.soundteam_acceso_habilitado()
+    AND lower(btrim(COALESCE(email, ''))) <> 'johnbocal31@gmail.com'
     AND (
       (SELECT public.soundteam_es_admin_global())
       OR (
         rol_acceso = 'miembro'
-        AND lower(btrim(COALESCE(email, ''))) <> 'johnbocal31@gmail.com'
         AND (SELECT public.soundteam_es_lider_de_sede(integrantes.sede_id))
       )
     )

@@ -939,6 +939,8 @@ export default function App() {
   const [nuevoTipoSetCancion, setNuevoTipoSetCancion] = useState("lenta");
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
+  const [mostrarFormularioCancion, setMostrarFormularioCancion] = useState(false);
+  const [seccionCancionActiva, setSeccionCancionActiva] = useState(0);
 
   const [idServicioChatActivo, setIdServicioChatActivo] = useState(null);
   const [mensajesChat, setMensajesChat] = useState([]);
@@ -1317,7 +1319,8 @@ export default function App() {
 
     await cargarRepertorioSupabase();
     setModoEdicionCancion(false);
-      setIdCancionEditando(null);
+    setMostrarFormularioCancion(false);
+    setIdCancionEditando(null);
     setCancionSeleccionadaDetalle(null);
     setNuevoTituloCancion("");
     setNuevoArtistaCancion("");
@@ -3050,7 +3053,7 @@ export default function App() {
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border }]}>
                       <TouchableOpacity
                         style={{ backgroundColor: t.bg, paddingHorizontal: 13, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: t.border, marginBottom: 16, alignSelf: "flex-start" }}
-                        onPress={() => { setSemitonos(0); setModoNashville(false); setCancionSeleccionadaDetalle(null); }}
+                        onPress={() => { setSemitonos(0); setModoNashville(false); setSeccionCancionActiva(0); setCancionSeleccionadaDetalle(null); }}
                       >
                         <Text style={{ color: t.textMain, fontSize: 12, fontWeight: "bold" }}>← Volver al repertorio</Text>
                       </TouchableOpacity>
@@ -3069,6 +3072,7 @@ export default function App() {
                             setEtiquetasActuales(c.etiquetas || []);
                             setIdCancionEditando(c.id);
                             setModoEdicionCancion(true);
+                            setMostrarFormularioCancion(true);
                             setCancionSeleccionadaDetalle(null);
                           }}
                         >
@@ -3099,21 +3103,52 @@ export default function App() {
                           <Text style={{ color: t.textMain, fontWeight: "bold" }}>Original</Text>
                         </TouchableOpacity>
                       </View>
-                      <View style={{ backgroundColor: t.bg, padding: 17, borderRadius: 12, borderWidth: 1, borderColor: t.border }}>
-                        <Text style={{ color: t.textMain, fontSize: 14, lineHeight: 22 }}>{modoNashville
-                          ? convertirANashville(
-                              transponerLetra(cancionSeleccionadaDetalle.letra || "", semitonos),
-                              transponerTono(cancionSeleccionadaDetalle.tono, semitonos)
-                            )
-                          : transponerLetra(cancionSeleccionadaDetalle.letra || "", semitonos)
-                        }</Text>
-                      </View>
+                      {(() => {
+                        const letraVista = modoNashville
+                          ? convertirANashville(transponerLetra(cancionSeleccionadaDetalle.letra || "", semitonos), transponerTono(cancionSeleccionadaDetalle.tono, semitonos))
+                          : transponerLetra(cancionSeleccionadaDetalle.letra || "", semitonos);
+                        const lineas = letraVista.split("\n");
+                        const secciones = [];
+                        let actual = { titulo: "Canción completa", lineas: [] };
+                        const encabezado = /^\s*\[(INTRO|INTRODUCCI[ÓO]N|V\s*\d+|ESTROFA(?:\s*\d+)?|VERSO(?:\s*\d+)?|CORO|PRECORO|PUENTE|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|TAG)\]\s*$/i;
+                        lineas.forEach(linea => {
+                          const match = linea.match(encabezado);
+                          if (match) {
+                            if (actual.lineas.length || secciones.length === 0) secciones.push(actual);
+                            actual = { titulo: match[1].replace(/\s+/g, " ").toUpperCase(), lineas: [] };
+                          } else actual.lineas.push(linea);
+                        });
+                        if (actual.lineas.length || secciones.length === 0) secciones.push(actual);
+                        const seccion = secciones[Math.min(seccionCancionActiva, secciones.length - 1)] || secciones[0];
+                        return <>
+                          {secciones.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 7 }}>
+                            {secciones.map((s, i) => <TouchableOpacity key={i} onPress={() => setSeccionCancionActiva(i)} style={{ backgroundColor: i === seccionCancionActiva ? t.primary : t.cardBg, borderColor: i === seccionCancionActiva ? t.primary : t.border, borderWidth: 1, borderRadius: 20, paddingHorizontal: 13, paddingVertical: 8 }}>
+                              <Text style={{ color: i === seccionCancionActiva ? "#FFFFFF" : t.textMain, fontSize: 11, fontWeight: "900" }}>{s.titulo}</Text>
+                            </TouchableOpacity>)}
+                          </ScrollView>}
+                          <View style={{ backgroundColor: t.bg, padding: 17, borderRadius: 12, borderWidth: 1, borderColor: t.border }}>
+                            {seccion.lineas.map((linea, i) => {
+                              const acordes = [...linea.matchAll(/\[([^\]]+)\]/g)].map(m => m[1]);
+                              const texto = linea.replace(/\[([^\]]+)\]/g, "").trim();
+                              if (!linea.trim()) return <View key={i} style={{ height: 12 }} />;
+                              return <View key={i} style={{ marginBottom: 8 }}>
+                                {acordes.length > 0 && <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 18, marginLeft: 4, marginBottom: 1 }}>{acordes.map((acorde, j) => <Text key={j} style={{ color: t.primary, fontSize: 15, fontWeight: "900", minWidth: 22 }}>{acorde}</Text>)}</View>}
+                                {!!texto && <Text style={{ color: t.textMain, fontSize: 16, lineHeight: 25 }}>{texto}</Text>}
+                              </View>;
+                            })}
+                          </View>
+                        </>;
+                      })()}
                     </View>
                   ) : (
                     <>
                     {puedeGestionarRepertorio && (
                       <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 12, borderWidth: 1, borderRadius: 16, padding: 17 }]}>
-                        <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16, marginBottom: 12 }]}>{modoEdicionCancion ? "✏️ Editar canción" : "➕ Agregar nueva canción"}</Text>
+                        <TouchableOpacity onPress={() => { setMostrarFormularioCancion(v => !v); if (mostrarFormularioCancion) { setModoEdicionCancion(false); setIdCancionEditando(null); } }} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: mostrarFormularioCancion ? 14 : 0, paddingVertical: 4 }}>
+                          <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16 }]}>{modoEdicionCancion ? "✏️ Editar canción" : "＋ Agregar nueva canción"}</Text>
+                          <Text style={{ color: t.primary, fontSize: 18, fontWeight: "900" }}>{mostrarFormularioCancion ? "−" : "+"}</Text>
+                        </TouchableOpacity>
+                        {mostrarFormularioCancion && <>
                         {!modoEdicionCancion && (
                           <TouchableOpacity
                             onPress={importarCancionesCongregacionales}
@@ -3155,6 +3190,7 @@ export default function App() {
                         <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary }]} onPress={guardarOActualizarCancion}>
                           <Text style={styles.loginButtonText}>{modoEdicionCancion ? "Guardar cambios" : "Guardar en repertorio"}</Text>
                         </TouchableOpacity>
+                        </>}
                       </View>
                     )}
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 13 : 19 }]}>
@@ -3205,7 +3241,7 @@ export default function App() {
                         <TouchableOpacity
                           key={c.id}
                           style={[styles.repertorioItemRowPro, { borderBottomColor: t.border, backgroundColor: t.bg, borderRadius: 12, marginBottom: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: t.border }]}
-                          onPress={() => { setSemitonos(0); setModoNashville(false); setCancionSeleccionadaDetalle(c); }}
+                          onPress={() => { setSemitonos(0); setModoNashville(false); setSeccionCancionActiva(0); setCancionSeleccionadaDetalle(c); }}
                         >
                           <View style={{ flex: 1, paddingVertical: 6, paddingRight: 10 }}>
                             <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "bold", marginBottom: 4 }}>{c.titulo}</Text>

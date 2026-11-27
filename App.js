@@ -3143,7 +3143,7 @@ export default function App() {
                     <View key={int.id} style={[styles.memberCard, { backgroundColor: t.cardBg, borderColor: t.border, borderRadius: 16, padding: esMovil ? 13 : 17, marginBottom: 10, borderWidth: 1 }]}>
                       <View style={styles.memberHeaderRow}>
                         <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}><Text numberOfLines={2} style={[styles.memberTitle, { color: t.textMain, fontSize: 14, fontWeight: "900" }]}>{int.nombre}</Text><Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{int.rolAcceso === "lider" ? "LÍDER DE SEDE" : int.rolAcceso === "admin" ? "ADMINISTRADOR" : "INTEGRANTE"}</Text></View>
-                        <View style={{ flexDirection: "row", gap: 6 }}>
+                        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 6 }}>
                           {esAdminOLider && int.userId && int.userId !== usuarioId && String(int.email || "").trim().toLowerCase() !== "johnbocal31@gmail.com" && (
                             <TouchableOpacity
                               disabled={generandoClaveTemporalId === int.id}

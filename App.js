@@ -2827,7 +2827,7 @@ export default function App() {
                             <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "800", letterSpacing: 0.6 }}>👥 OCUPACIÓN DE PUESTOS</Text>
                             <Text style={{ color: t.textSub, fontSize: 9, fontWeight: "700" }}>DISPONIBILIDAD</Text>
                           </View>
-                          <View style={{ flexDirection: anchoVentana < 600 ? "column" : "row", gap: 12 }}>
+                          <View style={{ flexDirection: "row", alignItems: "stretch", gap: anchoVentana < 600 ? 7 : 12 }}>
                             <View style={{ flex: 1, minWidth: 0 }}>
                               <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: 11, borderWidth: 1, borderColor: t.border }}>
                               <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎤 VOCES</Text>
@@ -2853,7 +2853,7 @@ export default function App() {
                               ))}
                               </View>
                             </View>
-                            <View style={{ flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: t.border, paddingLeft: 9 }}>
+                            <View style={{ flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: t.border, paddingLeft: anchoVentana < 600 ? 6 : 9 }}>
                               <View style={{ backgroundColor: t.cardBg, borderRadius: 13, padding: 11, borderWidth: 1, borderColor: t.border }}>
                               <Text style={{ color: t.primary, fontSize: 11, fontWeight: "800", marginBottom: 10, letterSpacing: 0.5 }}>🎸 INSTRUMENTOS</Text>
                               {[

@@ -803,35 +803,41 @@ export default function App() {
   const [filtroTipoRepertorio, setFiltroTipoRepertorio] = useState("todos");
 
   const obtenerSeccionesEnVivo = (letra) => {
-    const encabezado = /^\\s*\\[(INTRO(?:DUCCIÓN)?|V\\s*\\d+|ESTROFA(?:\\s*\\d+)?|VERSO(?:\\s*\\d+)?|CORO(?:\\s*\\d+)?|ESTRIBILLO|PRE[- ]?CORO|POST[- ]?CORO|PUENTE(?:\\s*\\d+)?|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|CODA|VUELTA|VAMP|BREAKDOWN|TAG)\\]\\s*$/i;
+    const encabezado = /^\s*\[(INTRO(?:DUCCIÓN)?|V\s*\d+|ESTROFA(?:\s*\d+)?|VERSO(?:\s*\d+)?|CORO(?:\s*\d+)?|ESTRIBILLO|PRE[- ]?CORO|POST[- ]?CORO|PUENTE(?:\s*\d+)?|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|CODA|VUELTA|VAMP|BREAKDOWN|TAG)\]\s*$/i;
+    const lineas = String(letra || "").replace(/\r/g, "").split("\n");
     const secciones = [];
     let actual = { titulo: "Canción completa", lineas: [] };
-    String(letra || "").split("\\n").forEach(linea => {
-      const match = linea.match(encabezado);
+
+    lineas.forEach(linea => {
+      const match = linea.trim().match(encabezado);
       if (match) {
-        if (actual.lineas.length) secciones.push(actual);
-        actual = { titulo: match[1].replace(/\\s+/g, " ").toUpperCase(), lineas: [] };
-      } else actual.lineas.push(linea);
+        if (actual.lineas.length || actual.titulo !== "Canción completa") secciones.push(actual);
+        actual = { titulo: match[1].replace(/\s+/g, " ").toUpperCase(), lineas: [] };
+      } else {
+        actual.lineas.push(linea);
+      }
     });
+
     if (actual.lineas.length || secciones.length === 0) secciones.push(actual);
-    return secciones.map((s, index) => {
-      const t = s.titulo.toUpperCase();
-      let abreviatura = t.slice(0, 3);
-      if (/^(ESTROFA|VERSO|V)\\s*(\\d+)?$/.test(t)) abreviatura = "V" + ((t.match(/\\d+/) || [index + 1])[0]);
-      else if (/CORO|ESTRIBILLO/.test(t)) abreviatura = "C";
-      else if (/PRE/.test(t)) abreviatura = "PC";
-      else if (/POST/.test(t)) abreviatura = "PoC";
-      else if (/PUENTE/.test(t)) abreviatura = "P";
-      else if (/INTRO/.test(t)) abreviatura = "IN";
-      else if (/INTERLUDIO/.test(t)) abreviatura = "INT";
-      else if (/INSTRUMENTAL/.test(t)) abreviatura = "I";
-      else if (/OUTRO/.test(t)) abreviatura = "O";
-      else if (/FINAL/.test(t)) abreviatura = "F";
-      else if (/CODA/.test(t)) abreviatura = "T";
-      else if (/VUELTA/.test(t)) abreviatura = "Vu";
-      else if (/VAMP/.test(t)) abreviatura = "Va";
-      else if (/BREAKDOWN/.test(t)) abreviatura = "BD";
-      return { ...s, abreviatura, letra: s.lineas.join("\\n").trim() };
+
+    return secciones.map((seccion, index) => {
+      const titulo = seccion.titulo.toUpperCase();
+      let abreviatura = titulo.slice(0, 3);
+      if (/^(ESTROFA|VERSO|V)\s*(\d+)?$/.test(titulo)) abreviatura = "V" + ((titulo.match(/\d+/) || [index + 1])[0]);
+      else if (/CORO|ESTRIBILLO/.test(titulo)) abreviatura = "C";
+      else if (/PRE/.test(titulo)) abreviatura = "PC";
+      else if (/POST/.test(titulo)) abreviatura = "PoC";
+      else if (/PUENTE/.test(titulo)) abreviatura = "P";
+      else if (/INTRO/.test(titulo)) abreviatura = "IN";
+      else if (/INTERLUDIO/.test(titulo)) abreviatura = "INT";
+      else if (/INSTRUMENTAL/.test(titulo)) abreviatura = "I";
+      else if (/OUTRO/.test(titulo)) abreviatura = "O";
+      else if (/FINAL/.test(titulo)) abreviatura = "F";
+      else if (/CODA/.test(titulo)) abreviatura = "T";
+      else if (/VUELTA/.test(titulo)) abreviatura = "Vu";
+      else if (/VAMP/.test(titulo)) abreviatura = "Va";
+      else if (/BREAKDOWN/.test(titulo)) abreviatura = "BD";
+      return { ...seccion, abreviatura, letra: seccion.lineas.join("\n").trim() };
     });
   };
 

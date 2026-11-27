@@ -934,18 +934,20 @@ export default function App() {
   const [nuevaLetraCancion, setNuevaLetraCancion] = useState("");
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
 
-  const [canalChatActivo, setCanalChatActivo] = useState("finsemana");
+  const [idServicioChatActivo, setIdServicioChatActivo] = useState(null);
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState("");
   const [idMensajeEditando, setIdMensajeEditando] = useState(null);
 
   const cargarMensajesSupabase = async () => {
-    if (!sesionIniciada) return;
+    if (!sesionIniciada || idServicioChatActivo === null) {
+      setMensajesChat([]);
+      return;
+    }
     const { data, error } = await supabase
       .from("mensajes")
       .select("*")
-      .eq("canal", canalChatActivo)
-      .eq("sede", sedeIdSeleccionada)
+      .eq("servicio_id", idServicioChatActivo)
       .order("created_at", { ascending: true });
     if (error) {
       setErrorDatos(`No se pudieron cargar los mensajes: ${error.message}`);
@@ -956,7 +958,7 @@ export default function App() {
 
   useEffect(() => {
     if (sesionIniciada) cargarMensajesSupabase();
-  }, [canalChatActivo, sedeIdSeleccionada, sesionIniciada]);
+  }, [idServicioChatActivo, sesionIniciada]);
 
   const handleLogin = async () => {
     const email = emailInput.trim().toLowerCase();
@@ -1087,6 +1089,30 @@ export default function App() {
 
   const esAdmin = emailUsuario === "johnbocal31@gmail.com";
   const esAdminOLider = esAdmin || rolUsuario === "lider";
+  const servicioIncluyeUsuario = (serv) => {
+    const voces = serv?.voces || {};
+    const instrumentos = serv?.instrumentos || {};
+    const coros = String(voces.coros || "").split(",").map(n => n.trim());
+    return voces.principal === usuario || coros.includes(usuario) ||
+      ["piano", "guitarra", "bajo", "bateria"].some(rol => instrumentos[rol] === usuario);
+  };
+  const serviciosChatDisponibles = servicios
+    .filter(serv => esAdminOLider || servicioIncluyeUsuario(serv))
+    .sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")));
+  const servicioChatActual = serviciosChatDisponibles.find(
+    serv => String(serv.id) === String(idServicioChatActivo)
+  ) || null;
+
+  useEffect(() => {
+    if (serviciosChatDisponibles.length === 0) {
+      setIdServicioChatActivo(null);
+      setMensajesChat([]);
+      return;
+    }
+    if (!serviciosChatDisponibles.some(serv => String(serv.id) === String(idServicioChatActivo))) {
+      setIdServicioChatActivo(serviciosChatDisponibles[0].id);
+    }
+  }, [servicios, usuario, esAdminOLider, sedeIdSeleccionada]);
   const esVozPrincipalDeServicio = (serv) =>
     !!usuarioId &&
     String(serv?.voces?.principal_user_id || "") === String(usuarioId);
@@ -1161,39 +1187,45 @@ export default function App() {
 
 
   const enviarOActualizarMensajeChat = async () => {
-    if (nuevoMensajeTexto.trim() !== "") {
-      const horaActual = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      if (idMensajeEditando !== null) {
-        const { error } = await supabase.from("mensajes").update({ texto: nuevoMensajeTexto.trim(), editado: true }).eq("id", Number(idMensajeEditando));
-        if (error) { alert(`No se pudo corregir el mensaje: ${error.message}`); return; }
-        setIdMensajeEditando(null);
-        setNuevoMensajeTexto("");
-        await cargarMensajesSupabase();
-      } else {
-        const mensaje = {
-          autor: usuario,
-          texto: nuevoMensajeTexto.trim(),
-          hora: horaActual,
-          canal: canalChatActivo,
-          sede: sedeIdSeleccionada,
-          editado: false,
-        };
-        const { error } = await supabase.from("mensajes").insert([{ ...mensaje, user_id: usuarioId }]);
-        if (error) { alert(`No se pudo enviar el mensaje: ${error.message}`); return; }
-        setNuevoMensajeTexto("");
-        await cargarMensajesSupabase();
-      }
+    if (idServicioChatActivo === null || !nuevoMensajeTexto.trim()) return;
+    const horaActual = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (idMensajeEditando !== null) {
+      const { error } = await supabase.from("mensajes")
+        .update({ texto: nuevoMensajeTexto.trim(), editado: true })
+        .eq("id", Number(idMensajeEditando))
+        .eq("servicio_id", idServicioChatActivo);
+      if (error) { alert(`No se pudo corregir el mensaje: ${error.message}`); return; }
+      setIdMensajeEditando(null);
+    } else {
+      const mensaje = {
+        autor: usuario,
+        texto: nuevoMensajeTexto.trim(),
+        hora: horaActual,
+        canal: "servicio",
+        servicio_id: idServicioChatActivo,
+        sede: sedeIdSeleccionada,
+        editado: false,
+        user_id: usuarioId,
+      };
+      const { error } = await supabase.from("mensajes").insert([mensaje]);
+      if (error) { alert(`No se pudo enviar el mensaje: ${error.message}`); return; }
     }
+    setNuevoMensajeTexto("");
+    await cargarMensajesSupabase();
   };
 
   const limpiarHistorialChat = async () => {
-    if (!esAdminOLider) { alert("⚠️ Solo Administradores y Líderes pueden limpiar el chat."); return; }
-    if (confirm(`¿Deseas borrar el historial del chat de ${canalChatActivo.toUpperCase()} para esta sede (${sedeActual.nombre})?`)) {
-      const { error } = await supabase.from("mensajes").delete().eq("canal", canalChatActivo).eq("sede", sedeIdSeleccionada);
-      if (error) { alert(`No se pudo limpiar el chat: ${error.message}`); return; }
-      setMensajesChat([]);
-      alert("Chat de la sede limpiado con éxito.");
+    if (!esAdminOLider || idServicioChatActivo === null) {
+      alert("Solo Administradores y Líderes pueden limpiar el chat de un servicio.");
+      return;
     }
+    const servicio = servicios.find(s => String(s.id) === String(idServicioChatActivo));
+    if (!servicio) return;
+    if (!confirm(`¿Borrar todos los mensajes del chat de "${servicio.titulo || "Servicio"}" del ${servicio.fecha}? Esta acción no se puede deshacer.`)) return;
+    const { error } = await supabase.from("mensajes").delete().eq("servicio_id", idServicioChatActivo);
+    if (error) { alert(`No se pudo limpiar el chat: ${error.message}`); return; }
+    setMensajesChat([]);
+    alert("Historial de este servicio limpiado.");
   };
 
 
@@ -1944,6 +1976,7 @@ export default function App() {
               <Text style={{ color: t.textSub, fontSize: 10, fontWeight: "800", letterSpacing: 1.5, paddingHorizontal: 10, marginBottom: 10 }}>MENÚ PRINCIPAL</Text>
               {[
                 { key: "inicio", label: "Inicio", icon: "⌂" },
+                { key: "chat", label: "Chat", icon: "▤" },
                 { key: "eventos", label: "Eventos y calendario", icon: "▦" },
                 ...(esAdminOLider ? [{ key: "equipo", label: "Equipo", icon: "♧" }] : []),
                 { key: "repertorio", label: "Repertorio", icon: "♫" },
@@ -2101,6 +2134,7 @@ export default function App() {
                   </View>
 
                   <View style={{ flexDirection: esEscritorio ? "row" : "column", alignItems: "stretch", gap: 16 }}>
+                    {false && (
                     <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, flex: esEscritorio ? 1.55 : undefined, width: esEscritorio ? undefined : "100%", marginBottom: 0, padding: esMovil ? 15 : 22 }]}>
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15, gap: 10 }}>
                         <View style={{ flex: 1 }}>
@@ -2203,6 +2237,7 @@ export default function App() {
                       </View>
                     </View>
 
+                    )}
                     <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
                       <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 0, padding: esMovil ? 15 : 20 }]}>
                         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 9, gap: 8 }}>
@@ -2224,6 +2259,69 @@ export default function App() {
                           <Text style={{ color: t.textSub, fontSize: 11, lineHeight: 17, paddingVertical: 10 }}>Todavía no hay servicios próximos programados.</Text>
                         )}
                       </View>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {pestana === "chat" && (
+                <View style={{ width: "100%" }}>
+                  <View style={{ backgroundColor: t.banner, borderRadius: 20, padding: esMovil ? 18 : 24, marginBottom: 16 }}>
+                    <Text style={{ color: "#DCE4FF", fontSize: 10, fontWeight: "900", letterSpacing: 1.4 }}>COMUNICACIÓN · SOUNDTEAM</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 24 : 30, fontWeight: "900", marginTop: 7 }}>Chat por servicio</Text>
+                    <Text style={{ color: "#E8EAFE", fontSize: 12, lineHeight: 18, marginTop: 6 }}>Cada conversación es privada para los músicos programados y los responsables autorizados.</Text>
+                  </View>
+                  <View style={{ flexDirection: esEscritorio ? "row" : "column", gap: 14, alignItems: "stretch" }}>
+                    <View style={[styles.card, { width: esEscritorio ? 300 : "100%", backgroundColor: t.cardBg, borderColor: t.border, padding: 14, marginBottom: 0 }]}>
+                      <Text style={{ color: t.textMain, fontSize: 15, fontWeight: "900", marginBottom: 10 }}>Tus servicios</Text>
+                      {serviciosChatDisponibles.length === 0 ? (
+                        <Text style={{ color: t.textSub, fontSize: 12, lineHeight: 18 }}>No tienes servicios asignados con chat disponible.</Text>
+                      ) : serviciosChatDisponibles.map(serv => {
+                        const activo = String(idServicioChatActivo) === String(serv.id);
+                        return (
+                          <TouchableOpacity key={serv.id} onPress={() => { setIdServicioChatActivo(serv.id); setMensajesChat([]); setIdMensajeEditando(null); setNuevoMensajeTexto(""); }}
+                            style={{ padding: 12, borderRadius: 11, marginBottom: 7, backgroundColor: activo ? t.primary + "18" : t.bg, borderWidth: 1, borderColor: activo ? t.primary : t.border }}>
+                            <Text style={{ color: activo ? t.primary : t.textMain, fontSize: 12, fontWeight: "900" }}>{serv.titulo || "Servicio"}</Text>
+                            <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>{serv.fecha}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    <View style={[styles.card, { flex: 1, minWidth: 0, backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 13 : 18, marginBottom: 0 }]}>
+                      {servicioChatActual ? (
+                        <>
+                          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: t.textMain, fontSize: 16, fontWeight: "900" }}>{servicioChatActual.titulo || "Servicio"}</Text>
+                              <Text style={{ color: t.textSub, fontSize: 11, marginTop: 3 }}>{servicioChatActual.fecha}</Text>
+                            </View>
+                            {esAdminOLider && <TouchableOpacity onPress={limpiarHistorialChat} style={{ backgroundColor: "#FEE2E2", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 9 }}><Text style={{ color: "#B91C1C", fontSize: 10, fontWeight: "800" }}>Limpiar chat</Text></TouchableOpacity>}
+                          </View>
+                          <View style={{ backgroundColor: t.bg, borderRadius: 13, borderWidth: 1, borderColor: t.border, padding: 10, minHeight: 260, maxHeight: 430, marginBottom: 11 }}>
+                            <ScrollView>
+                              {mensajesChat.length === 0 ? <Text style={{ color: t.textSub, textAlign: "center", marginTop: 24, fontSize: 12 }}>Aún no hay mensajes. Inicia la conversación del servicio.</Text> : mensajesChat.map((m, i) => {
+                                const esMio = m.user_id === usuarioId;
+                                return <View key={m.id || i} style={{ marginBottom: 9, padding: 11, borderRadius: 11, backgroundColor: esMio ? t.primary + "18" : t.cardBg, borderWidth: 1, borderColor: t.border }}>
+                                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                                    <Text style={{ color: t.primary, fontWeight: "800", fontSize: 11, flex: 1 }}>{m.autor}{m.editado ? " · editado" : ""}</Text>
+                                    <View style={{ flexDirection: "row", gap: 7, alignItems: "center" }}>
+                                      <Text style={{ color: t.textSub, fontSize: 10 }}>{m.hora}</Text>
+                                      {esMio && <TouchableOpacity onPress={() => { setIdMensajeEditando(m.id); setNuevoMensajeTexto(m.texto); }}><Text style={{ color: t.primary, fontSize: 10, fontWeight: "800" }}>Editar</Text></TouchableOpacity>}
+                                    </View>
+                                  </View>
+                                  <Text style={{ color: t.textMain, fontSize: 13, lineHeight: 19 }}>{m.texto}</Text>
+                                </View>;
+                              })}
+                            </ScrollView>
+                          </View>
+                          <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                            <TextInput style={[styles.loginInput, { flex: 1, minWidth: 0, backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 0, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, borderRadius: 10, minHeight: 46 }]}
+                              placeholder="Escribe un mensaje..." placeholderTextColor={t.textSub} value={nuevoMensajeTexto} onChangeText={setNuevoMensajeTexto} />
+                            <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary, paddingHorizontal: 16, minHeight: 46, justifyContent: "center" }]} onPress={enviarOActualizarMensajeChat}><Text style={styles.loginButtonText}>{idMensajeEditando !== null ? "Guardar" : "Enviar"}</Text></TouchableOpacity>
+                          </View>
+                          {idMensajeEditando !== null && <TouchableOpacity onPress={() => { setIdMensajeEditando(null); setNuevoMensajeTexto(""); }} style={{ alignSelf: "flex-start", marginTop: 8 }}><Text style={{ color: t.textSub, fontSize: 11 }}>Cancelar edición</Text></TouchableOpacity>}
+                        </>
+                      ) : <Text style={{ color: t.textSub, fontSize: 12 }}>Selecciona un servicio para abrir su chat.</Text>}
                     </View>
                   </View>
                 </View>
@@ -3197,6 +3295,7 @@ export default function App() {
           <View style={[styles.tabBar, esMovil && styles.tabBarMobile, esTablet && styles.tabBarTablet, { backgroundColor: t.cardBg, borderTopColor: t.border }]}>
             {[
               { key: "inicio", label: "🏠 Inicio" },
+              { key: "chat", label: "💬 Chat" },
               { key: "eventos", label: "📅 Eventos" },
               ...(esAdminOLider ? [{ key: "equipo", label: "👥 Equipo" }] : []),
               { key: "repertorio", label: "🎵 Repertorio" },

@@ -3049,13 +3049,25 @@ export default function App() {
                     <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 25 : 32, fontWeight: "900", marginTop: 8 }}>Ajustes</Text>
                     <Text style={{ color: "#E8EAFE", fontSize: 12, marginTop: 6 }}>Administra tu perfil y la apariencia de tu aplicación.</Text>
                   </View>
-                  <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 16 : 22, marginBottom: 16 }]}>
-                    <Text style={{ color: t.textMain, fontSize: 16, fontWeight: "900", marginBottom: 6 }}>Invita a tu equipo</Text>
-                    <Text style={{ color: t.textSub, fontSize: 12, lineHeight: 18, marginBottom: 14 }}>Comparte el enlace para que los integrantes puedan ingresar a SoundTeam.</Text>
-                    <TouchableOpacity onPress={copiarEnlaceApp} style={{ backgroundColor: t.primary, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 13, minHeight: 46, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, alignSelf: "flex-start" }}>
-                      <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "900" }}>↗ Compartir enlace</Text>
+                  <View style={{ backgroundColor: "#073B78", borderColor: "#27A7FF", borderWidth: 1.5, borderRadius: esMovil ? 19 : 24, padding: esMovil ? 17 : 23, marginBottom: 18, overflow: "hidden", shadowColor: "#168BFF", shadowOpacity: 0.38, shadowRadius: 18, shadowOffset: { width: 0, height: 7 }, elevation: 8 }}>
+                    <View style={{ position: "absolute", top: -38, right: -22, width: 150, height: 150, borderRadius: 75, backgroundColor: "#168BFF", opacity: 0.22 }} />
+                    <View style={{ position: "absolute", bottom: -55, right: 65, width: 125, height: 125, borderRadius: 63, backgroundColor: "#8B5CF6", opacity: 0.22 }} />
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 15 }}>
+                      <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: "#FFFFFF20", borderWidth: 1, borderColor: "#8BD4FF", alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ fontSize: 25 }}>✨</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 18 : 21, fontWeight: "900" }}>Invita a tu equipo</Text>
+                        <Text style={{ color: "#A9D9FF", fontSize: 10, fontWeight: "900", letterSpacing: 1, marginTop: 3 }}>SOUNDTEAM · CRECEMOS JUNTOS</Text>
+                      </View>
+                      <Text style={{ color: "#8BD4FF", fontSize: 22 }}>✦</Text>
+                    </View>
+                    <Text style={{ color: "#E4F3FF", fontSize: 12, lineHeight: 19, marginBottom: 16 }}>Comparte el enlace y permite que tu equipo llegue directamente a la aplicación.</Text>
+                    <TouchableOpacity onPress={copiarEnlaceApp} activeOpacity={0.82} style={{ backgroundColor: "#21A5FF", borderColor: "#8BD4FF", borderWidth: 1, borderRadius: 15, paddingHorizontal: 19, paddingVertical: 13, minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, alignSelf: "flex-start", shadowColor: "#39B8FF", shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5 }}>
+                      <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "900" }}>↗</Text>
+                      <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "900" }}>Compartir enlace</Text>
                     </TouchableOpacity>
-                    {!!mensajeInvitacion && <Text style={{ color: t.textSub, fontSize: 11, fontWeight: "700", marginTop: 10 }}>{mensajeInvitacion}</Text>}
+                    {!!mensajeInvitacion && <Text style={{ color: "#BDE7FF", fontSize: 11, fontWeight: "800", marginTop: 12 }}>{mensajeInvitacion}</Text>}
                   </View>
                   <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, padding: esMovil ? 16 : 22 }]}>
                     <Text style={{ color: t.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginBottom: 14 }}>PERFIL DEL USUARIO</Text>

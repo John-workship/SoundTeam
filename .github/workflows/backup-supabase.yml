@@ -31,6 +31,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client openssl
 
+      - name: Verify database connection settings (safe)
+        if: steps.preflight.outputs.enabled == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+          value = os.environ.get("SUPABASE_DB_URL", "")
+          parsed = urlsplit(value)
+          print("Connection scheme:", parsed.scheme or "MISSING")
+          print("Connection host:", parsed.hostname or "MISSING")
+          print("Connection port:", parsed.port or "DEFAULT")
+          print("Connection user:", parsed.username or "MISSING")
+          if parsed.password is None:
+              print("Password field: MISSING")
+          else:
+              print("Password field: PRESENT (value hidden)")
+          PY
+
       - name: Dump and encrypt database
         if: steps.preflight.outputs.enabled == 'true'
         env:

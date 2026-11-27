@@ -235,6 +235,7 @@ export default function App() {
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [modoRecuperacionPassword, setModoRecuperacionPassword] = useState(false);
+  const [cambioPasswordTemporal, setCambioPasswordTemporal] = useState(false);
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [confirmarNuevaPassword, setConfirmarNuevaPassword] = useState("");
   const [mensajeAuth, setMensajeAuth] = useState("");
@@ -253,6 +254,7 @@ export default function App() {
     }
     setIntegrantes((dataInt || []).map((m) => ({
       id: m.id,
+      userId: m.user_id || null,
       nombre: m.nombre || "",
       email: m.email ? m.email.trim().toLowerCase() : "",
       sedeId: (m.sede_id || "general").toLowerCase(),
@@ -286,6 +288,26 @@ export default function App() {
       setRolUsuario("miembro");
       return;
     }
+
+    const appMetadata = session.user.app_metadata || {};
+    if (appMetadata.soundteam_must_change_password) {
+      const vence = Date.parse(appMetadata.soundteam_temp_password_expires_at || "");
+      if (!Number.isFinite(vence) || vence <= Date.now()) {
+        await supabase.auth.signOut();
+        setSesionIniciada(false);
+        setModoRecuperacionPassword(false);
+        setCambioPasswordTemporal(false);
+        setErrorAuth("Tu contraseña temporal venció. Solicita al administrador una nueva clave temporal.");
+        return;
+      }
+      setCambioPasswordTemporal(true);
+      setModoRecuperacionPassword(true);
+      setSesionIniciada(false);
+      setErrorAuth("");
+      setMensajeAuth("Tu administrador te asignó una contraseña temporal. Debes cambiarla para ingresar a SoundTeam.");
+      return;
+    }
+    setCambioPasswordTemporal(false);
 
     // Vincula el perfil previamente creado por un administrador con la cuenta autenticada.
     const { error: claimError } = await supabase.rpc("claim_soundteam_profile");
@@ -795,6 +817,7 @@ export default function App() {
   const [emailNuevoMiembro, setEmailNuevoMiembro] = useState("");
   const [rolAccesoNuevo, setRolAccesoNuevo] = useState("miembro");
   const [rolesMusicalesNuevo, setRolesMusicalesNuevo] = useState([]);
+  const [generandoClaveTemporalId, setGenerandoClaveTemporalId] = useState(null);
 
   const [repertorio, setRepertorio] = useState([]);
   const [importandoCancionesCongregacionales, setImportandoCancionesCongregacionales] = useState(false);
@@ -1078,13 +1101,24 @@ export default function App() {
     setErrorAuth("");
     setMensajeAuth("");
     try {
-      const { error } = await supabase.auth.updateUser({ password: nuevaPassword });
-      if (error) {
-        setErrorAuth(`No se pudo actualizar la contraseña: ${error.message}`);
-        return;
+      if (cambioPasswordTemporal) {
+        const { error } = await supabase.functions.invoke("soundteam-password-admin", {
+          body: { action: "complete", newPassword: nuevaPassword }
+        });
+        if (error) {
+          setErrorAuth(`No se pudo cambiar la contraseña temporal: ${error.message}`);
+          return;
+        }
+      } else {
+        const { error } = await supabase.auth.updateUser({ password: nuevaPassword });
+        if (error) {
+          setErrorAuth(`No se pudo actualizar la contraseña: ${error.message}`);
+          return;
+        }
       }
       await supabase.auth.signOut();
       setModoRecuperacionPassword(false);
+      setCambioPasswordTemporal(false);
       setNuevaPassword("");
       setConfirmarNuevaPassword("");
       setPasswordInput("");
@@ -1192,6 +1226,28 @@ export default function App() {
 
   const esAdmin = emailUsuario === "johnbocal31@gmail.com";
   const esAdminOLider = esAdmin || rolUsuario === "lider";
+
+  const generarClaveTemporal = async (integrante) => {
+    if (!esAdminOLider) return;
+    if (!integrante?.userId) {
+      alert("Este integrante todavía no ha vinculado su cuenta de acceso. Primero debe completar su registro con el correo asignado.");
+      return;
+    }
+    if (!confirm(`¿Generar una nueva contraseña temporal para ${integrante.nombre}? La contraseña actual dejará de funcionar.`)) return;
+    setGenerandoClaveTemporalId(integrante.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("soundteam-password-admin", {
+        body: { action: "reset", memberId: integrante.id }
+      });
+      if (error) throw error;
+      if (!data?.temporaryPassword) throw new Error("El servidor no devolvió la contraseña temporal.");
+      alert(`Contraseña temporal para ${integrante.nombre}:\n\n${data.temporaryPassword}\n\nVálida hasta: ${new Date(data.expiresAt).toLocaleString()}\n\nEntrégala directamente al integrante. Al ingresar deberá crear su propia contraseña.`);
+    } catch (error) {
+      alert(`No se pudo generar la contraseña temporal: ${error.message}`);
+    } finally {
+      setGenerandoClaveTemporalId(null);
+    }
+  };
   const servicioIncluyeUsuario = (serv) => {
     const voces = serv?.voces || {};
     const instrumentos = serv?.instrumentos || {};
@@ -1724,6 +1780,9 @@ export default function App() {
           )}
           {modoRecuperacionPassword && (
             <View style={{ marginTop: 12 }}>
+              <Text style={{ color: t.textSub, fontSize: 12, lineHeight: 18, marginBottom: 10 }}>{cambioPasswordTemporal ? "Por seguridad, esta contraseña temporal solo permite ingresar una vez y tiene una vigencia máxima de 24 horas. Define ahora tu contraseña personal." : "Define una nueva contraseña para recuperar el acceso."}</Text>
+              {!!mensajeAuth && <Text style={{ color: "#16A34A", fontSize: 12, marginBottom: 8 }}>{mensajeAuth}</Text>}
+              {!!errorAuth && <Text accessibilityRole="alert" style={{ color: "#EF4444", fontSize: 12, marginBottom: 8 }}>{errorAuth}</Text>}
               <Text style={[styles.inputLabel, { color: t.textMain }]}>Nueva contraseña</Text>
               <TextInput
                 style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain }]}
@@ -3067,6 +3126,15 @@ export default function App() {
                       <View style={styles.memberHeaderRow}>
                         <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}><Text numberOfLines={2} style={[styles.memberTitle, { color: t.textMain, fontSize: 14, fontWeight: "900" }]}>{int.nombre}</Text><Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{int.rolAcceso === "lider" ? "LÍDER DE SEDE" : int.rolAcceso === "admin" ? "ADMINISTRADOR" : "INTEGRANTE"}</Text></View>
                         <View style={{ flexDirection: "row", gap: 6 }}>
+                          {esAdminOLider && int.userId && String(int.email || "").trim().toLowerCase() !== "johnbocal31@gmail.com" && (
+                            <TouchableOpacity
+                              disabled={generandoClaveTemporalId === int.id}
+                              style={{ backgroundColor: "#2563EB", opacity: generandoClaveTemporalId === int.id ? 0.6 : 1, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 9, minHeight: 34, justifyContent: "center" }}
+                              onPress={() => generarClaveTemporal(int)}
+                            >
+                              <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}>{generandoClaveTemporalId === int.id ? "Generando..." : "🔑 Clave temporal"}</Text>
+                            </TouchableOpacity>
+                          )}
                           {(int.rolAcceso !== "admin" && (esAdmin || int.rolAcceso === "miembro")) && (
                             <TouchableOpacity
                               style={{ backgroundColor: t.primary, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 9, minHeight: 34, justifyContent: "center" }}

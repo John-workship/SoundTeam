@@ -941,6 +941,8 @@ export default function App() {
   const [etiquetasActuales, setEtiquetasActuales] = useState([]);
   const [mostrarFormularioCancion, setMostrarFormularioCancion] = useState(false);
   const [seccionCancionActiva, setSeccionCancionActiva] = useState(0);
+  const [seccionesEditorCancion, setSeccionesEditorCancion] = useState([{ id: 1, titulo: "ESTROFA 1", letra: "" }]);
+  const siguienteIdSeccion = useRef(2);
 
   const [idServicioChatActivo, setIdServicioChatActivo] = useState(null);
   const [mensajesChat, setMensajesChat] = useState([]);
@@ -1297,7 +1299,7 @@ export default function App() {
       compas: nuevoCompasCancion,
       tipo_set: nuevoTipoSetCancion,
       etiquetas: etiquetasActuales,
-      letra: nuevaLetraCancion || "",
+      letra: seccionesEditorCancion.map(s => `[${s.titulo.trim().toUpperCase() || "SECCIÓN"}]\n${s.letra || ""}`).join("\n\n"),
       sede_id: sedeIdSeleccionada,
     };
 
@@ -1329,6 +1331,7 @@ export default function App() {
     setNuevoCompasCancion("4/4");
     setNuevoTipoSetCancion("lenta");
     setNuevaLetraCancion("");
+    setSeccionesEditorCancion([{ id: siguienteIdSeccion.current++, titulo: "ESTROFA 1", letra: "" }]);
     setEtiquetasActuales([]);
     alert(modoEdicionCancion ? "Canción actualizada." : "Canción guardada.");
   };
@@ -3068,6 +3071,14 @@ export default function App() {
                             setNuevoBpmCancion(String(c.bpm || "120"));
                             setNuevoCompasCancion(c.compas || "4/4");
                             setNuevoTipoSetCancion(c.tipoSet || c.tipo_set || "lenta");
+                            const bloques = (c.letra || "").split(/\n\s*\[(INTRO|INTRODUCCI[ÓO]N|V\s*\d+|ESTROFA(?:\s*\d+)?|VERSO(?:\s*\d+)?|CORO|PRECORO|PUENTE|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|TAG)\]\s*\n/i);
+                            const partes = [];
+                            const patron = /^\[(INTRO|INTRODUCCI[ÓO]N|V\s*\d+|ESTROFA(?:\s*\d+)?|VERSO(?:\s*\d+)?|CORO|PRECORO|PUENTE|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|TAG)\]\s*$/i;
+                            const lineasLetra = (c.letra || "").split("\n");
+                            let parte = { titulo: "ESTROFA 1", letra: [] };
+                            lineasLetra.forEach(linea => { const m = linea.match(patron); if (m) { if (parte.letra.length || partes.length) partes.push(parte); parte = { titulo: m[1].toUpperCase(), letra: [] }; } else parte.letra.push(linea); });
+                            if (parte.letra.length || !partes.length) partes.push(parte);
+                            setSeccionesEditorCancion(partes.map((p, i) => ({ id: siguienteIdSeccion.current++, titulo: p.titulo || `ESTROFA ${i+1}`, letra: p.letra.join("\n").trim() })));
                             setNuevaLetraCancion(c.letra || "");
                             setEtiquetasActuales(c.etiquetas || []);
                             setIdCancionEditando(c.id);
@@ -3186,7 +3197,27 @@ export default function App() {
                             </TouchableOpacity>
                           ))}
                         </View>
-                        <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, height: 125, textAlignVertical: "top", marginBottom: 12, borderRadius: 11, padding: 13 }]} placeholder="Letra con acordes [C]..." placeholderTextColor={t.textSub} multiline value={nuevaLetraCancion} onChangeText={setNuevaLetraCancion} />
+                        <View style={{ marginTop: 8, marginBottom: 12 }}>
+                          <Text style={[styles.inputLabel, { color: t.textMain, marginBottom: 8 }]}>Estructura de la canción · agrega y ordena sus secciones</Text>
+                          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 12 }}>
+                            {["ESTROFA","CORO","PRECORO","PUENTE","INTRO","INTERLUDIO","FINAL"].map(tipo => (
+                              <TouchableOpacity key={tipo} onPress={() => { const n = tipo === "ESTROFA" ? seccionesEditorCancion.filter(s => /^ESTROFA/.test(s.titulo)).length + 1 : 1; setSeccionesEditorCancion(prev => [...prev, { id: siguienteIdSeccion.current++, titulo: tipo === "ESTROFA" ? `ESTROFA ${n}` : tipo, letra: "" }]); }} style={{ backgroundColor: t.bg, borderColor: t.border, borderWidth: 1, borderRadius: 18, paddingHorizontal: 11, paddingVertical: 8 }}>
+                                <Text style={{ color: t.textMain, fontSize: 11, fontWeight: "800" }}>＋ {tipo}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          {seccionesEditorCancion.map((seccion, index) => (
+                            <View key={seccion.id} style={{ backgroundColor: t.bg, borderColor: t.border, borderWidth: 1, borderRadius: 12, padding: 11, marginBottom: 9 }}>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                                <TextInput value={seccion.titulo} onChangeText={v => setSeccionesEditorCancion(prev => prev.map(s => s.id === seccion.id ? { ...s, titulo: v } : s))} placeholder="Nombre de sección" placeholderTextColor={t.textSub} style={{ flex: 1, color: t.textMain, fontWeight: "900", borderBottomWidth: 1, borderBottomColor: t.border, paddingVertical: 6 }} />
+                                <TouchableOpacity disabled={index === 0} onPress={() => setSeccionesEditorCancion(prev => { const next = [...prev]; [next[index-1], next[index]] = [next[index], next[index-1]]; return next; })} style={{ padding: 7, opacity: index === 0 ? 0.3 : 1 }}><Text style={{ color: t.textMain, fontWeight: "900" }}>↑</Text></TouchableOpacity>
+                                <TouchableOpacity disabled={index === seccionesEditorCancion.length-1} onPress={() => setSeccionesEditorCancion(prev => { const next = [...prev]; [next[index+1], next[index]] = [next[index], next[index+1]]; return next; })} style={{ padding: 7, opacity: index === seccionesEditorCancion.length-1 ? 0.3 : 1 }}><Text style={{ color: t.textMain, fontWeight: "900" }}>↓</Text></TouchableOpacity>
+                                <TouchableOpacity disabled={seccionesEditorCancion.length === 1} onPress={() => setSeccionesEditorCancion(prev => prev.filter(s => s.id !== seccion.id))} style={{ padding: 7, opacity: seccionesEditorCancion.length === 1 ? 0.3 : 1 }}><Text style={{ color: "#F87171", fontWeight: "900" }}>✕</Text></TouchableOpacity>
+                              </View>
+                              <TextInput style={{ color: t.textMain, minHeight: 105, textAlignVertical: "top", padding: 10, borderRadius: 9, backgroundColor: t.cardBg }} placeholder="Escribe la letra y coloca los acordes así: [C] [G] [Am]..." placeholderTextColor={t.textSub} multiline value={seccion.letra} onChangeText={v => setSeccionesEditorCancion(prev => prev.map(s => s.id === seccion.id ? { ...s, letra: v } : s))} />
+                            </View>
+                          ))}
+                        </View>
                         <TouchableOpacity style={[styles.loginButton, { backgroundColor: t.primary }]} onPress={guardarOActualizarCancion}>
                           <Text style={styles.loginButtonText}>{modoEdicionCancion ? "Guardar cambios" : "Guardar en repertorio"}</Text>
                         </TouchableOpacity>

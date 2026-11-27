@@ -3160,17 +3160,6 @@ export default function App() {
                           <Text style={{ color: t.primary, fontSize: 18, fontWeight: "900" }}>{mostrarFormularioCancion ? "−" : "+"}</Text>
                         </TouchableOpacity>
                         {mostrarFormularioCancion && <>
-                        {!modoEdicionCancion && (
-                          <TouchableOpacity
-                            onPress={importarCancionesCongregacionales}
-                            disabled={importandoCancionesCongregacionales}
-                            style={{ backgroundColor: t.banner, padding: 13, borderRadius: 11, marginBottom: 14, opacity: importandoCancionesCongregacionales ? 0.65 : 1 }}
-                          >
-                            <Text style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "bold" }}>
-                              {importandoCancionesCongregacionales ? "Importando canciones..." : "🎵 Importar 30 canciones congregacionales"}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="Título de la canción" placeholderTextColor={t.textSub} value={nuevoTituloCancion} onChangeText={setNuevoTituloCancion} />
                         <TextInput style={[styles.loginInput, { backgroundColor: t.bg, borderColor: t.border, color: t.textMain, marginBottom: 10, borderRadius: 11, minHeight: 46, paddingHorizontal: 13 }]} placeholder="Artista o autor" placeholderTextColor={t.textSub} value={nuevoArtistaCancion} onChangeText={setNuevoArtistaCancion} />
                         <View style={{ flexDirection: esMovil ? "column" : "row", gap: 8, width: "100%" }}>

@@ -245,8 +245,7 @@ export default function App() {
 
   const sincronizarDatosApp = async () => {
     const { data: dataInt, error } = await supabase
-      .from("integrantes")
-      .select("id, nombre, email, sede_id, rol_acceso, roles_musicales, user_id")
+      .rpc("soundteam_listar_integrantes_visibilidad")
       .order("nombre", { ascending: true });
     if (error) {
       setErrorDatos(`No se pudieron cargar los integrantes: ${error.message}`);
@@ -258,7 +257,7 @@ export default function App() {
       nombre: m.nombre || "",
       email: m.email ? m.email.trim().toLowerCase() : "",
       sedeId: (m.sede_id || "general").toLowerCase(),
-      rolAcceso: (m.rol_acceso || m.rol || "miembro").toLowerCase(),
+      rolAcceso: (m.rol_acceso || "miembro").toLowerCase(),
       rolesMusicales: m.roles_musicales || [],
     })));
     return true;
@@ -319,7 +318,7 @@ export default function App() {
 
     const { data: perfil, error: perfilError } = await supabase
       .from("integrantes")
-      .select("id, nombre, nombre_perfil, email, sede_id, rol_acceso, roles_musicales, user_id, avatar_url")
+      .select("id, nombre, nombre_perfil, sede_id, rol_acceso, roles_musicales, user_id, avatar_url")
       .eq("user_id", session.user.id)
       .maybeSingle();
 
@@ -3182,7 +3181,7 @@ export default function App() {
                           )}
                         </View>
                       </View>
-                      <Text style={{ color: t.textSub, fontSize: 11, marginTop: 9, lineHeight: 17 }}>{int.email || "Correo no registrado"}</Text>
+                      {esAdminOLider && <Text style={{ color: t.textSub, fontSize: 11, marginTop: 9, lineHeight: 17 }}>{int.email || "Correo no registrado"}</Text>}
                       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
                         {(Array.isArray(int.rolesMusicales) ? int.rolesMusicales : []).length > 0 ? (Array.isArray(int.rolesMusicales) ? int.rolesMusicales : []).map(rol => {
                           const nombres = { vozPrincipal: "Voz principal", coros: "Coros", piano: "Piano", guitarra: "Guitarra", bajo: "Bajo", bateria: "Batería" };

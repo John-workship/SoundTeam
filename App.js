@@ -3114,7 +3114,7 @@ export default function App() {
                         lineas.forEach(linea => {
                           const match = linea.match(encabezado);
                           if (match) {
-                            if (actual.lineas.length || secciones.length === 0) secciones.push(actual);
+                            if (actual.lineas.length) secciones.push(actual);
                             actual = { titulo: match[1].replace(/\s+/g, " ").toUpperCase(), lineas: [] };
                           } else actual.lineas.push(linea);
                         });

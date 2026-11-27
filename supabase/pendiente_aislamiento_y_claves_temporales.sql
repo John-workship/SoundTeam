@@ -251,10 +251,8 @@ LANGUAGE plpgsql
 SET search_path = ''
 AS $function$
 BEGIN
-  IF COALESCE(
-    (SELECT auth.jwt() -> 'app_metadata' ->> 'soundteam_must_change_password'),
-    'false'
-  ) = 'true' THEN
+  IF (SELECT auth.uid()) IS NOT NULL
+     AND NOT (SELECT public.soundteam_acceso_habilitado()) THEN
     RAISE EXCEPTION 'Debes cambiar tu contraseña temporal antes de continuar';
   END IF;
 

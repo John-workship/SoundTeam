@@ -95,6 +95,10 @@ Deno.serve(async (req: Request) => {
       !!callerProfile.sede_id &&
       callerProfile.sede_id === target.sede_id;
 
+    if (isSameSiteLeader && String(target.rol_acceso || "").toLowerCase() !== "miembro") {
+      return json(403, { error: "El líder solo puede restablecer claves de integrantes de su sede." });
+    }
+
     if (!globalAdmin && !isSameSiteLeader) {
       return json(403, { error: "Solo el administrador global o el líder de la misma sede puede generar esta clave." });
     }

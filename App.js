@@ -508,6 +508,7 @@ export default function App() {
   const [proyeccionAbierta, setProyeccionAbierta] = useState(false);
   const [enlaceProyeccion, setEnlaceProyeccion] = useState("");
   const [mensajeProyeccion, setMensajeProyeccion] = useState("");
+  const [mensajeInvitacion, setMensajeInvitacion] = useState("");
   const canalProyeccionRef = useRef(null);
   const scrollProyeccionRef = useRef(null);
   const posicionScrollProyeccionRef = useRef(0);
@@ -1744,6 +1745,32 @@ export default function App() {
     canal.send({ type: "broadcast", event: "inicio_letra", payload: {} });
   };
 
+  const copiarEnlaceApp = async () => {
+    const enlaceApp = "https://soundteam-eta.vercel.app";
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(enlaceApp);
+        setMensajeInvitacion("¡Enlace de SoundTeam copiado! Compártelo con tu equipo.");
+        return;
+      } catch (_) {}
+    }
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      const campoTemporal = document.createElement("textarea");
+      campoTemporal.value = enlaceApp;
+      campoTemporal.style.position = "fixed";
+      campoTemporal.style.opacity = "0";
+      document.body.appendChild(campoTemporal);
+      campoTemporal.select();
+      const copiado = document.execCommand("copy");
+      document.body.removeChild(campoTemporal);
+      if (copiado) {
+        setMensajeInvitacion("¡Enlace de SoundTeam copiado! Compártelo con tu equipo.");
+        return;
+      }
+    }
+    setMensajeInvitacion("No se pudo copiar automáticamente. Enlace: " + enlaceApp);
+  };
+
   const copiarEnlaceProyeccion = async () => {
     if (!enlaceProyeccion || typeof navigator === "undefined") {
       setMensajeProyeccion("No se pudo preparar el enlace de proyección.");
@@ -2289,6 +2316,17 @@ export default function App() {
             <View style={[styles.mainWrapper, esMovil && styles.mainWrapperMobile, esTablet && styles.mainWrapperTablet]}>
               {pestana === "inicio" && (
                 <View style={{ width: "100%" }}>
+                  <View style={{ backgroundColor: "#07569B", borderColor: "#0B68B5", borderWidth: 1, borderRadius: esMovil ? 18 : 23, padding: esMovil ? 16 : 20, marginBottom: 16, overflow: "hidden", flexDirection: esMovil ? "column" : "row", alignItems: esMovil ? "stretch" : "center", justifyContent: "space-between", gap: 14 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: "#FFFFFF", fontSize: esMovil ? 19 : 22, fontWeight: "900", marginBottom: 6 }}>Invita a tu equipo</Text>
+                      <Text style={{ color: "#D6E9FF", fontSize: 13, lineHeight: 19, maxWidth: 360 }}>Comparte el enlace y tu equipo podrá ingresar a SoundTeam en segundos.</Text>
+                    </View>
+                    <TouchableOpacity onPress={copiarEnlaceApp} style={{ backgroundColor: "#1996F5", borderRadius: 24, paddingHorizontal: 19, paddingVertical: 13, minHeight: 46, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, alignSelf: esMovil ? "flex-start" : "center" }}>
+                      <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>↗</Text>
+                      <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "900" }}>Compartir enlace</Text>
+                    </TouchableOpacity>
+                    {!!mensajeInvitacion && <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700" }}>{mensajeInvitacion}</Text>}
+                  </View>
                   <View style={{ backgroundColor: t.banner, borderColor: t.banner, borderWidth: 1, borderRadius: esMovil ? 19 : 26, padding: esMovil ? 18 : esTablet ? 22 : 28, marginBottom: 18, overflow: "hidden", shadowColor: t.banner, shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: esMovil ? 18 : 24, gap: 8 }}>
                       <View style={{ flex: 1 }}>

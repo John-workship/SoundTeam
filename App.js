@@ -1296,11 +1296,19 @@ export default function App() {
   const servicioIncluyeUsuario = (serv) => {
     const voces = serv?.voces || {};
     const instrumentos = serv?.instrumentos || {};
-    const coros = String(voces.coros || "").split(",").map(n => n.trim()).filter(Boolean);
+    const nombreNormalizado = String(usuario || "").trim().toLowerCase();
+    const nombreUnicoEnSede = integrantes.filter(m =>
+      m.sedeId === serv.sedeId &&
+      String(m.nombre || "").trim().toLowerCase() === nombreNormalizado
+    ).length === 1;
     const esPrincipalPorId = !!usuarioId && String(voces.principal_user_id || "") === String(usuarioId);
-    const esPrincipalPorNombre = String(voces.principal || "").trim() === usuario;
-    return esPrincipalPorId || esPrincipalPorNombre || coros.includes(usuario) ||
+    const esPrincipalLegacy = !voces.principal_user_id && nombreUnicoEnSede &&
+      String(voces.principal || "").trim() === usuario;
+    const esCoro = nombreUnicoEnSede &&
+      String(voces.coros || "").split(",").map(n => n.trim()).includes(usuario);
+    const esInstrumentista = nombreUnicoEnSede &&
       ["piano", "guitarra", "bajo", "bateria"].some(rol => String(instrumentos[rol] || "").trim() === usuario);
+    return esPrincipalPorId || esPrincipalLegacy || esCoro || esInstrumentista;
   };
   const serviciosChatDisponibles = serviciosChatFuente
     .filter(serv => esAdminOLider || servicioIncluyeUsuario(serv))

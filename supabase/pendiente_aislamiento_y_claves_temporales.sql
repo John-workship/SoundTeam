@@ -341,7 +341,8 @@ AS $function$
     );
 $function$;
 
--- rls_auto_enable() is an event-trigger callback, not an application RPC; preserve its DDL execution.
+-- El callback del event trigger no debe ser invocable por la API REST.
+REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.soundteam_actualizar_servicio_asignado(bigint, text, jsonb) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_es_admin_global() FROM anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_es_lider_de_sede(text) FROM anon;

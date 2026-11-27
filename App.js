@@ -414,6 +414,7 @@ export default function App() {
   const esDomingoSeleccionado = new Date(mesSeleccionadoObj.year, mesSeleccionadoObj.mesIndex, diaSeleccionado).getDay() === 0;
 
   const [servicios, setServicios] = useState([]);
+  const [serviciosChatFuente, setServiciosChatFuente] = useState([]);
   const serviciosProximos = servicios
     .filter((serv) => String(serv.fecha || "") >= fechaHoyLocal)
     .sort((a, b) => String(a.fecha || "").localeCompare(String(b.fecha || "")))
@@ -443,10 +444,36 @@ export default function App() {
       setServicios([]);
     }
   };
+  
+  // Lista independiente para Chat. Supabase RLS restringe miembros y líderes
+  // a su sede y permite al administrador global consultar todas las sedes.
+  const cargarServiciosChatSupabase = async () => {
+    if (!sesionIniciada) return;
+    const { data, error } = await supabase
+      .from("servicios")
+      .select("id, fecha, titulo, sede_id, voces, instrumentos");
+    if (error) {
+      setErrorDatos(`No se pudieron cargar los chats: ${error.message}`);
+      return;
+    }
+    setServiciosChatFuente((data || []).map((s) => ({
+      id: s.id,
+      fecha: s.fecha,
+      titulo: s.titulo,
+      sedeId: s.sede_id,
+      voces: s.voces || {},
+      instrumentos: s.instrumentos || {},
+    })));
+  };
 
   useEffect(() => {
     if (sesionIniciada) cargarServiciosSupabase();
   }, [sedeIdSeleccionada, sesionIniciada]);
+
+  useEffect(() => {
+    if (sesionIniciada) cargarServiciosChatSupabase();
+    else setServiciosChatFuente([]);
+  }, [sesionIniciada]);
 
   const [modalProgramarVisible, setModalProgramarVisible] = useState(false);
   const [modalPostularVisible, setModalPostularVisible] = useState(false);
@@ -1269,11 +1296,13 @@ export default function App() {
   const servicioIncluyeUsuario = (serv) => {
     const voces = serv?.voces || {};
     const instrumentos = serv?.instrumentos || {};
-    const coros = String(voces.coros || "").split(",").map(n => n.trim());
-    return voces.principal === usuario || coros.includes(usuario) ||
-      ["piano", "guitarra", "bajo", "bateria"].some(rol => instrumentos[rol] === usuario);
+    const coros = String(voces.coros || "").split(",").map(n => n.trim()).filter(Boolean);
+    const esPrincipalPorId = !!usuarioId && String(voces.principal_user_id || "") === String(usuarioId);
+    const esPrincipalPorNombre = String(voces.principal || "").trim() === usuario;
+    return esPrincipalPorId || esPrincipalPorNombre || coros.includes(usuario) ||
+      ["piano", "guitarra", "bajo", "bateria"].some(rol => String(instrumentos[rol] || "").trim() === usuario);
   };
-  const serviciosChatDisponibles = servicios
+  const serviciosChatDisponibles = serviciosChatFuente
     .filter(serv => esAdminOLider || servicioIncluyeUsuario(serv))
     .sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")));
   const servicioChatActual = serviciosChatDisponibles.find(
@@ -1289,7 +1318,7 @@ export default function App() {
     if (!serviciosChatDisponibles.some(serv => String(serv.id) === String(idServicioChatActivo))) {
       setIdServicioChatActivo(serviciosChatDisponibles[0].id);
     }
-  }, [servicios, usuario, esAdminOLider, sedeIdSeleccionada]);
+  }, [serviciosChatFuente, usuario, usuarioId, esAdminOLider]);
   const esVozPrincipalDeServicio = (serv) =>
     !!usuarioId &&
     String(serv?.voces?.principal_user_id || "") === String(usuarioId);

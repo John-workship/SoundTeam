@@ -1128,8 +1128,10 @@ export default function App() {
   };
 
   const handleActualizarPassword = async () => {
-    if (nuevaPassword.length < 8) {
-      setErrorAuth("La contraseña debe tener al menos 8 caracteres.");
+    if (nuevaPassword.length < 12 || nuevaPassword.length > 128 ||
+        !/[a-z]/.test(nuevaPassword) || !/[A-Z]/.test(nuevaPassword) ||
+        !/[0-9]/.test(nuevaPassword) || !/[^A-Za-z0-9]/.test(nuevaPassword)) {
+      setErrorAuth("Usa una contraseña de 12 a 128 caracteres con mayúsculas, minúsculas, números y símbolos.");
       return;
     }
     if (nuevaPassword !== confirmarNuevaPassword) {

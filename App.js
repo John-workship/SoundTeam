@@ -3168,7 +3168,7 @@ export default function App() {
                               <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}>✏️ Editar</Text>
                             </TouchableOpacity>
                           )}
-                          {(esAdmin || (int.rolAcceso === "miembro" && String(int.email || "").trim().toLowerCase() !== "johnbocal31@gmail.com")) && (
+                          {String(int.email || "").trim().toLowerCase() !== "johnbocal31@gmail.com" && (esAdmin || int.rolAcceso === "miembro") && (
 <TouchableOpacity
                           style={{ backgroundColor: "#EF4444", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 9, minHeight: 34, justifyContent: "center" }}
                           onPress={async () => {

@@ -1769,6 +1769,7 @@ export default function App() {
               paddingVertical: 36
             }}
           >
+            {!!datosProyeccion?.seccion && datosProyeccion?.totalSecciones > 1 && <Text style={{ color: "#94A3B8", fontSize: Math.max(14, Math.min(24, anchoVentana * 0.018)), fontWeight: "800", textAlign: "center", marginBottom: 18, letterSpacing: 2 }}>{datosProyeccion.seccion}</Text>}
             <Text
               selectable
               style={{
@@ -2039,20 +2040,27 @@ export default function App() {
                     {!!errorClick && <Text style={{ color: "#FCA5A5", fontSize: 11 }}>{errorClick}</Text>}
                   </View>
 
-            <View style={styles.teleprompterLyricsBox}>
-              <Text style={styles.teleprompterLyricsText}>
-                {(() => {
-                  const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
-                  const objetoRepo = repertorio.find(r => r.titulo && cancionActual.titulo && r.titulo.toLowerCase() === cancionActual.titulo.toLowerCase()) || {};
-                  const letraBase = objetoRepo.letra || cancionActual.letra || "[INTRO]\\nLetra no disponible en biblioteca.";
-                    const tonoActual = transponerTono(cancionActual.tono || objetoRepo.tono || "C", semitonosEnVivo);
-                    const letraTranspuesta = transponerLetra(letraBase, semitonosEnVivo);
-                    return modoNashvilleEnVivo
-                      ? convertirANashville(letraTranspuesta, tonoActual)
-                      : letraTranspuesta;
-                })()}
-              </Text>
-            </View>
+            {(() => {
+              const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
+              const objetoRepo = repertorio.find(r => r.titulo && cancionActual.titulo && r.titulo.toLowerCase() === cancionActual.titulo.toLowerCase()) || {};
+              const letraBase = objetoRepo.letra || cancionActual.letra || "[INTRO]\\nLetra no disponible en biblioteca.";
+              const tonoActual = transponerTono(cancionActual.tono || objetoRepo.tono || "C", semitonosEnVivo);
+              const letraTranspuesta = transponerLetra(letraBase, semitonosEnVivo);
+              const letraVista = modoNashvilleEnVivo ? convertirANashville(letraTranspuesta, tonoActual) : letraTranspuesta;
+              const secciones = obtenerSeccionesEnVivo(letraVista);
+              const seccionActual = secciones[Math.min(indiceSeccionEnVivo, secciones.length - 1)] || secciones[0];
+              return <>
+                {secciones.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 8, paddingHorizontal: 2 }}>
+                  {secciones.map((seccion, index) => <TouchableOpacity key={index} onPress={() => setIndiceSeccionEnVivo(index)} style={{ paddingHorizontal: 15, paddingVertical: 10, borderRadius: 22, backgroundColor: index === indiceSeccionEnVivo ? "#8B78FF" : "#1E293B", borderWidth: 1, borderColor: index === indiceSeccionEnVivo ? "#A99BFF" : "#334155" }}>
+                    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 13 }}>{seccion.abreviatura}</Text>
+                  </TouchableOpacity>)}
+                </ScrollView>}
+                <View style={styles.teleprompterLyricsBox}>
+                  {secciones.length > 1 && <Text style={{ color: "#8B78FF", fontSize: 13, fontWeight: "900", marginBottom: 10 }}>{seccionActual?.titulo}</Text>}
+                  <Text style={styles.teleprompterLyricsText}>{secciones.length > 1 ? (seccionActual?.letra || "") : letraVista}</Text>
+                </View>
+              </>;
+            })()}
 
           </ScrollView>
         </View>

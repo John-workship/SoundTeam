@@ -1,6 +1,7 @@
 -- Perfil personal de SoundTeam: foto y nombre propio, sin modificar permisos ni datos de otros integrantes.
 alter table public.integrantes
   add column if not exists avatar_url text;
+alter table public.integrantes add column if not exists nombre_perfil text;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('avatars', 'avatars', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
@@ -61,7 +62,7 @@ begin
   end if;
 
   update public.integrantes
-  set nombre = trim(p_nombre),
+  set nombre_perfil = trim(p_nombre),
       avatar_url = nullif(trim(coalesce(p_avatar_url, '')), '')
   where user_id = auth.uid();
 

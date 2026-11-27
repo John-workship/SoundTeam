@@ -346,7 +346,7 @@ REVOKE EXECUTE ON FUNCTION public.soundteam_actualizar_servicio_asignado(bigint,
 REVOKE EXECUTE ON FUNCTION public.soundteam_es_admin_global() FROM anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_es_lider_de_sede(text) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_pertenece_a_sede(text) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.soundteam_puede_gestionar_repertorio(text) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_puede_gestionar_repertorio(text) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_puede_gestionar_sede(text) FROM anon;
 GRANT EXECUTE ON FUNCTION public.soundteam_puede_gestionar_repertorio(text) TO authenticated, service_role;
 
@@ -363,6 +363,7 @@ REVOKE EXECUTE ON FUNCTION public.soundteam_pertenece_a_sede(text) FROM PUBLIC, 
 REVOKE EXECUTE ON FUNCTION public.soundteam_puede_gestionar_sede(text) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_es_participante_servicio(bigint) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_puede_acceder_chat_servicio(bigint) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_puede_gestionar_repertorio(text) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_mantener_servicios_meses() FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.claim_soundteam_profile() TO authenticated, service_role;

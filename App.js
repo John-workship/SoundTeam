@@ -14,15 +14,15 @@ import { supabase, isSupabaseConfigured } from "./supabase";
 
 const TEMAS = {
   azul: {
-    bg: "#F4F6FC",
-    cardBg: "#FFFFFF",
-    border: "#E5EAF5",
-    primary: "#5755D9",
-    textMain: "#18213B",
-    textSub: "#71809B",
-    banner: "#5145CD",
-    selectedDay: "#5755D9",
-    nombre: "✨ SoundTeam",
+    bg: "#070B19",
+    cardBg: "#101A32",
+    border: "#2A3C66",
+    primary: "#8B7CFF",
+    textMain: "#F5F7FF",
+    textSub: "#A7B5D8",
+    banner: "#30266D",
+    selectedDay: "#328BFF",
+    nombre: "🌌 Futurista",
   },
   claro: {
     bg: "#F1F5F9",
@@ -3219,12 +3219,12 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, width: "100%", height: "100%", minHeight: "100vh" },
-  loginContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24, width: "100%", minHeight: "100vh" },
-  loginCard: { width: "100%", maxWidth: 460, padding: 34, borderRadius: 26, borderWidth: 1, shadowColor: "#000000", shadowOpacity: 0.28, shadowRadius: 30, shadowOffset: { width: 0, height: 14 }, elevation: 10 },
-  loginTitle: { fontSize: 34, fontWeight: "900", textAlign: "center", marginBottom: 10, letterSpacing: 0.3 },
+  loginContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24, width: "100%", minHeight: "100vh", backgroundColor: "#070B19" },
+  loginCard: { width: "100%", maxWidth: 480, padding: 36, borderRadius: 30, borderWidth: 1, shadowColor: "#7867FF", shadowOpacity: 0.34, shadowRadius: 46, shadowOffset: { width: 0, height: 18 }, elevation: 16 },
+  loginTitle: { fontSize: 38, fontWeight: "900", textAlign: "center", marginBottom: 10, letterSpacing: 1.5 },
   loginSubtitle: { fontSize: 14, textAlign: "center", marginBottom: 26, lineHeight: 22 },
-  loginInput: { borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, marginBottom: 14, fontSize: 15, minHeight: 52 },
-  loginButton: { paddingVertical: 16, paddingHorizontal: 22, borderRadius: 14, alignItems: "center", minHeight: 54, justifyContent: "center", shadowColor: "#000000", shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  loginInput: { borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, marginBottom: 14, fontSize: 15, minHeight: 54, shadowColor: "#4F6BFF", shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  loginButton: { paddingVertical: 16, paddingHorizontal: 22, borderRadius: 15, alignItems: "center", minHeight: 54, justifyContent: "center", shadowColor: "#7567FF", shadowOpacity: 0.3, shadowRadius: 18, shadowOffset: { width: 0, height: 7 }, elevation: 6 },
   loginButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 16 },
   header: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 18, borderBottomWidth: 1, width: "100%" },
   headerMobile: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10 },

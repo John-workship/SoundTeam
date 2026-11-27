@@ -17,6 +17,12 @@ REVOKE ALL ON TABLE public.usuarios FROM anon, authenticated;
 
 REVOKE ALL ON TABLE public.teams, public.team_members, public.events,
   public.assignments, public.setlists FROM anon, authenticated;
+REVOKE ALL PRIVILEGES (id, nombre, pin, rol, created_at, sede)
+  ON TABLE public.usuarios FROM anon, authenticated;
+REVOKE ALL PRIVILEGES (id, created_at, nombre, rol, grupo_id, sede_id, rol_acceso, email)
+  ON TABLE public."Integrantes" FROM anon, authenticated;
+REVOKE ALL PRIVILEGES (id, team_id, title, artist, original_key, chordpro, created_at, grupo_id, editado)
+  ON TABLE public.songs FROM anon, authenticated;
 
 -- La app no necesita leer el PIN legado. Solo se conceden las columnas necesarias.
 REVOKE ALL ON TABLE public.integrantes FROM anon, authenticated;

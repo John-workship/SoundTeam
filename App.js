@@ -3144,7 +3144,7 @@ export default function App() {
                       <View style={styles.memberHeaderRow}>
                         <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}><Text numberOfLines={2} style={[styles.memberTitle, { color: t.textMain, fontSize: 14, fontWeight: "900" }]}>{int.nombre}</Text><Text style={{ color: t.textSub, fontSize: 10, marginTop: 3 }}>{int.rolAcceso === "lider" ? "LÍDER DE SEDE" : int.rolAcceso === "admin" ? "ADMINISTRADOR" : "INTEGRANTE"}</Text></View>
                         <View style={{ flexDirection: "row", gap: 6 }}>
-                          {esAdminOLider && int.userId && String(int.email || "").trim().toLowerCase() !== "johnbocal31@gmail.com" && (
+                          {esAdminOLider && int.userId && int.userId !== usuarioId && String(int.email || "").trim().toLowerCase() !== "johnbocal31@gmail.com" && (
                             <TouchableOpacity
                               disabled={generandoClaveTemporalId === int.id}
                               style={{ backgroundColor: "#2563EB", opacity: generandoClaveTemporalId === int.id ? 0.6 : 1, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 9, minHeight: 34, justifyContent: "center" }}

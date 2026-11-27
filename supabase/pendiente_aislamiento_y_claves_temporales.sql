@@ -57,7 +57,12 @@ AS $function$
     AND COALESCE(
       (SELECT auth.jwt() -> 'app_metadata' ->> 'soundteam_must_change_password'),
       'false'
-    ) <> 'true';
+    ) <> 'true'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.soundteam_claves_temporales t
+      WHERE t.user_id = (SELECT auth.uid())
+    );
 $function$;
 
 REVOKE ALL ON FUNCTION public.soundteam_acceso_habilitado() FROM PUBLIC, anon;

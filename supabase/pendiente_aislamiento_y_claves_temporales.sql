@@ -329,7 +329,7 @@ AS $function$
     );
 $function$;
 
-REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated;
+-- rls_auto_enable() is an event-trigger callback, not an application RPC; preserve its DDL execution.
 REVOKE EXECUTE ON FUNCTION public.soundteam_actualizar_servicio_asignado(bigint, text, jsonb) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_es_admin_global() FROM anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_es_lider_de_sede(text) FROM anon;

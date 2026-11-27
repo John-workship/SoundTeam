@@ -53,7 +53,8 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: authData, error: authError } = await callerClient.auth.getUser();
+  const accessToken = authorization.replace(/^Bearer\\s+/i, "").trim();
+  const { data: authData, error: authError } = await callerClient.auth.getUser(accessToken);
   if (authError || !authData.user) return json(401, { error: "Debes iniciar sesión nuevamente." });
 
   const caller = authData.user;

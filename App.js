@@ -444,6 +444,7 @@ export default function App() {
 
   const [modoEnVivoActivo, setModoEnVivoActivo] = useState(false);
   const [indiceCancionEnVivo, setIndiceCancionEnVivo] = useState(0);
+  const [indiceSeccionEnVivo, setIndiceSeccionEnVivo] = useState(0);
   const [proyeccionAbierta, setProyeccionAbierta] = useState(false);
   const [enlaceProyeccion, setEnlaceProyeccion] = useState("");
   const [mensajeProyeccion, setMensajeProyeccion] = useState("");
@@ -473,6 +474,10 @@ export default function App() {
   const [avanceAutomaticoActivo, setAvanceAutomaticoActivo] = useState(false);
   const [semitonosEnVivo, setSemitonosEnVivo] = useState(0);
   const [modoNashvilleEnVivo, setModoNashvilleEnVivo] = useState(false);
+
+  useEffect(() => {
+    setIndiceSeccionEnVivo(0);
+  }, [indiceCancionEnVivo]);
 
   useEffect(() => {
     setSemitonosEnVivo(0);
@@ -797,6 +802,39 @@ export default function App() {
   const [busquedaRepertorio, setBusquedaRepertorio] = useState("");
   const [filtroTipoRepertorio, setFiltroTipoRepertorio] = useState("todos");
 
+  const obtenerSeccionesEnVivo = (letra) => {
+    const encabezado = /^\\s*\\[(INTRO(?:DUCCIÓN)?|V\\s*\\d+|ESTROFA(?:\\s*\\d+)?|VERSO(?:\\s*\\d+)?|CORO(?:\\s*\\d+)?|ESTRIBILLO|PRE[- ]?CORO|POST[- ]?CORO|PUENTE(?:\\s*\\d+)?|INTERLUDIO|INSTRUMENTAL|FINAL|OUTRO|CODA|VUELTA|VAMP|BREAKDOWN|TAG)\\]\\s*$/i;
+    const secciones = [];
+    let actual = { titulo: "Canción completa", lineas: [] };
+    String(letra || "").split("\\n").forEach(linea => {
+      const match = linea.match(encabezado);
+      if (match) {
+        if (actual.lineas.length) secciones.push(actual);
+        actual = { titulo: match[1].replace(/\\s+/g, " ").toUpperCase(), lineas: [] };
+      } else actual.lineas.push(linea);
+    });
+    if (actual.lineas.length || secciones.length === 0) secciones.push(actual);
+    return secciones.map((s, index) => {
+      const t = s.titulo.toUpperCase();
+      let abreviatura = t.slice(0, 3);
+      if (/^(ESTROFA|VERSO|V)\\s*(\\d+)?$/.test(t)) abreviatura = "V" + ((t.match(/\\d+/) || [index + 1])[0]);
+      else if (/CORO|ESTRIBILLO/.test(t)) abreviatura = "C";
+      else if (/PRE/.test(t)) abreviatura = "PC";
+      else if (/POST/.test(t)) abreviatura = "PoC";
+      else if (/PUENTE/.test(t)) abreviatura = "P";
+      else if (/INTRO/.test(t)) abreviatura = "IN";
+      else if (/INTERLUDIO/.test(t)) abreviatura = "INT";
+      else if (/INSTRUMENTAL/.test(t)) abreviatura = "I";
+      else if (/OUTRO/.test(t)) abreviatura = "O";
+      else if (/FINAL/.test(t)) abreviatura = "F";
+      else if (/CODA/.test(t)) abreviatura = "T";
+      else if (/VUELTA/.test(t)) abreviatura = "Vu";
+      else if (/VAMP/.test(t)) abreviatura = "Va";
+      else if (/BREAKDOWN/.test(t)) abreviatura = "BD";
+      return { ...s, abreviatura, letra: s.lineas.join("\\n").trim() };
+    });
+  };
+
   const construirEstadoProyeccion = () => {
     const cancionActual = setlistEnVivoActual[indiceCancionEnVivo] || {};
     const objetoRepo = repertorio.find(r =>
@@ -809,11 +847,15 @@ export default function App() {
       semitonosEnVivo
     );
     const letraTranspuesta = transponerLetra(letraBase, semitonosEnVivo);
+    const letraFormateada = modoNashvilleEnVivo ? convertirANashville(letraTranspuesta, tonoActual) : letraTranspuesta;
+    const secciones = obtenerSeccionesEnVivo(letraFormateada);
+    const seccionActual = secciones[Math.min(indiceSeccionEnVivo, secciones.length - 1)] || secciones[0];
 
     return {
-      letra: modoNashvilleEnVivo
-        ? convertirANashville(letraTranspuesta, tonoActual)
-        : letraTranspuesta,
+      letra: secciones.length > 1 ? (seccionActual?.letra || "") : letraFormateada,
+      seccion: seccionActual?.titulo || "",
+      indiceSeccion: indiceSeccionEnVivo,
+      totalSecciones: secciones.length,
       indiceCancion: indiceCancionEnVivo
     };
   };
@@ -896,7 +938,8 @@ export default function App() {
     indiceCancionEnVivo,
     repertorio,
     semitonosEnVivo,
-    modoNashvilleEnVivo
+    modoNashvilleEnVivo,
+    indiceSeccionEnVivo
   ]);
 
   const cargarRepertorioSupabase = async () => {

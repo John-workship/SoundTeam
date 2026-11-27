@@ -20,5 +20,12 @@
     "@supabase/supabase-js": "^2.57.4",
     "expo-image-picker": "~17.0.10"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "glob@^13.0.0": "^14.0.2",
+    "minimatch@^9.0.0": "^11.0.1",
+    "minimatch@^10.0.1": "^11.0.1",
+    "postcss": "^8.5.23",
+    "image-size": "npm:image-size-next@1.2.2"
+  }
 }

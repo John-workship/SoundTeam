@@ -257,10 +257,12 @@ BEGIN
   END IF;
 
   IF current_user IN ('postgres', 'service_role') THEN
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
     RETURN NEW;
   END IF;
 
   IF (SELECT public.soundteam_es_admin_global()) THEN
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
     RETURN NEW;
   END IF;
 
@@ -300,10 +302,8 @@ LANGUAGE plpgsql
 SET search_path = ''
 AS $function$
 BEGIN
-  IF COALESCE(
-    (SELECT auth.jwt() -> 'app_metadata' ->> 'soundteam_must_change_password'),
-    'false'
-  ) = 'true' THEN
+  IF (SELECT auth.uid()) IS NOT NULL
+     AND NOT (SELECT public.soundteam_acceso_habilitado()) THEN
     RAISE EXCEPTION 'Debes cambiar tu contraseña temporal antes de continuar';
   END IF;
 
@@ -349,6 +349,35 @@ REVOKE EXECUTE ON FUNCTION public.soundteam_pertenece_a_sede(text) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_puede_gestionar_repertorio(text) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.soundteam_puede_gestionar_sede(text) FROM anon;
 GRANT EXECUTE ON FUNCTION public.soundteam_puede_gestionar_repertorio(text) TO authenticated, service_role;
+
+-- RPC de aplicación: ninguna función privilegiada queda ejecutable por PUBLIC/anon.
+REVOKE EXECUTE ON FUNCTION public.claim_soundteam_profile() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.postularse_servicio(bigint, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.retirar_postulacion_servicio(bigint, text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_actualizar_orden_bloques(bigint, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_actualizar_perfil(text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_actualizar_servicio_asignado(bigint, text, jsonb) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_es_admin_global() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_es_lider_de_sede(text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_pertenece_a_sede(text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_puede_gestionar_sede(text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_es_participante_servicio(bigint) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_puede_acceder_chat_servicio(bigint) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.soundteam_mantener_servicios_meses() FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION public.claim_soundteam_profile() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.postularse_servicio(bigint, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.retirar_postulacion_servicio(bigint, text, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_actualizar_orden_bloques(bigint, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_actualizar_perfil(text, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_actualizar_servicio_asignado(bigint, text, jsonb) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_es_admin_global() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_es_lider_de_sede(text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_pertenece_a_sede(text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_puede_gestionar_sede(text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_es_participante_servicio(bigint) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_puede_acceder_chat_servicio(bigint) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.soundteam_mantener_servicios_meses() TO service_role;
 
 -- Bucket privado. Cada integrante solo puede leer, cargar, reemplazar y borrar sus propios archivos.
 UPDATE storage.buckets SET public = false WHERE id = 'avatars';

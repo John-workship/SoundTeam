@@ -285,6 +285,7 @@ export default function App() {
       setEmailUsuario("");
       setUsuarioId(null);
       setRolUsuario("miembro");
+      setRolesMusicalesUsuario([]);
       return;
     }
 
@@ -345,6 +346,7 @@ export default function App() {
     setUsuarioId(session.user.id);
     setEmailUsuario(session.user.email.trim().toLowerCase());
     setRolUsuario((perfil.rol_acceso || "miembro").toLowerCase());
+    setRolesMusicalesUsuario(Array.isArray(perfil.roles_musicales) ? perfil.roles_musicales : []);
     setSedeIdSeleccionada(perfil.sede_id || "general");
     setSesionIniciada(true);
     await sincronizarDatosApp();
@@ -1207,8 +1209,8 @@ export default function App() {
     setUsuarioId(null);
     setEmailInput("");
     setPasswordInput("");
-    setRolUsuario((perfil.rol_acceso || "miembro").toLowerCase());
-    setRolesMusicalesUsuario(Array.isArray(perfil.roles_musicales) ? perfil.roles_musicales : []);
+    setRolUsuario("miembro");
+    setRolesMusicalesUsuario([]);
     setPestana("inicio");
     setErrorAuth("");
     setErrorDatos("");
@@ -1341,7 +1343,9 @@ export default function App() {
     !!servicioEditandoActual &&
     esVozPrincipalDeServicio(servicioEditandoActual) &&
     !esAdminOLider;
-  const puedeGestionarRepertorio = esAdminOLider || rolesMusicalesUsuario.some(r => ["piano", "guitarra", "bajo", "bateria"].includes(String(r).toLowerCase()));
+  const tieneInstrumentoAsignado = rolesMusicalesUsuario.some(r => ["piano", "guitarra", "bajo", "bateria"].includes(String(r).toLowerCase()));
+  const puedeAgregarCancion = esAdminOLider || tieneInstrumentoAsignado;
+  const puedeGestionarRepertorio = esAdminOLider;
 
   const importarCancionesCongregacionales = async () => {
     if (!puedeGestionarRepertorio || importandoCancionesCongregacionales) return;
@@ -1453,8 +1457,8 @@ export default function App() {
 
 
   const guardarOActualizarCancion = async () => {
-    if (!puedeGestionarRepertorio) {
-      alert("No tienes permisos para modificar el repertorio.");
+    if (!puedeAgregarCancion || (modoEdicionCancion && !esAdminOLider)) {
+      alert("Puedes agregar canciones si tienes un instrumento asignado. La edición está reservada a administradores y líderes.");
       return;
     }
     if (!nuevoTituloCancion.trim()) {
@@ -3401,7 +3405,7 @@ export default function App() {
                     </View>
                   ) : (
                     <>
-                    {puedeGestionarRepertorio && (
+                    {puedeAgregarCancion && (
                       <View style={[styles.card, { backgroundColor: t.cardBg, borderColor: t.border, marginBottom: 12, borderWidth: 1, borderRadius: 16, padding: 17 }]}>
                         <TouchableOpacity onPress={() => { setMostrarFormularioCancion(v => !v); if (mostrarFormularioCancion) { setModoEdicionCancion(false); setIdCancionEditando(null); } }} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: mostrarFormularioCancion ? 14 : 0, paddingVertical: 4 }}>
                           <Text style={[styles.cardTitle, { color: t.textMain, fontSize: 16 }]}>{modoEdicionCancion ? "✏️ Editar canción" : "＋ Agregar nueva canción"}</Text>

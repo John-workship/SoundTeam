@@ -1344,6 +1344,18 @@ export default function App() {
     esVozPrincipalDeServicio(servicioEditandoActual) &&
     !esAdminOLider;
   const tieneInstrumentoAsignado = rolesMusicalesUsuario.some(r => ["piano", "guitarra", "bajo", "bateria"].includes(String(r).toLowerCase()));
+  const esInstrumentistaEditando =
+    !!servicioEditandoActual &&
+    !esAdminOLider &&
+    String(servicioEditandoActual.sedeId || "") === String(sedeIdSeleccionada || "") &&
+    tieneInstrumentoAsignado;
+  const puedeEditarOrganizacionEditando = esAdminOLider || esVozPrincipalEditando || esInstrumentistaEditando;
+  const puedeEditarServicioMusical = (serv) =>
+    esAdminOLider ||
+    (!!serv &&
+      String(serv.sedeId || "") === String(sedeIdSeleccionada || "") &&
+      (esVozPrincipalDeServicio(serv) || tieneInstrumentoAsignado));
+  const tienePermisoMusicalEditando = esVozPrincipalEditando || esInstrumentistaEditando;
   const puedeAgregarCancion = esAdminOLider || tieneInstrumentoAsignado;
   const puedeGestionarRepertorio = esAdminOLider;
 
@@ -2578,7 +2590,7 @@ export default function App() {
                         placeholderTextColor={t.textSub}
                         value={nombreEvento}
                         onChangeText={setNombreEvento}
-                        editable={!esVozPrincipalEditando}
+                        editable={!tienePermisoMusicalEditando}
                       />
 
                       <Text style={[styles.inputLabel, { color: t.textMain }]}>Observaciones</Text>
@@ -2592,7 +2604,7 @@ export default function App() {
 
                       
                        <Text style={[styles.inputLabel, { color: t.textMain, fontWeight: "bold", marginTop: 8 }]}>Organización del Setlist</Text>
-                       {(esAdminOLider || esVozPrincipalEditando) && (
+                       {(puedeEditarOrganizacionEditando) && (
                          <View style={{ backgroundColor: t.bg, borderColor: t.border, borderWidth: 1, borderRadius: 9, padding: 10, marginBottom: 10 }}>
                            {esAdminOLider && (
                              <>
@@ -2776,7 +2788,7 @@ export default function App() {
                                 orden_bloques_setlist: ordenBloquesEditando,
                               };
                               if (idServicioEditando !== null) {
-                                if (esVozPrincipalEditando) {
+                                if (tienePermisoMusicalEditando) {
                                   const { error } = await supabase.rpc("soundteam_actualizar_servicio_asignado", {
                                     p_servicio_id: Number(idServicioEditando),
                                     p_observaciones: observaciones,
@@ -2866,7 +2878,7 @@ export default function App() {
                             <Text style={[styles.eventMainTitle, { color: t.textMain, fontSize: anchoVentana < 600 ? 17 : 19, lineHeight: 24 }]}>{serv.titulo}</Text>
                             <Text style={{ color: t.textSub, fontSize: 10, marginTop: 4 }}>📅 {fechaActualClave}</Text>
                           </View>
-                          {(esAdminOLider || esVozPrincipalDeServicio(serv)) && (
+                          {(puedeEditarServicioMusical(serv)) && (
                             <View style={{ flexDirection: "row", gap: 4 }}>
                               <TouchableOpacity
                                 style={[styles.editServiceBtn, { paddingVertical: 2, paddingHorizontal: 5 }]}
